@@ -8,11 +8,10 @@
 - **Filename parsing is heuristic.** Unusual names (e.g. titles with ` - ` before an issue number) can parse wrongly; the review tables exist for that reason.
 - **Series grouping from filenames** is a guess: it strips trailing issue/volume numbers and bracketed tags.
 - **`ComicInfo.xml` rewrite** drops XML namespace declarations and appends new elements; field values and existing elements are kept.
-- **YACReader may import the `Archive` folders.** Backups and converted `.cbr` files are kept as normal `.cbz` / `.cbr` files inside
-  `Archive` subfolders. YACReader supports those formats and shows sub-folders of the library, and no way to exclude a folder was found,
-  so those copies will probably appear as duplicate comics after a library update. This is an inference, not a tested result. Until it is
-  fixed (see [roadmap](roadmap.md), item 0), move `Archive` folders out of your library or delete them once you are happy with the results.
-  *Convert to ZIP* in Single issue also writes a `.zip`, which YACReader supports too.
+- **`Archive` backups are renamed `.bak`, untested in YACReader.** Backups and converted `.cbr` files are stored as `<name>.cbz.bak` /
+  `<name>.cbr.bak` so YACReader should not recognise them as comics. That is an inference, not a tested result. Backups made by earlier
+  versions kept their real `.cbz` / `.cbr` names and may still be imported: add `.bak` to them by hand, or move those `Archive` folders out
+  of your library. *Convert to ZIP* in Single issue also writes a `.zip`, which YACReader supports too.
 - YACReader reads `ComicInfo.xml` **only if you enable it** (Settings > General) **and update the library** afterwards, so metadata written
   by the Metadata and Clean-up tools won't show until you do.
 - Python is required to run; a double-click `.exe` is planned.

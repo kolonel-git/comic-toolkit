@@ -12,6 +12,31 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-06 23:10 +11:00 · Session 18: backups stored as `.bak` (roadmap item 0)
+
+**Summary:** Backups and converted originals in `Archive` folders are now renamed with a `.bak` suffix, so YACReader should not import them as duplicate comics.
+
+**Changes**
+- `archive_tools.py`: new constant `BACKUP_SUFFIX = ".bak"`; `move_to_archive` now targets `Archive/<name>.bak` (docstring updated).
+  Both callers pick it up: `swap_in` (Clean-up and Metadata backups) and `dispose_original` (CBR to CBZ "Move to Archive folder").
+- Docs: `safety.md`, `known-limitations.md`, `tools.md`, `roadmap.md` (item 0 marked done) and the root `README.md` describe the `.bak` behaviour.
+
+**Technical notes**
+- Name collisions go through the existing `unique()`: a second backup of `Batman 01.cbz` becomes `Batman 01.cbz (1).bak`.
+  Restoring means moving the file back and deleting `.bak` (and the ` (1)` if present).
+- Backups made before this change keep their real extensions and are not migrated.
+- Scans skip `Archive` folders as before, so nothing else changed.
+- No restore button or log note was added; the roadmap says so.
+
+**Verification:** a scripted test in a temp directory ran `swap_in` with backup twice and `dispose_original` with the Move option. It confirmed
+backups landed as `Batman 01.cbz.bak` and `Batman 01.cbz (1).bak`, the moved `.cbr` became `X 01.cbr.bak`, no backup carries a comic extension,
+the live file stayed in place, a backup opens as a valid zip, and `find_comics` lists only the live file. The GUI was not launched, and
+YACReader's handling of `.bak` files is untested.
+
+**Known issues:** older `Archive` backups with real extensions may still be imported by YACReader.
+
+---
+
 ## 2026-10-06 22:12 +11:00 · Session 17: documentation split into a docs folder
 
 **Summary:** The single README had grown to about 270 lines. It is now a short overview, and the detail lives in topic files under `docs/`.

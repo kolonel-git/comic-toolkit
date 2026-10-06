@@ -14,6 +14,7 @@ from comic_core import ARCHIVE_DIR, Comic, is_page, natural_key, unique
 
 KEEP_NAMES, SEQUENTIAL = "Keep as is", "Sequential (001.jpg)"
 BACKUP, REPLACE = "Keep a backup in Archive folder", "Replace the original"
+BACKUP_SUFFIX = ".bak"
 CI_TAGS = {"series": "Series", "issue": "Number", "volume": "Volume", "year": "Year", "title": "Title"}
 
 
@@ -32,8 +33,9 @@ def verify_zip(path, expected_pages):
 
 
 def move_to_archive(path):
-    """Move `path` into an 'Archive' folder next to it. Returns the new location."""
-    dest = unique(path.parent / ARCHIVE_DIR / path.name)
+    """Move `path` into an 'Archive' folder next to it as '<name>.bak', so readers such as YACReader
+    don't import it as a duplicate comic. Restoring is dropping the '.bak'. Returns the new location."""
+    dest = unique(path.parent / ARCHIVE_DIR / (path.name + BACKUP_SUFFIX))
     dest.parent.mkdir(exist_ok=True)
     shutil.move(str(path), str(dest))
     return dest

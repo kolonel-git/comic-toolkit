@@ -35,7 +35,7 @@ The Home page shows the tools as cards, grouped as below. A Dark mode switch sit
 - Archive rewrites are verified before they replace a file; originals can be kept in an `Archive` folder.
 - Conflicting names are flagged and skipped, never silently overwritten.
 
-One thing to know first: YACReader will probably import `Archive` folders as duplicate comics. See
+Backups in `Archive` folders are renamed `.bak` so comic readers such as YACReader ignore them. See
 [Known limitations](docs/known-limitations.md) and the [safety model](docs/safety.md).
 
 ## Documentation

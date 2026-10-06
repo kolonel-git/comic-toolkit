@@ -10,7 +10,7 @@ Last reviewed against everything learned so far on 2026-10-06 (see [CHANGELOG](C
 | Finding | Effect on the plan |
 |---|---|
 | YACReader imports `ComicInfo.xml` only when enabled, and only on a library update | Every tool that writes metadata shows a reminder. Documented above. |
-| YACReader supports cbz/cbr/zip/rar/7z/pdf and shows library sub-folders; no ignore option found | Our `Archive` backups probably show up as duplicate comics. New item 0: store backups so readers ignore them. |
+| YACReader supports cbz/cbr/zip/rar/7z/pdf and shows library sub-folders; no ignore option found | Our `Archive` backups probably show up as duplicate comics. Item 0 (done): backups are stored as `.bak` so readers ignore them. |
 | YACReader stores story-arc fields as plain text, has no reading-list import, and keeps Reading Lists in its own database | Reading Order is metadata-based (with an optional filename prefix). No `.cbl`, no database writes. |
 | YACReader's editable fields are a fixed list (Series, Title, Issue number/count, Volume, Story arc/number/count, Alternate series/number/count, Series Group, Genre) | The Metadata extension is limited to fields YACReader shows. Reading Order may use the Alternate trio, which has a count. |
 | Health, Stats, the folder browser and the pipeline all need the same library scan (walk files, parse names, read `ComicInfo.xml`, page counts) | Build one shared scan layer first, with an optional disposable cache, instead of four separate scanners. |
@@ -19,9 +19,9 @@ Last reviewed against everything learned so far on 2026-10-06 (see [CHANGELOG](C
 
 ## Build order
 
-**0. Backup safety fix (proposed, needs sign-off).** Keep the `Archive` folder but name backups `<file>.bak` (e.g. `Batman 01.cbz.bak`),
-so no reader recognises them; restoring is a rename. Small change in `archive_tools.move_to_archive` plus a tiny "restore" note in the log.
-Existing scans already skip `Archive`.
+**0. Backup safety fix (done, 2026-10-06).** The `Archive` folder stays, but backups are named `<file>.bak` (e.g. `Batman 01.cbz.bak`),
+so no reader recognises them; restoring is a rename. Change is in `archive_tools.move_to_archive`. Existing scans already skip `Archive`.
+Still to do: confirm in YACReader that `.bak` files are ignored. A restore button and a log note were not added.
 
 **1. Metadata extensions.** Parse `Count` from "(of N)" (the parser's bracket-stripping currently discards it) and write it as `Count`
 (YACReader's "Issue count"); read `Publisher`; add a **Set for selected rows** action for fixed-value fields that can't come from a filename
