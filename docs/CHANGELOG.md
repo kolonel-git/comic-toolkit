@@ -8,7 +8,30 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
   modification timestamps and are approximate (marked `~`); where nothing could be reconstructed it says so.
 - Each block lists: summary, decisions, changes by file, technical notes, bugs found and fixed, verification, and known
   issues. "Verification" only claims what was actually run.
-- Maintenance rule: add a new block at the top at the end of every session, and update `README.md` to match.
+- Maintenance rule: add a new block at the top at the end of every session, and update the docs (see `docs/README.md`) to match.
+
+---
+
+## 2026-10-06 22:12 +11:00 · Session 17: documentation split into a docs folder
+
+**Summary:** The single README had grown to about 270 lines. It is now a short overview, and the detail lives in topic files under `docs/`.
+
+**Changes**
+- `README.md` (rewritten, root): overview, quick start, a table of the tool groups, safety at a glance, and links into `docs/`.
+- `docs/` (new): `README.md` (index plus how the docs are kept current), `getting-started.md` (install, RAR extractor, settings),
+  `tools.md`, `renamer-templates.md`, `safety.md`, `architecture.md`, `known-limitations.md`, `roadmap.md`, `reading-order.md`,
+  `versioning.md`, and this changelog (moved from the project root).
+- `CHANGELOG.md` moved to `docs/CHANGELOG.md`; the maintenance-rule line in its conventions now points at `docs/README.md`.
+
+**Technical notes**
+- The split was done programmatically by heading, so the text of each section is unchanged. Edits were limited to: section headings
+  promoted to page titles (and sub-headings demoted a level), a navigation link back to the docs index on every page, the naming presets
+  and template syntax carved out of the tools page into `renamer-templates.md`, and cross-links (for example "see Roadmap item 0" now links
+  to `roadmap.md`, and "spec below" links to `reading-order.md`).
+- Earlier changelog entries still say "README" for text that now lives in `docs/`. They are historical and were not rewritten.
+- Remaining planned work is unchanged.
+
+**Verification:** every relative link in the root README and in `docs/` was checked to resolve to an existing file. Every non-empty line of the previous README was compared against the new files: 24 lines differ, all of them the intentional edits listed above (headings, retargeted links, the replaced overview and quick-start wording, the maintenance text). That comparison caught one mistake of mine, a sentence turned into a heading in `renamer-templates.md`, which was fixed. The application code was not touched, so no tests were run.
 
 ---
 
