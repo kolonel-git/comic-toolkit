@@ -15,7 +15,9 @@ from comic_core import ARCHIVE_DIR, Comic, is_page, natural_key, unique
 KEEP_NAMES, SEQUENTIAL = "Keep as is", "Sequential (001.jpg)"
 BACKUP, REPLACE = "Keep a backup in Archive folder", "Replace the original"
 BACKUP_SUFFIX = ".bak"
-CI_TAGS = {"series": "Series", "issue": "Number", "volume": "Volume", "year": "Year", "title": "Title"}
+CI_TAGS = {"series": "Series", "issue": "Number", "volume": "Volume", "year": "Year", "title": "Title",
+           "count": "Count", "publisher": "Publisher", "series_group": "SeriesGroup", "genre": "Genre",
+           "alternate_series": "AlternateSeries"}
 
 
 def is_comicinfo(name):

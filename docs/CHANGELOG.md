@@ -12,6 +12,35 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-06 23:20 +11:00 · Session 19: metadata extensions (roadmap item 1)
+
+**Summary:** The Metadata tool now handles issue count, reads more `ComicInfo.xml` fields, and can set fixed values (Series Group, Genre, Alternate series, Publisher) on the checked rows.
+
+**Decisions**
+- Publisher is settable as well as read; a read-only Publisher had no use. This goes slightly beyond the roadmap wording.
+- "Selected rows" means checked rows, matching how the table already works.
+- Only the "(of N)" / "(n of N)" forms are parsed as a count.
+
+**Changes by file**
+- `rename_core.py`: `_COUNT` regex; `parse_filename` returns a `count` key (None when absent or 0); `read_comicinfo` also returns `count`,
+  `publisher`, `series_group`, `genre`, `alternate_series`.
+- `archive_tools.py`: `CI_TAGS` gains `count`, `publisher`, `series_group`, `genre`, `alternate_series`. `merge_comicinfo` was already generic, so it writes them unchanged.
+- `page_metadata.py`: `count` added to `FIELDS` / `LABELS` / `EDITABLE`, new "Of" column, `w_count` switch, `Row.sets`, `SET_FIELDS`, a
+  "Set for checked rows" form section (field menu, value entry, button), `set_selected()`, and a YACReader reminder note under the table.
+
+**Technical notes**
+- `_compute` applies `row.sets` after the filename fields, so a set value is written whenever it differs from what the file has, regardless of the
+  Fill / Overwrite choice. Sets live on the row and vanish on rescan.
+- Count regex: `[(\[]\s*(?:\d+\s*)?of\s*(\d+)\s*[)\]]`. The existing `_TAGS` bracket stripping is unchanged, so the series and issue parse is unaffected.
+- The Renamer's `merge` now carries the extra keys but templates only use the original five tokens, so renaming is unchanged.
+- The reminder note is on the Metadata page only; Clean-up writes no metadata.
+
+**Verification:** a scripted test ran and passed. Count parsing: five filenames (round and square brackets, with and without the issue number, a zero count ignored). The Renamer preset output was unchanged. `apply_metadata` wrote all five new fields, `read_comicinfo` read them back, and a second write kept them. The page was instantiated headless against two temp CBZs: the count was proposed as `2`, "Set value" applied Genre to the checked row only, an empty value cancelled it, a write went through with a `.bak` backup, and the table row showed the count. `ruff --select F,E9` was clean. I did not look at the page visually, and YACReader's display of the new fields is untested.
+
+**Known issues:** see [Known limitations](known-limitations.md): bare "(3/12)" isn't parsed, and the new fields have no table columns or Renamer tokens.
+
+---
+
 ## 2026-10-06 23:10 +11:00 · Session 18: backups stored as `.bak` (roadmap item 0)
 
 **Summary:** Backups and converted originals in `Archive` folders are now renamed with a `.bak` suffix, so YACReader should not import them as duplicate comics.

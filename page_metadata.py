@@ -14,12 +14,16 @@ from archive_tools import BACKUP, REPLACE, apply_metadata
 from comic_core import in_archive, natural_key
 from rename_core import parse_filename, read_comicinfo
 from ui_kit import (ACCENT, BG, BORDER, FONT, MUTED, PANEL, TEXT, DropZone, Page, apply_tree_theme, build_tree,
-                    button, menu, pick, switch_style, title_block)
+                    button, entry, menu, pick, switch_style, title_block)
 
 FILL, OVERWRITE = "Fill in missing fields only", "Overwrite with filename values"
-FIELDS = ("series", "issue", "volume", "year", "title")
-LABELS = {"series": "Series", "issue": "Issue number", "volume": "Volume", "year": "Year", "title": "Title"}
-EDITABLE = {"#3": "series", "#4": "issue", "#5": "volume", "#6": "year"}
+FIELDS = ("series", "issue", "volume", "year", "title", "count")
+LABELS = {"series": "Series", "issue": "Issue number", "volume": "Volume", "year": "Year", "title": "Title",
+          "count": "Issue count"}
+EDITABLE = {"#3": "series", "#4": "issue", "#5": "volume", "#6": "year", "#7": "count"}
+# Fixed values that can't come from a filename; applied to the checked rows with "Set for checked rows".
+SET_FIELDS = {"Series Group": "series_group", "Genre": "genre", "Alternate series": "alternate_series",
+              "Publisher": "publisher"}
 NO_CHANGE = "No change"
 
 
@@ -39,6 +43,7 @@ class Row:
     parsed: dict
     ci: dict
     edits: dict = field(default_factory=dict)  # values typed in the table
+    sets: dict = field(default_factory=dict)  # fixed values from "Set for checked rows"
     writes: dict = field(default_factory=dict)  # what will actually be written
     checked: bool = True
     status: str = ""
@@ -64,7 +69,7 @@ def _apply(q, rows, backup):
 
 class MetadataPage(Page):
     defaults = {"recursive": True, "w_series": True, "w_issue": True, "w_volume": True, "w_year": True,
-                "w_title": True, "existing": FILL, "folder_series": True, "original": BACKUP}
+                "w_title": True, "w_count": True, "existing": FILL, "folder_series": True, "original": BACKUP}
     choices = {"existing": [FILL, OVERWRITE], "original": [BACKUP, REPLACE]}
 
     def __init__(self, parent):
@@ -95,12 +100,15 @@ class MetadataPage(Page):
         wrap, self.tree = build_tree(self.main, [
             ("sel", "", 38, False), ("file", "File", 170, True), ("series", "Series", 130, True),
             ("issue", "#", 52, False), ("volume", "Vol", 44, False), ("year", "Year", 56, False),
-            ("status", "Status", 78, False)])
+            ("count", "Of", 44, False), ("status", "Status", 78, False)])
         wrap.pack(fill="both", expand=True)
         self.tree.bind("<Button-1>", self._click)
         self.tree.bind("<Double-1>", self._edit)
-        ctk.CTkLabel(self.main, text="Double-click Series, #, Vol or Year to correct a value.", font=(FONT, 12),
+        ctk.CTkLabel(self.main, text="Double-click Series, #, Vol, Year or Of to correct a value.", font=(FONT, 12),
                      text_color=MUTED, anchor="w").pack(fill="x", pady=(6, 0))
+        ctk.CTkLabel(self.main, text="YACReader only shows this after you turn on ComicInfo import "
+                     "(Settings > General) and update the library.", font=(FONT, 12), text_color=MUTED,
+                     anchor="w", justify="left", wraplength=560).pack(fill="x", pady=(2, 0))
 
         v = self.vars
         sw = switch_style()
@@ -113,6 +121,15 @@ class MetadataPage(Page):
         ctk.CTkSwitch(self.form.add("Missing series"), text="Use the folder name", variable=v["folder_series"],
                       **sw).pack(anchor="w")
         menu(self.form.add("Original file"), v["original"], [BACKUP, REPLACE]).pack(fill="x")
+        box = self.form.add("Set for checked rows")
+        self.set_field, self.set_value = ctk.StringVar(value=next(iter(SET_FIELDS))), ctk.StringVar()
+        menu(box, self.set_field, list(SET_FIELDS)).pack(fill="x")
+        entry(box, self.set_value).pack(fill="x", pady=(8, 0))
+        self.btn_set = button(box, "Set value", self.set_selected)
+        self.btn_set.pack(fill="x", pady=(8, 0))
+        ctk.CTkLabel(box, text="Applies to every checked row. Leave empty to cancel a pending value. "
+                     "Genre takes a comma-separated list.", font=(FONT, 11), text_color=MUTED, anchor="w",
+                     justify="left", wraplength=260).pack(fill="x", pady=(6, 0))
 
         self.btn_apply = button(self.footer, "Write metadata", self.apply, primary=True)
         self.btn_apply.pack(pady=(0, 8))
@@ -237,6 +254,9 @@ class MetadataPage(Page):
             if existing and clean(f, existing) == value:
                 continue
             writes[f] = value
+        for f, value in row.sets.items():
+            if (row.ci.get(f) or "") != value:
+                writes[f] = value
         row.writes = writes
         row.status = NO_CHANGE if not writes else "Update" if row.ci else "Add"
 
@@ -245,7 +265,7 @@ class MetadataPage(Page):
 
     def _values(self, row):
         return ("☑" if row.checked else "☐", row.path.name, *(self._shown(row, f) for f in
-                ("series", "issue", "volume", "year")), row.status)
+                ("series", "issue", "volume", "year", "count")), row.status)
 
     def _tags(self, row):
         return ("dim",) if row.status == NO_CHANGE else ()
@@ -266,6 +286,26 @@ class MetadataPage(Page):
         ready = sum(1 for r in self.rows if r.checked and r.writes)
         self.meta.configure(text=f"{len(self.rows)} files · {ready} to update" + self._cbr_note())
         self.btn_apply.configure(state="normal" if ready and not self.busy else "disabled")
+
+    def set_selected(self):
+        if self.busy or not self.rows:
+            return
+        self._close_editor(True)
+        key, value = SET_FIELDS[self.set_field.get()], self.set_value.get().strip()
+        rows = [r for r in self.rows if r.checked]
+        if not rows:
+            self.say("Check at least one row first.", err=True)
+            return
+        for r in rows:
+            if value:
+                r.sets[key] = value
+            else:
+                r.sets.pop(key, None)
+            self._compute(r)
+        self._resolve()
+        label = self.set_field.get()
+        self.say(f"{label} = {value} on {len(rows)} row{'s' if len(rows) != 1 else ''}." if value
+                 else f"Cancelled pending {label} on {len(rows)} row{'s' if len(rows) != 1 else ''}.")
 
     def select_all(self, value):
         for r in self.rows:

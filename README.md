@@ -26,7 +26,7 @@ The Home page shows the tools as cards, grouped as below. A Dark mode switch sit
 |---|---|---|
 | **Comic Cover Extractor** | Single issue, Bulk folder, Folder icons | Preview an issue's first and last pages, save covers one at a time or for a whole folder, and show covers as Explorer folder icons |
 | **Comic Renamer** | Renamer | Give a collection one consistent naming pattern, with a preview table you can edit before anything changes |
-| **Metadata** | Metadata | Write series, issue, volume, year and title from filenames into each CBZ's `ComicInfo.xml` |
+| **Metadata** | Metadata | Write series, issue, volume, year, title and issue count from filenames into each CBZ's `ComicInfo.xml`, and set Series Group, Genre, Alternate series or Publisher in bulk |
 | **Archive Tools** | CBR to CBZ, Clean-up | Repack RAR comics as verified ZIPs; strip junk files and tidy page names |
 
 ## Safety at a glance

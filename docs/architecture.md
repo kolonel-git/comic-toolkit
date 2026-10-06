@@ -12,8 +12,8 @@
 | `page_metadata.py` | Metadata page |
 | `page_convert.py` · `page_cleanup.py` | Archive tool pages |
 | `comic_core.py` | Archive reading (`Comic`), cover rendering, output-path planning, shared constants |
-| `rename_core.py` | Filename parsing, `ComicInfo.xml` reading, name templating |
-| `archive_tools.py` | Verified zip rewriting: CBR to CBZ, clean-up, `ComicInfo.xml` stamping |
+| `rename_core.py` | Filename parsing (including the issue count), `ComicInfo.xml` reading, name templating |
+| `archive_tools.py` | Verified zip rewriting: CBR to CBZ, clean-up, `ComicInfo.xml` stamping. `CI_TAGS` maps field names to XML tags and `merge_comicinfo` writes any of them, so new fields need only a `CI_TAGS` entry |
 | `folder_icons.py` | `folder.ico` / `desktop.ini` / `folder.jpg` generation (Windows) |
 
 Logic modules (`*_core.py`, `archive_tools.py`, `folder_icons.py`) contain no UI code so they can be tested or reused

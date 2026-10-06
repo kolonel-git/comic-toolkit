@@ -31,6 +31,7 @@ CASES = ["Keep as is", "Title Case"]
 FOLDER_STYLES = ["Series", "Series + volume"]
 
 _YEAR = re.compile(r"[(\[]\s*((?:19|20)\d{2})(?:[-./]\d{1,2})*\s*[)\]]")
+_COUNT = re.compile(r"[(\[]\s*(?:\d+\s*)?of\s*(\d+)\s*[)\]]", re.I)  # '(of 12)', '(3 of 12)'
 _TAGS = re.compile(r"\([^)]*\)|\[[^\]]*\]")
 _VOL = re.compile(r"(?<![A-Za-z])(?:vol(?:ume)?\.?|v)\s*(\d{1,3})(?![A-Za-z\d])", re.I)
 _TITLE = re.compile(r"^(.*?\d)\s+[-–:]\s+(.+)$")
@@ -44,9 +45,11 @@ def _clean(s):
 
 
 def parse_filename(stem):
-    """'Batman #012 - The Court (2016) (Digital)' -> series/volume/issue/year/title (None when absent)."""
+    """'Batman #012 - The Court (2016) (of 12)' -> series/volume/issue/year/title/count (None when absent)."""
     m = _YEAR.search(stem)
     year = m.group(1) if m else None
+    m = _COUNT.search(stem)
+    count = str(int(m.group(1))) if m and int(m.group(1)) > 0 else None
     s = _clean(_TAGS.sub(" ", stem))
     volume = issue = title = None
     m = _VOL.search(s)
@@ -62,7 +65,8 @@ def parse_filename(stem):
     if issue is None and volume:  # manga-style 'Berserk Vol 3': the volume is the number
         issue, volume = volume, None
     series = _clean(s)
-    return {"series": series or None, "volume": volume, "issue": issue, "year": year, "title": title}
+    return {"series": series or None, "volume": volume, "issue": issue, "year": year, "title": title,
+            "count": count}
 
 
 def _rar_member(path, member):
@@ -114,7 +118,10 @@ def read_comicinfo(path):
         return str(int(v)) if v.isdigit() and int(v) > 0 else None
 
     return {"series": get("Series") or None, "volume": pos_int("Volume"),
-            "issue": get("Number") or None, "year": pos_int("Year"), "title": get("Title") or None}
+            "issue": get("Number") or None, "year": pos_int("Year"), "title": get("Title") or None,
+            "count": pos_int("Count"), "publisher": get("Publisher") or None,
+            "series_group": get("SeriesGroup") or None, "genre": get("Genre") or None,
+            "alternate_series": get("AlternateSeries") or None}
 
 
 def merge(parsed, ci, use_ci):

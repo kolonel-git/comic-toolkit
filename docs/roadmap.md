@@ -23,7 +23,7 @@ Last reviewed against everything learned so far on 2026-10-06 (see [CHANGELOG](C
 so no reader recognises them; restoring is a rename. Change is in `archive_tools.move_to_archive`. Existing scans already skip `Archive`.
 Still to do: confirm in YACReader that `.bak` files are ignored. A restore button and a log note were not added.
 
-**1. Metadata extensions.** Parse `Count` from "(of N)" (the parser's bracket-stripping currently discards it) and write it as `Count`
+**1. Metadata extensions (done, 2026-10-06; Publisher is settable as well as read).** Parse `Count` from "(of N)" (the parser's bracket-stripping currently discards it) and write it as `Count`
 (YACReader's "Issue count"); read `Publisher`; add a **Set for selected rows** action for fixed-value fields that can't come from a filename
 (`SeriesGroup`, `Genre`, `AlternateSeries`). `CI_TAGS` and `merge_comicinfo` become a generic field writer that Reading Order reuses.
 Small; extends the existing Metadata table. Adds a YACReader reminder banner.

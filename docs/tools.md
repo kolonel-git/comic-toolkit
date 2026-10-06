@@ -25,7 +25,7 @@ See [Naming styles and templates](renamer-templates.md) for the eight presets an
 
 | Tool | What it does |
 |---|---|
-| **Metadata** | Stamp series, issue number, volume, year and title from filenames into each CBZ's `ComicInfo.xml` (the file YACReader and most readers use). Review table with inline editing of Series, #, Vol and Year; choose which fields to write; fill only missing fields or overwrite existing values; fall back to the folder name when the filename has no series. Other fields already in the XML are preserved. `.cbr` files can't be written to and are skipped with a note. |
+| **Metadata** | Stamp series, issue number, volume, year, title and issue count from filenames into each CBZ's `ComicInfo.xml` (the file YACReader and most readers use). The count is read from "(of 12)" or "(3 of 12)" (round or square brackets) and written as `Count`, YACReader's "Issue count". Review table with inline editing of Series, #, Vol, Year and Of; choose which fields to write; **Set for checked rows** applies one fixed value (Series Group, Genre, Alternate series or Publisher) to every checked row, which no filename can supply (an empty value cancels a pending one; Genre takes a comma-separated list); a note on the page reminds you that YACReader shows ComicInfo data only after you enable import and update the library; fill only missing fields or overwrite existing values; fall back to the folder name when the filename has no series. Other fields already in the XML are preserved. `.cbr` files can't be written to and are skipped with a note. |
 
 ## Archive Tools
 

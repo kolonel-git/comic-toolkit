@@ -12,6 +12,9 @@
   `<name>.cbr.bak` so YACReader should not recognise them as comics. That is an inference, not a tested result. Backups made by earlier
   versions kept their real `.cbz` / `.cbr` names and may still be imported: add `.bak` to them by hand, or move those `Archive` folders out
   of your library. *Convert to ZIP* in Single issue also writes a `.zip`, which YACReader supports too.
+- **Issue count is recognised only as "(of N)" / "(3 of 12)".** A bare "(3/12)" is not parsed, to avoid confusing it with dates. The
+  Renamer reads the new fields but has no tokens for them, and the Metadata table shows no columns for Series Group, Genre, Alternate series
+  or Publisher (they appear only in what gets written).
 - YACReader reads `ComicInfo.xml` **only if you enable it** (Settings > General) **and update the library** afterwards, so metadata written
   by the Metadata and Clean-up tools won't show until you do.
 - Python is required to run; a double-click `.exe` is planned.
