@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.ruff_cache/
+.pytest_cache/
+
+# Per-user app settings (saved on close; contains local paths)
+settings.json
+
+# Temporary files written by the archive tools
+*.part
+*.renametmp
+
+# Packaging output (planned PyInstaller build)
+build/
+dist/
+*.spec
+
+# Editor / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
