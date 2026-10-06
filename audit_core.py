@@ -232,7 +232,7 @@ def quality_flags(issue, min_pages=MIN_PAGES, max_pages=MAX_PAGES):
     elif issue.size > BIG_BYTES:
         flags.append(f"Very large file ({issue.size / 1e6:.0f} MB)")
     if issue.cover_h and issue.cover_h < LOW_COVER_HEIGHT:
-        flags.append(f"Low-resolution cover ({issue.cover_w}x{issue.cover_h})")
+        flags.append(f"Low-res cover ({issue.cover_w}x{issue.cover_h})")
     return flags
 
 

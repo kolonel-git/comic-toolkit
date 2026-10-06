@@ -12,6 +12,32 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-07 00:37 +11:00 · Session 22: review pass over everything built so far
+
+**Summary:** A check of the whole project before starting Reading Order: every scripted test rerun, a lint pass, a visual check of the new pages, and a read-through of the new code. It found and fixed four bugs and three layout problems. No features were added.
+
+**Bugs found and fixed**
+- `library_scan.py`: pruning the cache after a scan matched on a path prefix, so scanning `D:\Comics` also dropped cache entries for `D:\Comics Old`. The prefix now ends with a path separator. Only cost was a slower later scan.
+- `page_audit.py`: if the scan worker raised (for example an unreadable folder), nothing was ever posted back and the page showed a Stop button forever. The worker now catches errors and reports "Scan failed: …", and the page returns to idle.
+- `page_audit.py`: with both **Read page counts and covers** and **Full integrity test** off, the Broken report said "No broken files found" although nothing had been checked. It now says "Nothing was checked." with a hint on what to turn on.
+- `docs/roadmap.md`: leftover "Health" wording replaced by "Library audit" / "the audit".
+
+**Layout fixes (from screenshots of the real window)**
+- Duplicates table: the "Why" column cut off "Same series, volume and issue"; widened.
+- Broken and Quality tables: the Flags / Problem column was the one that got squeezed; the File column is now fixed width and the text column takes the spare room. The low-resolution flag text was shortened to "Low-res cover (WxH)".
+- Footer: the report-specific buttons sat in an empty frame that kept its old height after being hidden, leaving a gap above Export CSV on the Broken and Quality tabs. The buttons are now packed straight into the footer.
+
+**Checked and left alone**
+- Duplicate cover comparison is quadratic in file count. Timed on random hashes: 2,000 files in 0.3 s, 5,000 in 1.9 s, so about 8 s for 10,000.
+- The Metadata page's "Set for checked rows" section sits below the fold at the default window size and is reached by scrolling the side panel. It works; it is just not visible at first glance.
+- Full `ruff` reports 41 style items (mutable class attributes, import order, regex flag aliases and similar); none are bugs. The error-level checks (`--select F,E9`) are clean.
+
+**Verification:** these scripted tests were run and passed: archive tools (including `.bak` backups), icons, renamer and parser, backup naming, metadata (core and page), library scan, audit logic, audit window, and a new test for the three fixes above (sibling-folder cache entries kept, deleted-file entries still pruned, "Nothing was checked", and a failing worker releasing the page). The icons test needed an update because it called `write_icon` with an old argument name; the app's own callers were already correct. Screenshots of the Home page, Metadata, and all four audit reports were checked in dark mode before and after the layout fixes; the final capture of the Quality tab was partly covered by an unrelated window from the desktop, but the footer change was visible. Light mode was not re-checked after the fixes. Not run: any real RAR file, real comic collections, YACReader, or the manual tests in [manual-tests.md](manual-tests.md).
+
+**Known issues:** unchanged; see [Known limitations](known-limitations.md).
+
+---
+
 ## 2026-10-07 00:15 +11:00 · Session 21: Library Audit tool (roadmap item 3)
 
 **Summary:** New Home group **Library Audit** with one tool, *Library audit*: scan a folder once, then switch between four reports (Broken, Duplicates, Missing, Quality). Built on the shared scan from Session 20. Logic lives in `audit_core.py`, the window in `page_audit.py`.

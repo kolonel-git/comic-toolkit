@@ -18,12 +18,12 @@ from ui_kit import (ACCENT, BG, BORDER, FONT, MUTED, TEXT, DropZone, Page, apply
 BROKEN, DUPES, MISSING, QUALITY = "Broken", "Duplicates", "Missing", "Quality"
 REPORTS = [BROKEN, DUPES, MISSING, QUALITY]
 COLUMNS = {
-    BROKEN: [("file", "File", 260, True), ("problem", "Problem", 300, True)],
-    DUPES: [("sel", "", 38, False), ("group", "#", 40, False), ("why", "Why", 190, False),
+    BROKEN: [("file", "File", 330, False), ("problem", "Problem", 300, True)],
+    DUPES: [("sel", "", 38, False), ("group", "#", 40, False), ("why", "Why", 235, False),
             ("file", "File", 240, True), ("size", "Size", 74, False), ("pages", "Pages", 56, False)],
     MISSING: [("series", "Series", 220, True), ("volume", "Vol", 56, False), ("owned", "Owned", 62, False),
               ("missing", "Missing", 320, True)],
-    QUALITY: [("file", "File", 260, True), ("flags", "Flags", 300, True)],
+    QUALITY: [("file", "File", 330, False), ("flags", "Flags", 300, True)],
 }
 EMPTY = {BROKEN: "No broken files found.", DUPES: "No duplicates found.", MISSING: "No gaps found.",
          QUALITY: "Nothing flagged."}
@@ -31,6 +31,13 @@ EMPTY = {BROKEN: "No broken files found.", DUPES: "No duplicates found.", MISSIN
 
 def _run(q, root, o, stop):
     """Worker: scan, optionally test integrity, then compute all four reports. No Tk calls."""
+    try:
+        _audit(q, root, o, stop)
+    except Exception as e:  # noqa: BLE001 - whatever goes wrong, the page must stop waiting
+        q.put(("error", f"{type(e).__name__}: {e}"))
+
+
+def _audit(q, root, o, stop):
     deep = o["deep"] or o["similar"]
     res = scan_library(root, o["recursive"], deep=deep, deep_cbr=o["deep_cbr"],
                        progress=lambda d, t, i: q.put(("prog", "Scanning", d, t)), stop=stop)
@@ -116,11 +123,10 @@ class AuditPage(Page):
 
         self.btn_scan = button(self.footer, "Scan library", self.scan, primary=True)
         self.btn_scan.pack(pady=(0, 8))
-        self.extras = ctk.CTkFrame(self.footer, fg_color="transparent")
-        self.extras.pack(fill="x")
-        self.btn_move = button(self.extras, "Move checked to Archive", self.move_checked)
-        self.btn_copy = button(self.extras, "Copy wishlist", self.copy_wishlist)
-        self.btn_save = button(self.extras, "Save wishlist…", self.save_wishlist)
+        # report-specific buttons live directly in the footer and are packed before Export CSV on demand
+        self.btn_move = button(self.footer, "Move checked to Archive", self.move_checked)
+        self.btn_copy = button(self.footer, "Copy wishlist", self.copy_wishlist)
+        self.btn_save = button(self.footer, "Save wishlist…", self.save_wishlist)
         self.btn_csv = button(self.footer, "Export CSV…", self.export_csv)
         self.btn_csv.pack(pady=(0, 8))
         self.btn_stop = button(self.footer, "Stop", self.stop.set)
@@ -181,6 +187,13 @@ class AuditPage(Page):
                 if msg[0] == "prog":
                     self.progress.set(msg[2] / max(1, msg[3]))
                     self.meta.configure(text=f"{msg[1]} {msg[2]} of {msg[3]}…")
+                elif msg[0] == "error":
+                    self.q = None
+                    self.progress.set(0)
+                    self._show_report()
+                    self._idle()
+                    self.say(f"Scan failed: {msg[1]}", err=True)
+                    return
                 else:
                     self._finish(msg[1])
                     return
@@ -228,9 +241,12 @@ class AuditPage(Page):
                 for p in problems:
                     tree.insert("", "end", values=(i.rel, p), tags=("bad",))
             n = len(res["broken"])
-            self.meta.configure(text=f"{n} file{'s' if n != 1 else ''} with problems" if n else EMPTY[BROKEN])
-            self.hint.configure(text="Only problems from the quick scan." if not res["integrity"] else
-                                "Full integrity test: zip CRC check plus cover, middle and last page decoded.")
+            checked = res["deep"] or res["integrity"]
+            self.meta.configure(text=f"{n} file{'s' if n != 1 else ''} with problems" if n else
+                                EMPTY[BROKEN] if checked else "Nothing was checked.")
+            self.hint.configure(text="Full integrity test: zip CRC check plus cover, middle and last page decoded."
+                                if res["integrity"] else "Quick check of each file's first page." if res["deep"] else
+                                "Turn on 'Read page counts and covers' or the full integrity test, then scan again.")
         elif report == DUPES:
             for gi, g in enumerate(res["dups"], 1):
                 for i in g.issues:
@@ -267,11 +283,11 @@ class AuditPage(Page):
             b.pack_forget()
         report, res, busy = self.vars["report"].get(), self.results, bool(self.q)
         if report == DUPES:
-            self.btn_move.pack(pady=(0, 8))
+            self.btn_move.pack(pady=(0, 8), before=self.btn_csv)
             self.btn_move.configure(state="normal" if res and self.checked and not busy else "disabled")
         elif report == MISSING:
             for b in (self.btn_copy, self.btn_save):
-                b.pack(pady=(0, 8))
+                b.pack(pady=(0, 8), before=self.btn_csv)
                 b.configure(state="normal" if res and res["gaps"] and not busy else "disabled")
         self.btn_csv.configure(state="normal" if res and not busy else "disabled")
 

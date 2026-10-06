@@ -234,7 +234,7 @@ def scan_library(root, recursive=True, deep=False, deep_cbr=False, include_other
             progress(k + 1, len(files), issue)
     if use_cache:
         if not result.stopped:  # forget files that no longer exist under this root
-            prefix = _key(root)
+            prefix = _key(root).rstrip("\\/") + os.sep  # the separator stops "Comics" matching "Comics Old"
             entries = {k: v for k, v in entries.items() if not k.startswith(prefix) or k in seen}
         _save_cache(cache_path, entries)
     result.seconds = time.time() - t0

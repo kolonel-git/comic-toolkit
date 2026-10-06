@@ -13,7 +13,7 @@ Last reviewed against everything learned so far on 2026-10-06 (see [CHANGELOG](C
 | YACReader supports cbz/cbr/zip/rar/7z/pdf and shows library sub-folders; no ignore option found | Our `Archive` backups probably show up as duplicate comics. Item 0 (done): backups are stored as `.bak` so readers ignore them. |
 | YACReader stores story-arc fields as plain text, has no reading-list import, and keeps Reading Lists in its own database | Reading Order is metadata-based (with an optional filename prefix). No `.cbl`, no database writes. |
 | YACReader's editable fields are a fixed list (Series, Title, Issue number/count, Volume, Story arc/number/count, Alternate series/number/count, Series Group, Genre) | The Metadata extension is limited to fields YACReader shows. Reading Order may use the Alternate trio, which has a count. |
-| Health, Stats, the folder browser and the pipeline all need the same library scan (walk files, parse names, read `ComicInfo.xml`, page counts) | Build one shared scan layer first, with an optional disposable cache, instead of four separate scanners. |
+| Audit, Stats, the folder browser and the pipeline all need the same library scan (walk files, parse names, read `ComicInfo.xml`, page counts) | Build one shared scan layer first, with an optional disposable cache, instead of four separate scanners. |
 | Unreviewed automatic writes are risky, and a watcher can only run while the app is open | The watcher queues files for review by default and polls inside the app. A command-line mode is an optional later step. |
 | A PyInstaller build would lose `settings.json` (`__file__` points at a temporary or internal folder) and must bundle drag-and-drop and theme assets | Settings move to `%APPDATA%\ComicToolkit`; the app is built as a folder, not a single file. |
 
@@ -31,7 +31,7 @@ Small; extends the existing Metadata table. Adds a YACReader reminder banner.
 **2. Shared library scan (`library_scan.py`) (done, 2026-10-06; pending the manual checks).** One worker-thread scan that walks a library and yields an `Issue` record: path, size, mtime,
 fields parsed from the name, `ComicInfo.xml` fields, and lazily page count, cover size and cover hash. Results can be cached in
 `%APPDATA%\ComicToolkit\cache.json`, keyed by path + size + mtime. It is a cache, not a database: safe to delete, never the source of
-truth. CBR files are slower (whole-archive extraction), so deep reads of CBR are opt-in. Health, Stats, the browser and the pipeline sit on it.
+truth. CBR files are slower (whole-archive extraction), so deep reads of CBR are opt-in. The audit, Stats, the browser and the pipeline sit on it.
 
 **3. Library Audit tool (done, 2026-10-07; pending the manual checks)** (new Home group "Library Audit"; built as `audit_core.py` and `page_audit.py`). The four reports and their rules are described in [The tools](tools.md#library-audit); two details differ from the plan below: the report is named *Broken*, and cover similarity levels are Strict, Normal and Loose. Results table with a segmented switch between four reports; every report can export CSV.
 - *Corrupt or broken:* CBZ zip CRC test; CBR via the extractor's test command; archives with zero pages; pages Pillow can't open (sampled:
@@ -52,7 +52,7 @@ scan layer; publisher needs the `Publisher` read from item 1. Drawn with simple 
 export; missing values go in an "Unknown" bucket.
 
 **6. Folder tree browser.** A lazily loaded folder tree with a cover and counts for the selected folder, acting as a launcher: "open in
-Single issue / Bulk folder / Renamer / Metadata / Clean-up / Health" using the existing `set_folder` / `load` methods. It is a navigation hub,
+Single issue / Bulk folder / Renamer / Metadata / Clean-up / Library audit" using the existing `set_folder` / `load` methods. It is a navigation hub,
 not a reader, so it doesn't duplicate YACReader's library view.
 
 **7. Downloads watcher and "Process new comics" pipeline.** Order matters: CBR to CBZ, clean-up, metadata from filename, rename from the
