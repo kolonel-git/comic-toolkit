@@ -28,12 +28,12 @@ Still to do: confirm in YACReader that `.bak` files are ignored. A restore butto
 (`SeriesGroup`, `Genre`, `AlternateSeries`). `CI_TAGS` and `merge_comicinfo` become a generic field writer that Reading Order reuses.
 Small; extends the existing Metadata table. Adds a YACReader reminder banner.
 
-**2. Shared library scan (`library_scan.py`).** One worker-thread scan that walks a library and yields an `Issue` record: path, size, mtime,
+**2. Shared library scan (`library_scan.py`) (done, 2026-10-06; pending the manual checks).** One worker-thread scan that walks a library and yields an `Issue` record: path, size, mtime,
 fields parsed from the name, `ComicInfo.xml` fields, and lazily page count, cover size and cover hash. Results can be cached in
 `%APPDATA%\ComicToolkit\cache.json`, keyed by path + size + mtime. It is a cache, not a database: safe to delete, never the source of
 truth. CBR files are slower (whole-archive extraction), so deep reads of CBR are opt-in. Health, Stats, the browser and the pipeline sit on it.
 
-**3. Health tool** (new Home group "Library Audit"). Results table with a segmented switch between four reports; every report can export CSV.
+**3. Library Audit tool (done, 2026-10-07; pending the manual checks)** (new Home group "Library Audit"; built as `audit_core.py` and `page_audit.py`). The four reports and their rules are described in [The tools](tools.md#library-audit); two details differ from the plan below: the report is named *Broken*, and cover similarity levels are Strict, Normal and Loose. Results table with a segmented switch between four reports; every report can export CSV.
 - *Corrupt or broken:* CBZ zip CRC test; CBR via the extractor's test command; archives with zero pages; pages Pillow can't open (sampled:
   cover, middle, last).
 - *Duplicates:* tier 1 same series + volume + issue (from `ComicInfo.xml` or the name); tier 2 identical size; optional tier 3 cover-image

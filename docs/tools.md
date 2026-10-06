@@ -33,3 +33,25 @@ See [Naming styles and templates](renamer-templates.md) for the eight presets an
 |---|---|
 | **CBR to CBZ** | Repack RAR comics as ZIP in bulk. Each result is verified (zip integrity and matching page count) before the original is touched. Afterwards the `.cbr` is moved to `Archive` (as `.cbr.bak`), kept, or deleted. |
 | **Clean-up** | Remove non-image junk (Thumbs.db, `.nfo`, `__MACOSX`, …) and files matching patterns you type (e.g. `zzz*`); optionally rename pages to `001.jpg`, `002.jpg`, … (this also flattens folders inside the archive). `ComicInfo.xml` is always kept. |
+
+## Library Audit
+
+| Tool | What it does |
+|---|---|
+| **Library audit** | Scans a library folder once, then shows four reports you switch between at the top of the page. Nothing is changed by scanning, and every report exports to CSV. |
+
+Options: include subfolders; **Read page counts and covers** (on by default, needed for the quality checks and cover comparison);
+**Open real .cbr files** (slow, because a RAR is extracted whole); **Full integrity test** (slow, reads every file completely). `Archive` folders are skipped.
+A repeat scan of an unchanged library is fast, because results are cached (see [Architecture](architecture.md#the-library-scan)).
+
+- **Broken.** Without the integrity test: files the quick scan notices (not a valid zip, no images, a cover that won't open). With it: the zip CRC test
+  and the cover, middle and last pages must decode; real RAR files are checked with the extractor's own test command.
+- **Duplicates.** Groups of probable copies, strongest evidence first: same series, volume and issue number (from `ComicInfo.xml` or the filename);
+  identical file size; and, if **Compare cover images** is on, covers that look alike (Strict, Normal or Loose). The biggest file in each group is left
+  unticked and the others are pre-ticked. **Move checked to Archive** moves ticked files into an `Archive` folder as `.bak`, after a confirmation; nothing is deleted.
+- **Missing.** For each series and volume, the issue numbers you don't own, such as `Batman v2: #13, #27-#29`. A series is checked from the lowest issue you own
+  (or from #1 with **Expect issues from #1**) up to the highest issue you own or the issue count in `ComicInfo.xml`, whichever is larger. Annuals, specials,
+  one-shots, decimal numbers and files with no issue number are ignored. **Copy wishlist** and **Save wishlist** (`.txt` or `.csv`) give one line per missing issue.
+  Nothing is remembered between runs.
+- **Quality.** Flags files with fewer than 10 or more than 300 pages, a size under 1 MB or over 500 MB, or a cover under 800 px tall. These limits are fixed.
+

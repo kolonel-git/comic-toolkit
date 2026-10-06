@@ -28,6 +28,7 @@ The Home page shows the tools as cards, grouped as below. A Dark mode switch sit
 | **Comic Renamer** | Renamer | Give a collection one consistent naming pattern, with a preview table you can edit before anything changes |
 | **Metadata** | Metadata | Write series, issue, volume, year, title and issue count from filenames into each CBZ's `ComicInfo.xml`, and set Series Group, Genre, Alternate series or Publisher in bulk |
 | **Archive Tools** | CBR to CBZ, Clean-up | Repack RAR comics as verified ZIPs; strip junk files and tidy page names |
+| **Library Audit** | Library audit | Scan a library for broken files, duplicates, missing issues and low-quality files, with CSV and wishlist export |
 
 ## Safety at a glance
 
@@ -43,6 +44,6 @@ Backups in `Archive` folders are renamed `.bak` so comic readers such as YACRead
 Everything else lives in [`docs/`](docs/README.md):
 
 - [Getting started](docs/getting-started.md) · [The tools](docs/tools.md) · [Naming styles and templates](docs/renamer-templates.md)
-- [Safety model](docs/safety.md) · [Known limitations](docs/known-limitations.md) · [Architecture](docs/architecture.md)
+- [Safety model](docs/safety.md) · [Known limitations](docs/known-limitations.md) · [Architecture](docs/architecture.md) · [Manual tests](docs/manual-tests.md)
 - [Roadmap](docs/roadmap.md) · [Reading Order (planned)](docs/reading-order.md) · [Versioning](docs/versioning.md)
 - [Changelog](docs/CHANGELOG.md)

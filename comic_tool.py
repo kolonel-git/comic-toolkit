@@ -11,6 +11,8 @@
   Archive Tools
     CBR to CBZ    - repack RAR comics as verified ZIPs
     Clean-up      - strip junk files, normalise page names
+  Library Audit
+    Library audit - broken files, duplicates, missing issues, quality flags
 
 Light and dark mode: toggle in the sidebar; first launch follows Windows.
 
@@ -23,6 +25,7 @@ from pathlib import Path
 import customtkinter as ctk
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
+from page_audit import AuditPage
 from page_bulk import BulkPage
 from page_cleanup import CleanupPage
 from page_convert import ConvertPage
@@ -54,12 +57,15 @@ TOOLS = {  # key -> glyph, tint, title, description
                 "Repack RAR comics as verified ZIPs, in bulk."),
     "cleanup": ("✂", TINT_GREY, "Clean-up",
                 "Remove junk files and tidy page names in CBZ archives."),
+    "audit": ("✓", TINT_BLUE, "Library audit",
+              "Find broken files, duplicates, missing issues and low quality."),
 }
 GROUPS = [  # header, blurb, tool keys
     ("Comic Cover Extractor", "Pull cover images out of CBZ and CBR files.", ["single", "bulk", "icons"]),
     ("Comic Renamer", "Keep file names consistent across your collection.", ["rename"]),
     ("Metadata", "Fix the information stored inside your comics.", ["metadata"]),
     ("Archive Tools", "Repack and tidy the archives themselves.", ["convert", "cleanup"]),
+    ("Library Audit", "Check the whole collection for problems.", ["audit"]),
 ]
 
 
@@ -150,7 +156,8 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.pages = {"home": HomePage(content, self.show), "single": SinglePage(content),
                       "bulk": BulkPage(content), "icons": IconsPage(content),
                       "rename": RenamePage(content), "metadata": MetadataPage(content),
-                      "convert": ConvertPage(content), "cleanup": CleanupPage(content)}
+                      "convert": ConvertPage(content), "cleanup": CleanupPage(content),
+                      "audit": AuditPage(content)}
         self.nav = {}
         ctk.CTkLabel(side, text="Comic Toolkit", font=(FONT, 15, "bold"), text_color=TEXT,
                      anchor="w").pack(fill="x", padx=18, pady=(24, 14))

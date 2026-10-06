@@ -12,6 +12,81 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-07 00:15 +11:00 · Session 21: Library Audit tool (roadmap item 3)
+
+**Summary:** New Home group **Library Audit** with one tool, *Library audit*: scan a folder once, then switch between four reports (Broken, Duplicates, Missing, Quality). Built on the shared scan from Session 20. Logic lives in `audit_core.py`, the window in `page_audit.py`.
+
+**Decisions**
+- The report the roadmap called "Corrupt or broken" is shown as **Broken**, and the group is "Library Audit" (the earlier name "Library Health" was dropped).
+- The full CRC/decode integrity test is a switch, off by default, because it reads every file completely. The quick scan already reports files that are not valid zips, have no images or have an unreadable cover.
+- Duplicate cover comparison is a switch with three levels, Strict (4 of 64 hash bits), Normal (8), Loose (12). Defaults are untested on real covers.
+- The only action that touches files is *Move checked to Archive*; it asks first, pre-ticks every copy except the biggest in each group, and moves as `.bak` (Session 18), never deleting.
+- Missing issues are checked from the lowest owned issue by default; **Expect issues from #1** is a switch. The wishlist is export or copy only, with no stored state.
+- Quality limits (10 to 300 pages, 1 MB to 500 MB, cover under 800 px tall) are fixed constants, not options.
+
+**Changes by file**
+- `audit_core.py` (new): `check_integrity` and `test_rar`; `find_duplicates` returning `Group` objects (tier 1 series+volume+issue, tier 2 identical size, tier 3 cover hash clusters via union-find, groups wholly contained in an earlier group dropped, biggest file first); `find_missing` returning `Gap` objects plus an ignored count, `ranges`, `gap_name`, `wishlist_lines`; `quality_flags`, `find_quality`, `size_text`; `SIMILARITY` levels and the threshold constants.
+- `page_audit.py` (new): `AuditPage` with a scan worker thread reporting through a queue, four themed tables behind a segmented switch, Stop, per-report buttons (Move checked to Archive, Copy wishlist, Save wishlist, Export CSV), tick boxes in the Duplicates table, and a hint line explaining each report.
+- `comic_tool.py`: registers the page, adds the `audit` card and the "Library Audit" group, updates the module docstring.
+- Docs: `tools.md` (new section), `architecture.md`, `known-limitations.md`, `safety.md`, `roadmap.md` (item 3 done), `manual-tests.md` (new section D, 12 checks), both READMEs.
+
+**Technical notes**
+- Without the integrity switch the Broken report is simply the scan's `Issue.error` values. With it, `check_integrity` runs per CBZ: `ZipFile.testzip`, at least one image, and the cover, middle and last pages decoded fully with Pillow. A `.cbz` that is not a zip is reported as "Not a valid zip (may be a misnamed RAR)". Real RAR files use `7z t`, `unrar t` or `tar -tf`, whichever extractor was found, and only when **Open real .cbr files** is on.
+- Series and issue matching normalise case and punctuation, strip leading zeros from issue numbers, and compare the volume as text.
+- Cover clustering compares every pair of hashes (quadratic); fine for thousands of files, not yet measured on a very large library.
+- A missing-issue range ends at the larger of the highest owned issue and the largest `Count` seen in that series. Annual/special/one-shot/giant/king-size names, decimal issue numbers and files without a whole issue number are counted as ignored, not as gaps.
+- Moving duplicates removes the moved files from the in-memory results and re-draws the table; the scan cache entries for them are dropped at the next scan.
+- Results exist only in memory for the session; the scan cache is the only thing stored.
+
+**Bugs found and fixed:** none in the shipped code during this session. Test-script mistakes (an off-by-one file count, a fixture whose cover coincided with another, a console encoding error printing check-box glyphs) were fixed in the tests.
+
+**Verification:** scripted tests ran and passed. *Logic* (generated library): healthy CBZ passes; a text file named `.cbz`, a zip with no images, a zip with an undecodable middle page and a CBZ with a flipped byte are all reported; a fake RAR fails the extractor test; duplicates found by name and by identical size; a re-encoded, resized copy of a cover clustered at 1 bit apart and not reported when already grouped by name; missing issues `#4, #7-#8, #10-#12` with the end taken from `Count`; start-at-lowest versus from-#1; annuals and decimals ignored; wishlist lines; page-count, size and cover-height flags. *Window* (headless, real widgets): scan with progress; all four tables filled; the full integrity switch; tick boxes (pre-ticked smaller copy, toggling, Move button enabling); Move to Archive declined then accepted, producing `Archive/<name>.bak` and updating the table; clipboard wishlist and saved `.txt` and `.csv`; CSV export for each report; a similarity scan stopped part-way; cache hits on a repeat scan; theme switch and settings round-trip; changing folder clearing results; the whole app starting with the new page registered. `ruff --select F,E9` was clean, the earlier scan, metadata and logic tests still passed, and every doc link resolved.
+Not run: real comics or real RAR files, a large library, YACReader, or a visual check of the page. Those are manual tests D1 to D12.
+
+**Known issues:** see [Known limitations](known-limitations.md): similarity levels, quality limits and missing-issue rules are untested on real data.
+
+---
+
+## 2026-10-06 23:27 +11:00 · Session 20: shared library scan (roadmap item 2) and manual test plan
+
+**Summary:** New `library_scan.py` gives every future tool one way to read a library: an `Issue` record per comic, optional deep reading, and a disposable cache. It has no window yet; a command-line report exists so it can be checked by hand. A manual test plan covering items 0 to 2 was added.
+
+**Decisions**
+- No UI this session, as the roadmap said. A CLI (`python library_scan.py FOLDER`) was added so there is something a person can run and check.
+- Deep mode reads page count, cover size and cover hash from the first page only. A full CRC test is left to the Audit tool.
+- A `.cbz` that is not a zip is an error (`Not a valid zip`); a `.cbr` that is a real RAR is "unknown" unless `--deep-cbr` is given.
+- Parsed filename fields are not cached, so parser changes apply immediately.
+
+**Changes by file**
+- `library_scan.py` (new): `Issue` and `ScanResult` dataclasses, `scan_library(...)`, `cover_hash` (64-bit difference hash via Pillow), `hash_distance`,
+  cache load/save, `default_cache_path`, and `main()` for the command line (`--deep`, `--deep-cbr`, `--no-recursive`, `--no-cache`, `--cache-file`, `--csv`, `--limit`).
+- `docs/manual-tests.md` (new): hands-on checks A (backups), B (metadata extensions) and C (library scan), each with an expected result.
+- `docs/architecture.md` (new section "The library scan"), `docs/getting-started.md` (cache location, command-line use), `docs/known-limitations.md`,
+  `docs/roadmap.md` (item 2 marked done), `docs/README.md` and the root `README.md` (link to manual tests).
+
+**Technical notes**
+- File discovery reuses `rename_core.find_files`, so `Archive` folders are skipped and `include_other` adds `.pdf` / `.epub` as light records.
+- Cache file: `{"version": 1, "entries": {<lower-cased path>: {size, mtime, ci, ci_read, deep, pages, error, cover_w, cover_h, cover_hash}}}`.
+  An entry is reused only when size and mtime match and it holds what is asked (light entries never serve a deep scan, except real-RAR `.cbr` files that deep mode skips anyway).
+  Entries for deleted files under the scanned root are pruned after a complete scan (not after a stopped one). Writes go through a temp file and replace.
+- JPEG covers are decoded with `Image.draft` at about 64 px, which keeps the hash cheap.
+- `from __future__ import annotations` keeps `int | None` annotations valid on Python 3.9, the documented minimum.
+- A scan error on one file (locked, vanished) yields an `Issue` with `error` set instead of aborting the scan.
+
+**Bugs found and fixed:** the first version treated any non-zip `.cbz` as an unreadable-RAR "unknown" instead of an error, and reused light cache entries for it
+in deep mode. The test caught it; deep mode now flags it and the cache rule was adjusted. Extractor errors were multi-line; they are now collapsed to one line for tables and CSV.
+
+**Verification:** a scripted test with a generated library ran and passed: the Archive folder skipped; `.pdf` excluded unless asked; light-scan fields from names and `ComicInfo.xml` (including `Count` and `Publisher`); a zip-backed `.cbr` read in place and a fake RAR left unknown; the progress callback; a second run served entirely from cache;
+a deep scan after a light one re-reading as needed and then fully cached; page counts and cover sizes; `Not a valid zip`, `No images found` and `Cover unreadable` errors;
+a fake RAR with `--deep-cbr` giving a captured extraction error; a modified file re-read alone and a deleted file pruned from the cache; a corrupt cache file ignored and rewritten;
+`use_cache=False` writing nothing; the stop event ending a scan after three files; non-recursive and `include_other` listings; and the CLI writing a CSV and returning 2 for a missing folder.
+Cover hashes: the same generated cover re-encoded smaller and at lower quality differed by 1 bit; a different cover by 33. `ruff --select F,E9` was clean and every doc link resolved.
+Not run: any real RAR file, real comic covers, a large library for timing, or the GUI. Those are in [manual-tests.md](manual-tests.md).
+
+**Known issues:** the similarity threshold and scan speed are untested on real data; the scan has no window yet.
+
+---
+
 ## 2026-10-06 23:20 +11:00 · Session 19: metadata extensions (roadmap item 1)
 
 **Summary:** The Metadata tool now handles issue count, reads more `ComicInfo.xml` fields, and can set fixed values (Series Group, Genre, Alternate series, Publisher) on the checked rows.

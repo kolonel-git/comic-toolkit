@@ -17,4 +17,11 @@
   or Publisher (they appear only in what gets written).
 - YACReader reads `ComicInfo.xml` **only if you enable it** (Settings > General) **and update the library** afterwards, so metadata written
   by the Metadata and Clean-up tools won't show until you do.
+- **The scan's deep mode reads only each archive's first page**, so it can miss corruption deeper in a file; use the Audit tool's full integrity test for that.
+  Real RAR files are skipped unless **Open real .cbr files** (or `--deep-cbr`) is on. The cover-similarity levels (Strict 4, Normal 8, Loose 12 differing bits of 64)
+  are untested on real covers (see [manual tests](manual-tests.md), C7 and D5).
+- **Audit reports are heuristics.** Duplicates by series/issue depend on filename parsing; identical size can be a coincidence; covers from different editions
+  of the same issue look alike (and variant covers may not). Missing-issue gaps assume numbering is continuous, so series with deliberate gaps (or issue #0, which is
+  treated as not expected) will show false gaps. The quality limits (pages, size, cover height) are fixed constants in `audit_core.py`.
+- **The audit holds its results in memory only.** Nothing is saved between runs except the scan cache; a very large library shows every row at once.
 - Python is required to run; a double-click `.exe` is planned.

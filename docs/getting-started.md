@@ -17,3 +17,15 @@ Some `.cbr` files are really zips and need no extractor.
 
 Options for every tool and the theme are saved to `settings.json` next to the program when you close the window, and
 restored on next launch. Delete the file to reset to defaults.
+
+The library scan keeps a cache at `%APPDATA%\ComicToolkit\cache.json`. It only speeds up repeat scans, is safe to delete, and is never
+the source of truth about your comics.
+
+## Checking a library from the command line
+
+```
+python library_scan.py "D:\Comics" --deep --csv library.csv
+```
+
+This lists every comic with the series, issue, year and (with `--deep`) page count and cover size, and can write the table to CSV.
+See [Architecture](architecture.md#the-library-scan) for the options.
