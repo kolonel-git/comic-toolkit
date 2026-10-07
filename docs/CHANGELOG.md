@@ -12,6 +12,69 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-07 20:40 +11:00 · Session 28: Renamer revamp (cards, a format per type, full formatting options, year fixes)
+
+**Summary:** Two bugs reported against the Renamer (years not found even in clear brackets; a year used as the volume) were reproduced and fixed, and the tool was rebuilt around reviewing one file at a time on a card, a naming format per comic type, and a complete set of formatting options grouped under four settings tabs.
+
+**Bugs reproduced and fixed**
+- *Year not found:* only plain `(2016)`-style groups worked. `(Oct 2016)`, `(October 2016)`, `(2016, DC)`, `(DC 2016)`, `(2016 Digital)`, `(2016-)`, `(05-10-2016)`, `(1/2016)`, `(Summer 2016)` and a group starting with an invisible character all returned no year (34 test names now pass). A year is now taken from inside any bracket group (not an "(of 12)" count), and a bare year next to an issue number (`Batman 001 2016`, `Batman 2016 001`, `Batman.001.2016`) also counts. Years are limited to 1900 to next year, so `Spider-Man 2099` is untouched.
+- *Year used as the volume:* `read_comicinfo` accepted any positive `Volume`, and ComicInfo files very often store the start year there (Volume 2016), so names and folders got `v2016`. A year-like Volume is now returned as the year; the same applies to `v2016` / `Vol 2016` in a filename, with a note shown on the card.
+
+**Decisions**
+- Review is a card per file plus a list view; both edit the same data and nothing touches disk until Apply.
+- A template per type (15 types), each editable, instead of one for issues and one for collected editions; presets only fill a template.
+- Formatting is a small template language (optional groups, fallbacks, escapes, per-token formats) plus text options, so every choice is visible and documented rather than hidden in presets.
+- The old Renamer settings are not migrated (the option set changed shape); new per-type templates start at the old defaults.
+- Not done: saving hand edits between runs, writing the detected format into ComicInfo, per-field "source" badges on the card.
+
+**Changes by file**
+- `rename_core.py` (rewritten parser): year detection in any bracket, year spans, year-like volumes, `tags`, `original`, `year_end`, `notes`; `apply_type` for all 15 types; `apply_edits` for values typed on a card; `merge` keeps `year_end` in step; `read_comicinfo` turns a year-like Volume into the year. Single-issue parsing was checked against a snapshot of 23 earlier results (no change).
+- `name_format.py` (new): `DEFAULT_TEMPLATES` for every type, issue and collected presets, tokens (`series title issue volume year years year_end count range format type publisher tags original`), token formats (`{issue:3}`, `upper lower title sentence nospace snake dash`), fallbacks `{a|b}`, optional `[ ]` groups, escapes `\[ \] \{ \}`, `check_template`, text options (padding, case modes, leading article, separators, illegal characters, extension case, maximum length), `build_name`, `build_folder` (nested folders), `FORMAT_GUIDE`.
+- `page_rename.py` (rewritten): Cards view (file list with filters and status, card with Type, Series, Title, Issue, Volume, Issue range, Year, Year end, Issue count, live New name, destination, notes, Reset, Automatic name, Rename switch) and List view; Detect, Names, Text and Folders tabs; template editor with validation, a live example, preset fill, copy-to-group and a format guide window; folder template and presets; collected subfolder name; conflict mode "Add a number"; re-parsing on every option change.
+- `ui_kit.py`: `Form.heading` (group title with a rule).
+- Docs: `renamer-templates.md` (rewritten: every option), `tools.md`, `architecture.md`, `known-limitations.md`, `manual-tests.md` (section F replaced), both READMEs.
+
+**Technical notes**
+- A card edit goes into `Item.edits`; the name is rebuilt from detected fields, then the type override, then the edits, so clearing a field removes its optional group. Typing a name by hand sets `manual_stem`, which survives option changes until the card is reset or the name returned to automatic.
+- Statuses: Ready, Unchanged, Skipped, Numbered, Exists, Duplicate, No series. "Add a number" assigns `Name (2)` etc. to checked colliding files in list order, and treats unticked or unchanged files as occupying their current names.
+- The Library audit and the duplicate checks use the same parser, so TPBs have a volume, not an issue, and a year-like volume no longer groups series wrongly.
+
+**Verification:** a scripted test ran and passed. *Parser:* 21 year/volume forms including every reported failure, spans, tags and the original name; a CBZ with ComicInfo Volume 2016 read as year 2016 and no volume, and a real volume kept; a 23-name snapshot of single-issue parsing unchanged. *Engine:* padding, case, fallbacks, group dropping, literal brackets, article modes, separators, illegal-character modes, extension case, maximum length, template validation (unbalanced, unknown token, unknown format, no tokens), folder templates (nested, empty publisher, collected volume), every type's default template, and the guide listing every token. *Window (headless):* a messy folder of 19 files across `.cbz`, `.cbr`, `.pdf` and `.epub` with the expected names and statuses (including `(Oct 2004)`, `v2016` and the ComicInfo year-volume); per-type templates changing only their type; the Names editor writing to the chosen type with validation and an example; presets and copy-to-group; each text option; card navigation, editing, type override, reset, manual name, skip, Previous/Next and the four filters; opening a card from the list; detection switches; conflict numbering; folder templates with publisher, nested folders and the collected subfolder; a real apply that lost nothing and was idempotent on rescan; settings round trip, an old-format settings file loading without errors, theme switch, the guide window and every tab. Earlier scan, audit, metadata, order, backup and archive tests and `ruff --select F,E9` still passed. Screenshots of the card and the Names tab were checked in dark mode and led to moving the new name to the top of the card, shortening the toggle, and widening the status column; the Text and Folders tabs and light mode were not viewed. Not run: a real, untidy library (manual tests F1 to F9).
+
+**Known issues:** see [Known limitations](known-limitations.md).
+
+---
+
+## 2026-10-07 17:43 +11:00 · Session 27: Renamer for TPBs, compendiums and messy folders
+
+**Summary:** The Renamer was built around single issues, so TPBs and compendiums were mis-named (a `Vol 3` became issue 3, `Batman #1-12` became issue 12, format words were lost or left in the series name). The parser now recognises collected editions, and the Renamer names them with their own templates, shows a Type for every file, and handles the mess that comes with mixed folders.
+
+**Decisions**
+- Collected editions get a separate template and padding, so the single-issue styles behave exactly as before. A snapshot of 23 existing filenames parsed identically before and after the parser change.
+- A bare `Vol 3` stays an issue by default (manga convention, no change in behaviour); a setting switches it to a volume, and a per-file Type override covers the rest.
+- Annuals, specials and one-shots keep the word in the series name rather than becoming a format.
+- Series spelling is only unified for case and a leading *The*; no alias database.
+- Not done: filtering the table by type, and writing the detected format into `ComicInfo.xml`.
+
+**Changes by file**
+- `rename_core.py`: `parse_filename(stem, volume_as_issue=True)` now also returns `format`, `range`, `years`, `collected` and `kind`. New detection: format words (TPB/trade paperback, hardcover/HC, omnibus, compendium, deluxe edition, library edition, epic collection, graphic novel/OGN/GN, box set, collection), issue ranges (`#1-12`, `001-012`, `Issues 1-6`), year spans (`1996-1997`), volume words and numerals (`Book One`, `Volume Two`, `Vol. III`), `Series - Title` splitting, `Walking Dead, The` inversion, dotted names, a trailing bare year, unbracketed `Digital`/`WebRip`/`c2c`/`Hybrid`, and generic junk names (`scan0001`, `IMG_0042`, `Untitled`) treated as having no series. New: `COLLECTED_PRESETS`, `COLLECTED_STYLES`, `VOLUME_PADS`, `COLLECTED_FOLDERS`, `VOLUME_MODES`, `TYPES`, `apply_type`; `build_stem` takes a volume padding; `merge` keeps `years` in step with a ComicInfo year; `series_folder` ignores a collected volume.
+- `page_rename.py`: a **Type** column (double-click or right-click to override), the collected-editions options (style, custom template, `Vol 3` interpretation, volume padding, subfolder), re-parsing on option change, series-folder grouping that ignores a leading *The* and case, and a count of collected files in the summary.
+- Docs: `renamer-templates.md` (collected editions section), `tools.md`, `architecture.md`, `known-limitations.md`, `manual-tests.md` (section F), `README.md`.
+
+**Technical notes**
+- Format detection searches the whole name (including brackets, so `[TPB]` counts) and removes every format word from the series text; the first match in the specificity order decides the format. With a format present, a trailing number is the volume and a ` - ` splits series and title; without one, the old issue logic runs untouched.
+- A range needs both ends to be 1 to 4 digits, the second larger than the first, and the first below 1900, so `Wolverine 2000-2001` is not read as issues.
+- Because a TPB now has a volume but no issue, the Library audit no longer counts it as a gap-filling issue and the duplicate check no longer pairs `Saga Vol 3` TPB with `Saga 003`.
+- Overrides: *Issue* turns a lone volume back into an issue; any other choice makes the file collected and moves an issue number into the volume.
+
+**Bugs found and fixed:** `scan0001.cbz` was parsed as series `scan` and offered the name `scan 001`; generic names now have no series. `Saga, Vol. 03 - Title` left `Saga, - Title` as the series; the title is now split off. `Batman.001.2016` read 2016 as the issue; a trailing bare year is now the year. All were caught by the scripted tests and fixed before finishing.
+
+**Verification:** scripted tests ran and passed. *Parser:* a 23-name snapshot of existing behaviour unchanged; about 35 TPB-style names checked by eye and the important ones asserted (formats, volumes, ranges, year spans, word and roman numerals, inverted *The*, dotted names, junk endings, annuals). *Window (headless):* a messy folder of 15 files across `.cbz`, `.cbr`, `.pdf` and `.epub` (issues, TPBs, hardcover, omnibus, compendiums, epic collection, a range, an annual, a junk name and a nested file) with the expected new names, types and statuses; the bare-`Vol 3` collision flagged *Exists* and then resolved by the volume setting; per-file overrides in both directions and back to auto; all four collected styles, a custom template and volume padding; series folders with and without the `Collected Editions` subfolder and the *Series + volume* style; *The* and case grouping; an apply that changed only ready files, lost nothing and was idempotent on rescan; settings round-trip and theme. The earlier scan, audit, metadata, order, backup and archive tests and `ruff --select F,E9` still passed. A screenshot of the Renamer was checked in dark mode, which led to a wider Type column. Not run: a real, untidy library, so detection quality on real names is unmeasured (manual tests F1 to F7).
+
+**Known issues:** see [Known limitations](known-limitations.md).
+
+---
+
 ## 2026-10-07 17:20 +11:00 · Session 26: removing the issue number so YACReader sorts by filename
 
 **Summary:** YACReader sorts by issue number before filename, so a comic's `Number` tag can override the order you want. The Metadata and Reading order tools can now delete that tag, which makes YACReader fall back to the filename.

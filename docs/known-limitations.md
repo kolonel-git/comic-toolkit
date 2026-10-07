@@ -6,6 +6,9 @@
 - **Whole-archive extraction for RAR.** Opening a `.cbr` extracts all of it to a temp folder, so large CBR batches are slower than CBZ.
 - **Windows-only pieces:** Folder icons (`ctypes`, `desktop.ini`), the *Open folder* buttons (`os.startfile`). Explorer may need a refresh before new folder icons appear.
 - **Filename parsing is heuristic.** Unusual names (e.g. titles with ` - ` before an issue number) can parse wrongly; the review tables exist for that reason.
+- **Collected-edition detection is keyword based.** A series whose real title contains a format word (for example a series called *Deluxe*) is read as a collected edition; change its type on its card or in the Type column. A bare `Vol 3` is an issue unless you change **A name with only “Vol 3” is**. Series spelling is not unified beyond case and a leading *The*: `Walking Dead` and `Walking Dead Deluxe` are different series.
+- **Renamer settings from before the revamp are not carried over.** The old naming style, custom template and collected-style choices are ignored; everything else of the page starts at its defaults, and the new per-type templates start at the old defaults.
+- **Renamer details.** Hand edits on a card exist only until you rescan, rename or leave the app (nothing is saved between runs). The template box is narrow, so a long template scrolls inside it; the live example under it shows the result. `{publisher}` is empty unless ComicInfo.xml is used and has a publisher. A year is only recognised from 1900 to next year, and a year in the *middle* of the series name is not touched.
 - **Series grouping from filenames** is a guess: it strips trailing issue/volume numbers and bracketed tags.
 - **`ComicInfo.xml` rewrite** drops XML namespace declarations and appends new elements; field values and existing elements are kept.
 - **`Archive` backups are renamed `.bak`, untested in YACReader.** Backups and converted `.cbr` files are stored as `<name>.cbz.bak` /

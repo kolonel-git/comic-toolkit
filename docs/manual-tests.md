@@ -180,6 +180,40 @@ Use copies of real issues from at least two series (6 to 10 files) plus one `.cb
   *Expect:* readable, no clipping of the Status column, drag stays smooth, the side panel scrolls to every option.
   Result:
 
+## F. Renamer: cards, formats and messy folders
+
+Make a deliberately messy folder of copies: single issues, TPBs, hardcovers, omnibuses, compendiums, a `.cbr`, a `.pdf`, an `.epub`, `scan0001.cbz`, names written in
+different styles (`Saga Vol 1 TPB (2012)`, `saga_vol_2_tpb`, `Walking Dead, The Compendium 2`, `Batman #1-12 (Collected)`, `X-Men Epic Collection v12 - Title`), and the cases that
+used to go wrong: `Batman 001 (Oct 2016)`, `Batman 001 (2016, DC)`, `Wolverine v2016 003`, and a CBZ whose `ComicInfo.xml` has `Volume` set to a year.
+
+- [ ] **F1. Years.** Open the folder and look at the New name of each year case above.
+  *Expect:* every year is found (`(Oct 2016)`, `(2016, DC)`, `(2016-10-05)`, `(2016-2017)`), and no name contains `v2016` or a year as a volume. Send me any year it still misses, with the exact name.
+  Result:
+- [ ] **F2. Cards.** In **Cards**, step through files with Previous / Next and by clicking the file list. On a card change Series, Issue, Year, Title and Type.
+  *Expect:* the New name and "Goes to" update as you type, the status chip changes, the file list row follows, **Reset this card** puts it back, typing in New name sets a name by hand and **Automatic name** undoes it, and the **Rename** switch skips the file. Nothing on disk changes yet.
+  Result:
+- [ ] **F3. List and filters.** Switch to **List**, double-click a name, a Type and a Current name; use the card filters (Needs attention, Issues, Collected editions, Edited by hand).
+  *Expect:* the name edits in place, the Type menu appears, the current-name double-click opens its card, and each filter shows the right files with sensible Previous / Next.
+  Result:
+- [ ] **F4. Detection.** Read the Type of every file (Names are in the card header and the list).
+  *Expect:* issues say Issue, annuals Annual, and TPBs, hardcovers, omnibuses, compendiums, deluxe and library editions, epic collections, graphic novels, box sets and ranges show their format. Tell me any file the tool gets wrong.
+  Result:
+- [ ] **F5. A format per type.** In **Names**, pick TPB and change its template, then Issue, then Annual; try a preset, **Copy this template to**, an invalid template (missing `]` or `}`, an unknown `{token}`), and tokens such as `{issue:4}`, `{series:upper}`, `{issue|volume}`, `\[{year}\]`, `{publisher}` and `{tags}`.
+  *Expect:* only files of that type change, validation messages appear for the bad templates, the example under the box matches the card, and the Format guide lists every token and option. Tell me any token or formatting option you wish existed.
+  Result:
+- [ ] **F6. Text options.** In **Text** try each option: padding, capitalisation, leading “The”, separator, illegal characters, extension case and maximum length.
+  *Expect:* every option visibly changes the names it should, and a non-number in Maximum length is ignored.
+  Result:
+- [ ] **F7. Folders and conflicts.** In **Folders** switch on **Move into folders**; try each folder preset, a custom template such as `{publisher}/{series}`, the collected subfolder (rename it, or empty it), and both conflict choices with `Saga 003` plus `Saga Vol 3` present.
+  *Expect:* folders match the template (nested with `/`), `The Walking Dead` and `Walking Dead` share a folder, a TPB never makes `Saga v1`, and *Add a number* gives `Name (2)` instead of flagging the second file.
+  Result:
+- [ ] **F8. Apply and repeat.** Apply, then rescan.
+  *Expect:* only ticked, Ready (or Numbered) files change, no file is lost or overwritten, PDF/EPUB/CBR rename too, and a second scan shows nothing left to rename.
+  Result:
+- [ ] **F9. Real library sample.** Point the Renamer at 100+ files from your real, untidy library and use Cards with the *Needs attention* filter.
+  *Expect:* few wrong types, years or series; send me the names it gets wrong so detection can be improved. Also tell me whether the card layout is comfortable at your window size and in light mode.
+  Result:
+
 ## When you're done
 
 Send me the failed items with what you saw (a screenshot or the exact message helps). Passing results can be summarised in one line.

@@ -80,6 +80,16 @@ class Form(ctk.CTkScrollableFrame):
         self._row += 2
         return cell
 
+    def heading(self, text):
+        """A bold group title with a rule under it. Hide and show it like any other row."""
+        box = ctk.CTkFrame(self, fg_color=PANEL)
+        box.grid(row=self._row, column=0, sticky="ew", pady=(20, 0))
+        ctk.CTkLabel(box, text=text, font=(FONT, 13, "bold"), text_color=TEXT, anchor="w").pack(fill="x")
+        ctk.CTkFrame(box, height=1, fg_color=BORDER, corner_radius=0).pack(fill="x", pady=(4, 0))
+        box.label = box
+        self._row += 1
+        return box
+
     @staticmethod
     def show(cell, on):
         for w in (cell.label, cell):

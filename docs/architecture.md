@@ -8,20 +8,21 @@
 | `ui_kit.py` | Shared look: (light, dark) palette, styled widgets, form rows, drop zone, page scaffold, table helpers |
 | `batch_page.py` | Base page for run-per-item tools (progress, log, Preview, Stop) |
 | `page_single.py` · `page_bulk.py` · `page_icons.py` | Cover extractor pages |
-| `page_rename.py` | Renamer page |
+| `page_rename.py` | Renamer page: card and list views, four settings tabs, per-type template editor, conflict handling |
 | `page_metadata.py` | Metadata page |
 | `page_convert.py` · `page_cleanup.py` | Archive tool pages |
 | `page_order.py` | Reading order page: issue list with drag and tick boxes, plan preview, write worker, copy mode |
 | `page_audit.py` | Library audit page: scan worker, four report tables, CSV and wishlist export, move-to-Archive for duplicates |
 | `comic_core.py` | Archive reading (`Comic`), cover rendering, output-path planning, shared constants |
-| `rename_core.py` | Filename parsing (including the issue count), `ComicInfo.xml` reading, name templating |
+| `rename_core.py` | Filename parsing (years in any brackets, year-like volumes, issue count, collected-edition format, volume, range, tags, series cleanup), type override and hand edits, `ComicInfo.xml` reading, file search and rename |
+| `name_format.py` | Naming: per-type templates and presets, tokens, token formats, fallbacks, escapes, template validation, text options, folder templates, the in-app format guide |
 | `archive_tools.py` | Verified zip rewriting: CBR to CBZ, clean-up, `ComicInfo.xml` stamping. `CI_TAGS` maps field names to XML tags and `merge_comicinfo` writes any of them, so new fields need only a `CI_TAGS` entry |
 | `reading_order.py` | Reading-order logic: ordering key, ComicInfo field mapping (story arc / alternate series), per-issue plan, block moves and send-to-top/bottom for multi-selection, preview text, in-place or copy write with optional filename prefix |
 | `audit_core.py` | Audit logic: integrity checks, duplicate grouping, missing-issue gaps, quality flags, thresholds. Never changes a file |
 | `library_scan.py` | Shared library scan: one `Issue` record per comic (name fields, `ComicInfo.xml` fields, and in deep mode page count, cover size and cover hash) with a disposable cache in `%APPDATA%\ComicToolkit\cache.json`. Also a command-line report. See below |
 | `folder_icons.py` | `folder.ico` / `desktop.ini` / `folder.jpg` generation (Windows) |
 
-Logic modules (`*_core.py`, `archive_tools.py`, `folder_icons.py`, `library_scan.py`, `audit_core.py`, `reading_order.py`) contain no UI code so they can be tested or reused
+Logic modules (`*_core.py`, `archive_tools.py`, `folder_icons.py`, `library_scan.py`, `audit_core.py`, `reading_order.py`, `name_format.py`) contain no UI code so they can be tested or reused
 from a command line.
 
 ## The library scan

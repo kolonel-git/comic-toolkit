@@ -6,7 +6,7 @@ Index of the Comic Toolkit docs. The project overview and quick start live in th
 |---|---|
 | [Getting started](getting-started.md) | Install, requirements, the RAR extractor for `.cbr` files, where settings are saved |
 | [The tools](tools.md) | What each tool does and its options: Single issue, Bulk folder, Folder icons, Renamer, Metadata, CBR to CBZ, Clean-up, Library audit, Reading order |
-| [Naming styles and templates](renamer-templates.md) | The eight Renamer presets and the custom template syntax |
+| [Naming styles and templates](renamer-templates.md) | Every Renamer option: template syntax, tokens, token formats, a format per type, text options, folders and how names are read |
 | [Safety model](safety.md) | Previews, verified writes, the `Archive` folder, conflict handling |
 | [Architecture](architecture.md) | Project layout and what each module is responsible for |
 | [Manual tests](manual-tests.md) | Hands-on checks that need real comics, the real window or YACReader, with an expected result for each |
