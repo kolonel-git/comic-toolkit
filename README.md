@@ -11,7 +11,7 @@ database. Everything works on the files and folders on disk.
 ## Quick start
 
 ```
-pip install customtkinter tkinterdnd2 pillow
+pip install customtkinter tkinterdnd2 pillow pypdf
 python comic_tool.py
 ```
 
@@ -30,6 +30,7 @@ The Home page shows the tools as cards, grouped as below. A Dark mode switch sit
 | **Archive Tools** | CBR to CBZ, Clean-up | Repack RAR comics as verified ZIPs; strip junk files and tidy page names |
 | **Library Audit** | Library audit | Scan a library for broken files, duplicates, missing issues and low-quality files, with CSV and wishlist export |
 | **Reading Orders** | Reading order | Arrange issues in the order to read them and record it in each comic's `ComicInfo.xml`, optionally also in the filenames or a folder of copies |
+| **ACEO Cards** | ACEO sheets | Fill full pages of 8 ACEO trading cards with the covers you pick, from the blank template PDF, and save a print-ready PDF |
 
 ## Safety at a glance
 

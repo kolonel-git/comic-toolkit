@@ -12,6 +12,81 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-07 22:04 +11:00 · Session 31: ACEO outline colour and thickness
+
+**Summary:** The card outlines on the ACEO sheets can now be given a colour (so they stay visible on a black background) and a thickness.
+
+**Decisions**
+- The default colour is automatic: black on a white or light background, white on a black one, so a black background works without touching anything. Black, white, light grey, grey, red, gold and a custom hex colour are also offered.
+- The thickness defaults to the template's own (read from its `w` operator, 1 point for the bundled file); an empty or invalid value keeps it.
+- An invalid custom colour falls back to automatic and the page says so under the box.
+
+**Changes by file**
+- `aceo_core.py`: `OUTLINE_COLORS`, `parse_hex`, `outline_rgb`, `outline_width`; `read_template` also reads the template's line width; `outline_overlay` builds a transparent page with the template's rectangles stroked in the chosen colour and width and `render_pdf` merges that instead of the template page; the preview outlines use the same colour and width.
+- `page_aceo.py`: **Outline colour** menu, **Custom colour (#RRGGBB)** box with validation message, **Outline thickness** box; all re-draw the preview.
+- Docs: `tools.md`, `architecture.md`, `manual-tests.md` (G4).
+
+**Technical notes**
+- The overlay uses the template's rectangles (converted to PDF coordinates), not the template page itself, which is why the colour can change; with the default settings the result is the same black 1 point lines as before.
+- pypdf rewrites the number formatting when it merges pages, so tests read the stroke colour and width with a pattern instead of an exact string.
+
+**Verification:** scripted tests ran and passed: hex parsing (6 and 3 digits, with and without `#`, bad input), automatic contrast for white, black and light grey backgrounds, named and custom colours, a bad hex falling back, thickness parsing; PDFs created with automatic colour on black (white lines), gold, and custom red at thickness 3, each with the right stroke colour, width and eight rectangles on a Letter page with its picture; the preview drawn in white, red and thick; and in the window the automatic colour on a black background, the invalid-colour message and its clearing, thickness parsing, and a PDF made with a custom colour and thickness 2. Earlier ACEO, renamer, order, audit, scan and metadata tests and `ruff --select F,E9` still passed. A screenshot of the new options and the preview on a black background was checked in dark mode; the PDF itself was not opened in a viewer, so the line colour in a real viewer or print is unconfirmed (manual test G4).
+
+**Known issues:** unchanged.
+
+---
+
+## 2026-10-07 21:50 +11:00 · Session 30: ACEO sheets layout and full-screen preview
+
+**Summary:** The ACEO sheets page was rearranged so the cover list gets most of the room and the sheet preview sits at the right edge, and a **Full screen** button shows the sheet as large as the screen allows.
+
+**Changes by file**
+- `page_aceo.py`: the cover list now expands to fill the space (the file name column is wider and the Sheet · card column is always visible); the preview moved to a fixed-width column at the right edge and sizes the sheet to the height available; the side panel is grouped under Template, Covers, Cards and Output headings; new **Full screen** button and viewer (`open_full`, `close_full`, `_full_draw`) with ◀ ▶, Left/Right keys, **Close** and Esc, which redraws from the original cover bytes at the window's size.
+- Docs: `tools.md`, `manual-tests.md` (G1b).
+
+**Bugs found and fixed:** the first rearranged version showed only part of the sheet because the pane size (pixels) was multiplied by the display scaling a second time before drawing; sizes are now taken in pixels and converted once. Found in a screenshot and covered by a new test.
+
+**Technical notes**
+- The preview is drawn from the in-memory cover copies at the pane's pixel size; the full-screen view decodes the original cover bytes at the size of the window, so it is sharper. Both are re-drawn when the window or pane changes size (debounced).
+- The viewer shares the page's current sheet number, so moving in either one moves both.
+
+**Verification:** the scripted ACEO tests were extended and passed: the list is wider than the preview and the preview sits to its right; the sheet fits inside the side pane and inside the full-screen window (checked in pixels after display scaling); the viewer opens, shows "Sheet n of m", moves with the Right and Left keys and keeps the page's sheet in step, reuses its window on a second click, closes with Esc, and does not open when there are no covers; the earlier ACEO, renamer, order, audit, scan, metadata, backup and archive tests and `ruff --select F,E9` still passed. A screenshot of the page at 1200 × 780 in dark mode was checked (list columns, preview position and full sheet visible). The full-screen view was not captured as a screenshot, so how it looks on your screen is unconfirmed (manual test G1b).
+
+**Known issues:** unchanged.
+
+---
+
+## 2026-10-07 21:33 +11:00 · Session 29: ACEO sheets tool
+
+**Summary:** New Home group **ACEO Cards** with the **ACEO sheets** tool: it reads the card slots from the blank template PDF in the project (`ACEO - Full Page BLANK.pdf`), fits the covers you choose into them, eight to a page, and writes a print-ready PDF. A preview shows each sheet before it is made.
+
+**What the template is:** a Letter page (612 × 792 pt) containing eight 252 × 180 pt rectangles (3.5" × 2.5", landscape) drawn as outlines, in two columns of four, rows touching. The tool reads those rectangles from the page itself, so another template with plain rectangles works too.
+
+**Decisions**
+- A portrait cover is turned 90° by default to fill the landscape card (top of the cover on the left, so the sheet is turned clockwise to read it); this can be changed or switched off, and the cover can instead be fitted whole or stretched.
+- Pages are rendered as pictures with Pillow at 150, 300 (default) or 600 dpi and written with `pypdf`, then the template's own vector outlines are merged back on top, so the cut lines stay crisp. This avoids adding a PDF-drawing dependency; the cost is that the PDF has no selectable text.
+- Comics give their first page (or last page); loose images are used as they are. Archive folders are skipped when adding a folder.
+- `pypdf` is a new dependency (only for this tool).
+- Not done: card text or labels, rounded corners, bleed and crop marks, other layouts than the template's.
+
+**Changes by file**
+- `aceo_core.py` (new): `read_template` (finds `x y w h re` rectangles through the page's `cm` transforms and returns slots in reading order), `find_sources`, `load_cover`, `decode`, `fit_card` (fill, fit, stretch; turning; background), `compose_sheet`, `expand` (copies), `chunk`, `render_pdf` (one page at a time, outlines merged, `.part` file then replace, stop support).
+- `page_aceo.py` (new): `AceoPage` with drop and add buttons, a cover list with ▲ ▼ Top Bottom Remove Clear (reusing the Reading Order block helpers), a live sheet preview with navigation, options, a template chooser, a render worker with progress and Stop, and "open when done".
+- `comic_tool.py`: registers the page, the `aceo` card and the "ACEO Cards" group; the install line gains `pypdf`.
+- Docs: `tools.md`, `architecture.md`, `getting-started.md`, `known-limitations.md`, `manual-tests.md` (section G), both READMEs.
+
+**Technical notes**
+- Slot positions come from the template's content stream, converted to a top-left origin; a rectangle smaller than 10 pt is ignored. For the bundled file the content stream flips the page with `1 0 0 -1 0 792 cm`, which the reader applies.
+- One real bug was found while building: `page.get_contents()` is falsy for a valid content stream, so the first version found no slots; it now compares with `None`.
+- The page image is saved by Pillow with `resolution=dpi`, which makes the PDF page exactly the template's size (612 × 792 pt at every quality).
+- The preview uses small in-memory copies of each cover; the PDF is made from the original image bytes.
+
+**Verification:** scripted tests ran and passed. *Core:* the template read as 8 slots of 252 × 180 pt in the right order; cover fitting (top on the left or right, upright and letterboxed on black, crop, stretch, landscape left unturned); sheets with empty slots, a margin and an absurd margin; sheet counting, copies and chunking; folders and images as sources with Archive skipped; first and last page covers; a two-sheet PDF at 150 dpi with the right page size, outline operators on the page, pixel colours in the first card and blank empty slots, outlines off, a 600 dpi page of 5100 × 6600 pixels, a stop request leaving nothing behind, a template with no rectangles rejected, and a different two-slot template read and rendered. *Window (headless):* adding a folder with a broken comic, a PNG and a text file (broken one skipped with a message); counts and sheet/card positions; ordering and removal; copies; sheet navigation; creating a PDF through the save dialog (two sheets, outlines); last-page covers with outlines off; a cancelled dialog; a bad template, a missing template path falling back to the bundled one; stop during a 600 dpi render; settings round trip, theme and every fit/turn combination in the preview; the whole app registering the page. Earlier tests and `ruff --select F,E9` still passed. A screenshot of the page showed the list, the preview and the options correctly in dark mode. Not run: printing a sheet and measuring it, opening the PDF in other viewers, real comic covers at scale (manual tests G1 to G8).
+
+**Known issues:** see [Known limitations](known-limitations.md).
+
+---
+
 ## 2026-10-07 20:40 +11:00 · Session 28: Renamer revamp (cards, a format per type, full formatting options, year fixes)
 
 **Summary:** Two bugs reported against the Renamer (years not found even in clear brackets; a year used as the volume) were reproduced and fixed, and the tool was rebuilt around reviewing one file at a time on a card, a naming format per comic type, and a complete set of formatting options grouped under four settings tabs.

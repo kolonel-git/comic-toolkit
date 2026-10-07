@@ -61,3 +61,14 @@ A repeat scan of an unchanged library is fast, because results are cached (see [
 |---|---|
 | **Reading order** | Arrange issues (from one or several folders) in the order you want to read them and record it in each CBZ's `ComicInfo.xml` as a story arc, an alternate series, or both. Select several issues and drag, ▲ ▼ or Top / Bottom them together, **Suggest order** pre-sorts, untick to skip an issue, and a table previews the new number, filename and any arc being replaced. **Preview changes** lists every field that would change, without writing anything. Optional filename prefixes (`01 - Name`, `[01] Name`), **Remove issue numbers** (deletes `Number` from each issue so YACReader sorts by filename, best paired with the prefix), and an option to stamp copies in a new folder instead of the originals. See [Reading Order](reading-order.md). |
 
+## ACEO Cards
+
+| Tool | What it does |
+|---|---|
+| **ACEO sheets** | Fills full pages of ACEO trading cards with the covers you choose and saves a print-ready PDF. Drop comics, folders or cover images on the page (or use **Add folder…**); the first page of each comic is its cover (or pick the last page for a back cover). The sheets are laid out from the blank template PDF, `ACEO - Full Page BLANK.pdf` (a Letter page with eight 3.5" × 2.5" cards), the cover list takes most of the page, and a preview of each sheet as it will print sits at the right edge, with Previous and Next and a **Full screen** button that shows the sheet as large as the screen allows (arrow keys move between sheets, Esc closes it). Reorder with ▲ ▼ Top Bottom, remove or clear covers, and print several of each with **Copies of each cover**. |
+
+The options sit in the side panel under four headings (Template, Covers, Cards, Output): **Fit the cover** (fill the card and crop the edges, fit the whole cover inside, or stretch); **Turn the cover** (a portrait cover is turned 90° to fill a landscape card, top on the left or right, or never turned);
+**Behind the cover** (white, black or light grey, seen when the whole cover is fitted inside); **Margin inside each card** (points); **Card outlines** (draws the template's card rectangles over the covers as crisp lines) with an **Outline colour** (automatic, which is black on a white or light background and white on black; black, white, light grey, grey, red, gold, or a custom `#RRGGBB`) and an **Outline thickness** (empty keeps the template's, 1 point for the bundled one); **Print quality** (150, 300 or 600 dpi);
+**Choose…** another template PDF (any PDF whose card slots are drawn as rectangles; the slot count and size are read from it); **Open the PDF** when done. A last sheet with fewer covers leaves its other slots blank.
+The page shows a summary like "10 covers = 10 cards on 2 sheets (6 empty slots)" and the sheet and card each cover lands on. Originals are never changed.
+

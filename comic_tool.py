@@ -15,10 +15,12 @@
     Library audit - broken files, duplicates, missing issues, quality flags
   Reading Orders
     Reading order - arrange issues in reading order and record it in ComicInfo.xml
+  ACEO Cards
+    ACEO sheets   - fill pages of 8 ACEO cards with covers and save a PDF
 
 Light and dark mode: toggle in the sidebar; first launch follows Windows.
 
-pip install customtkinter tkinterdnd2 pillow
+pip install customtkinter tkinterdnd2 pillow pypdf
 CBR support needs 7-Zip, unrar, or Windows 11's built-in tar.exe (reads RAR).
 """
 import json
@@ -27,6 +29,7 @@ from pathlib import Path
 import customtkinter as ctk
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
+from page_aceo import AceoPage
 from page_audit import AuditPage
 from page_bulk import BulkPage
 from page_cleanup import CleanupPage
@@ -64,6 +67,8 @@ TOOLS = {  # key -> glyph, tint, title, description
               "Find broken files, duplicates, missing issues and low quality."),
     "order": ("1·2", TINT_PURPLE, "Reading order",
               "Put issues in reading order and record it inside each comic."),
+    "aceo": ("▤", TINT_YELLOW, "ACEO sheets",
+             "Fill full pages of 8 ACEO cards with covers and save a PDF."),
 }
 GROUPS = [  # header, blurb, tool keys
     ("Comic Cover Extractor", "Pull cover images out of CBZ and CBR files.", ["single", "bulk", "icons"]),
@@ -72,6 +77,7 @@ GROUPS = [  # header, blurb, tool keys
     ("Archive Tools", "Repack and tidy the archives themselves.", ["convert", "cleanup"]),
     ("Library Audit", "Check the whole collection for problems.", ["audit"]),
     ("Reading Orders", "Show which comic to read next.", ["order"]),
+    ("ACEO Cards", "Print covers as trading cards.", ["aceo"]),
 ]
 
 
@@ -163,7 +169,8 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
                       "bulk": BulkPage(content), "icons": IconsPage(content),
                       "rename": RenamePage(content), "metadata": MetadataPage(content),
                       "convert": ConvertPage(content), "cleanup": CleanupPage(content),
-                      "audit": AuditPage(content), "order": OrderPage(content)}
+                      "audit": AuditPage(content), "order": OrderPage(content),
+                      "aceo": AceoPage(content)}
         self.nav = {}
         ctk.CTkLabel(side, text="Comic Toolkit", font=(FONT, 15, "bold"), text_color=TEXT,
                      anchor="w").pack(fill="x", padx=18, pady=(24, 14))

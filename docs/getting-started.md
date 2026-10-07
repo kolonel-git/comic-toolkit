@@ -3,11 +3,11 @@
 [< Docs index](README.md)
 
 ```
-pip install customtkinter tkinterdnd2 pillow
+pip install customtkinter tkinterdnd2 pillow pypdf
 python comic_tool.py
 ```
 
-Tested on Python 3.14 (Windows 11). Python 3.9+ is required (`xml.etree.ElementTree.indent`).
+`pypdf` is only used by the ACEO sheets tool. Tested on Python 3.14 (Windows 11). Python 3.9+ is required (`xml.etree.ElementTree.indent`).
 
 **For `.cbr` (RAR) files** you need one RAR-capable extractor on the machine. The app looks for, in order:
 `7z` / `7za` / `unrar` on PATH, 7-Zip in `C:\Program Files\7-Zip`, then Windows' built-in `tar.exe` (bsdtar reads RAR).

@@ -12,17 +12,19 @@
 | `page_metadata.py` | Metadata page |
 | `page_convert.py` · `page_cleanup.py` | Archive tool pages |
 | `page_order.py` | Reading order page: issue list with drag and tick boxes, plan preview, write worker, copy mode |
+| `page_aceo.py` | ACEO sheets page: cover list with ordering, sheet preview, options, PDF creation worker |
 | `page_audit.py` | Library audit page: scan worker, four report tables, CSV and wishlist export, move-to-Archive for duplicates |
 | `comic_core.py` | Archive reading (`Comic`), cover rendering, output-path planning, shared constants |
 | `rename_core.py` | Filename parsing (years in any brackets, year-like volumes, issue count, collected-edition format, volume, range, tags, series cleanup), type override and hand edits, `ComicInfo.xml` reading, file search and rename |
 | `name_format.py` | Naming: per-type templates and presets, tokens, token formats, fallbacks, escapes, template validation, text options, folder templates, the in-app format guide |
 | `archive_tools.py` | Verified zip rewriting: CBR to CBZ, clean-up, `ComicInfo.xml` stamping. `CI_TAGS` maps field names to XML tags and `merge_comicinfo` writes any of them, so new fields need only a `CI_TAGS` entry |
 | `reading_order.py` | Reading-order logic: ordering key, ComicInfo field mapping (story arc / alternate series), per-issue plan, block moves and send-to-top/bottom for multi-selection, preview text, in-place or copy write with optional filename prefix |
+| `aceo_core.py` | ACEO sheets: reads the card slots from a template PDF, loads covers from comics or images, fits them into the slots, renders each page and draws the template's card outlines on top in the chosen colour and thickness (`pypdf` and Pillow) |
 | `audit_core.py` | Audit logic: integrity checks, duplicate grouping, missing-issue gaps, quality flags, thresholds. Never changes a file |
 | `library_scan.py` | Shared library scan: one `Issue` record per comic (name fields, `ComicInfo.xml` fields, and in deep mode page count, cover size and cover hash) with a disposable cache in `%APPDATA%\ComicToolkit\cache.json`. Also a command-line report. See below |
 | `folder_icons.py` | `folder.ico` / `desktop.ini` / `folder.jpg` generation (Windows) |
 
-Logic modules (`*_core.py`, `archive_tools.py`, `folder_icons.py`, `library_scan.py`, `audit_core.py`, `reading_order.py`, `name_format.py`) contain no UI code so they can be tested or reused
+Logic modules (`*_core.py`, `archive_tools.py`, `folder_icons.py`, `library_scan.py`, `audit_core.py`, `reading_order.py`, `name_format.py`, `aceo_core.py`) contain no UI code so they can be tested or reused
 from a command line.
 
 ## The library scan

@@ -214,6 +214,39 @@ used to go wrong: `Batman 001 (Oct 2016)`, `Batman 001 (2016, DC)`, `Wolverine v
   *Expect:* few wrong types, years or series; send me the names it gets wrong so detection can be improved. Also tell me whether the card layout is comfortable at your window size and in light mode.
   Result:
 
+## G. ACEO sheets
+
+Use 10 to 20 real comics (plus one loose cover image), the bundled `ACEO - Full Page BLANK.pdf`, and a printer or a PDF viewer with a ruler.
+
+- [ ] **G1. Adding and ordering.** Drop a folder of comics, then a loose `.jpg`, then add the same folder again. Reorder with ▲ ▼ Top Bottom (select several), remove one, and look at the Sheet · card column.
+  *Expect:* every comic gives one cover, a comic that can't be read is skipped with a message, repeated adds don't duplicate, the list numbering and sheet positions follow your order, and the preview changes with the sheets (◀ ▶).
+  Result:
+- [ ] **G1b. Layout and full screen.** Look at the page at your usual window size, then press **Full screen** on the preview.
+  *Expect:* the whole file name and the Sheet · card column are readable in the list, the preview sits at the right edge and shows the complete sheet (nothing cut off), and **Full screen** fills the screen with a much larger sheet; ◀ ▶ and the Left/Right keys change sheet, Esc or **Close** returns. Tell me if anything is clipped at your screen scaling or on a second monitor.
+  Result:
+- [ ] **G2. The PDF.** Press **Create PDF…** with the defaults and open the result.
+  *Expect:* a Letter PDF with 8 cards per page in the template's slots, the covers filling their cards (turned so the top is on the left), outlines drawn, and the last page blank where covers ran out. Tell me if the cards sit in the wrong place, are cropped too much or look soft.
+  Result:
+- [ ] **G3. Size on paper.** Print one sheet at 100% (no scaling to fit) and measure a card.
+  *Expect:* each card is 3.5" × 2.5" (88.9 × 63.5 mm) and the outlines line up with where you will cut. Tell me if anything is off.
+  Result:
+- [ ] **G4. Options.** Create PDFs with each **Fit the cover**, **Turn the cover** and **Behind the cover** choice, a margin of 6, outlines off, and 2 copies of each cover.
+  Also set **Behind the cover** to black with **Fit inside**, and try each **Outline colour** (automatic should give white lines on black), a custom `#FF8800` and a thickness of 2 or more; type a bad colour such as `#12`.
+  *Expect:* each option visibly does what it says, copies repeat each cover in a row, and the outlines can be switched off.
+  Result:
+- [ ] **G5. Quality and size.** Create a Draft, Standard and High PDF of 3 sheets and compare them.
+  *Expect:* Draft is small and acceptable on screen, Standard looks sharp in print, High is sharper but large (and slower); note the file sizes and times for me.
+  Result:
+- [ ] **G6. Back covers and images.** Switch **Image from each comic** to the last page, and add loose cover images (jpg, png, webp).
+  *Expect:* the back pages or images appear on the cards instead.
+  Result:
+- [ ] **G7. A different template.** Choose another PDF template (or one you edit), then **Use the bundled one**.
+  *Expect:* the slot count and size shown for the template match it, the preview and PDF use it, and a PDF with no rectangles is rejected with a clear message.
+  Result:
+- [ ] **G8. Stop.** Create a High-quality PDF of many sheets and press **Stop**.
+  *Expect:* it stops quickly, says no file was written, and leaves no partial PDF.
+  Result:
+
 ## When you're done
 
 Send me the failed items with what you saw (a screenshot or the exact message helps). Passing results can be summarised in one line.
