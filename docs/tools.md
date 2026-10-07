@@ -17,7 +17,7 @@ the sidebar (first launch follows Windows; your choice is remembered).
 
 | Tool | What it does |
 |---|---|
-| **Renamer** | Standardise file names across a folder (CBZ, CBR, PDF, EPUB; subfolders optional). Parses the filename, and optionally `ComicInfo.xml`, which wins when present. Pick a naming style from 8 presets or write a custom template, set issue-number padding and series capitalisation, optionally move files into series folders. A preview table shows old and new names with statuses; tick rows, double-click a new name to edit it, then apply. Nothing changes on disk until you confirm. |
+| **Renamer** | Standardise file names across a folder (CBZ, CBR, PDF, EPUB; subfolders optional). Parses the filename, and optionally `ComicInfo.xml`, which wins when present. Pick a naming style from 8 presets or write a custom template, set issue-number padding and series capitalisation, optionally move files into series folders. A reading-order number written by the Reading Order tool (`01 - Name`) is dropped when renaming unless **Keep the number at the start** is on. A preview table shows old and new names with statuses; tick rows, double-click a new name to edit it, then apply. Nothing changes on disk until you confirm. |
 
 See [Naming styles and templates](renamer-templates.md) for the eight presets and the custom template syntax.
 
@@ -25,7 +25,7 @@ See [Naming styles and templates](renamer-templates.md) for the eight presets an
 
 | Tool | What it does |
 |---|---|
-| **Metadata** | Stamp series, issue number, volume, year, title and issue count from filenames into each CBZ's `ComicInfo.xml` (the file YACReader and most readers use). The count is read from "(of 12)" or "(3 of 12)" (round or square brackets) and written as `Count`, YACReader's "Issue count". Review table with inline editing of Series, #, Vol, Year and Of; choose which fields to write; **Set for checked rows** applies one fixed value (Series Group, Genre, Alternate series or Publisher) to every checked row, which no filename can supply (an empty value cancels a pending one; Genre takes a comma-separated list); a note on the page reminds you that YACReader shows ComicInfo data only after you enable import and update the library; fill only missing fields or overwrite existing values; fall back to the folder name when the filename has no series. Other fields already in the XML are preserved. `.cbr` files can't be written to and are skipped with a note. |
+| **Metadata** | Stamp series, issue number, volume, year, title and issue count from filenames into each CBZ's `ComicInfo.xml` (the file YACReader and most readers use). The count is read from "(of 12)" or "(3 of 12)" (round or square brackets) and written as `Count`, YACReader's "Issue count". Review table with inline editing of Series, #, Vol, Year and Of; choose which fields to write; **Set for checked rows** applies one fixed value (Series Group, Genre, Alternate series or Publisher) to every checked row, which no filename can supply (an empty value cancels a pending one; Genre takes a comma-separated list); a note on the page reminds you that YACReader shows ComicInfo data only after you enable import and update the library; fill only missing fields or overwrite existing values; fall back to the folder name when the filename has no series. **Remove from checked rows** (under *Issue number*) deletes the `Number` tag from the checked files instead, so YACReader, which sorts by issue number before filename, falls back to the filename; **Keep it again** undoes that before writing, and typing a value in the table replaces a pending removal. Untick **Issue number** under *Fields to write* so a later run doesn't add it back from the filename. Other fields already in the XML are preserved. `.cbr` files can't be written to and are skipped with a note. |
 
 ## Archive Tools
 
@@ -54,4 +54,10 @@ A repeat scan of an unchanged library is fast, because results are cached (see [
   one-shots, decimal numbers and files with no issue number are ignored. **Copy wishlist** and **Save wishlist** (`.txt` or `.csv`) give one line per missing issue.
   Nothing is remembered between runs.
 - **Quality.** Flags files with fewer than 10 or more than 300 pages, a size under 1 MB or over 500 MB, or a cover under 800 px tall. These limits are fixed.
+
+## Reading Orders
+
+| Tool | What it does |
+|---|---|
+| **Reading order** | Arrange issues (from one or several folders) in the order you want to read them and record it in each CBZ's `ComicInfo.xml` as a story arc, an alternate series, or both. Select several issues and drag, ▲ ▼ or Top / Bottom them together, **Suggest order** pre-sorts, untick to skip an issue, and a table previews the new number, filename and any arc being replaced. **Preview changes** lists every field that would change, without writing anything. Optional filename prefixes (`01 - Name`, `[01] Name`), **Remove issue numbers** (deletes `Number` from each issue so YACReader sorts by filename, best paired with the prefix), and an option to stamp copies in a new folder instead of the originals. See [Reading Order](reading-order.md). |
 

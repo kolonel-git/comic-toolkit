@@ -24,4 +24,10 @@
   of the same issue look alike (and variant covers may not). Missing-issue gaps assume numbering is continuous, so series with deliberate gaps (or issue #0, which is
   treated as not expected) will show false gaps. The quality limits (pages, size, cover height) are fixed constants in `audit_core.py`.
 - **The audit holds its results in memory only.** Nothing is saved between runs except the scan cache; a very large library shows every row at once.
+- **Removing issue numbers is one-way per file.** The number is deleted from `ComicInfo.xml` (a `.bak` backup is kept unless you chose to replace), and the Metadata tool will
+  add it back from the filename on its next run unless **Issue number** is unticked under *Fields to write*. Whether YACReader then really sorts by filename is untested
+  (see [manual tests](manual-tests.md), B9 and E13).
+- **Reading Order has no cover thumbnails,** and the whole list lives in memory only (no saved order file). It writes only CBZ (or zip-backed) files.
+  Whether YACReader sorts the arc number numerically, and which of *Story arc* / *Alternate series* it shows best, is untested (see [manual tests](manual-tests.md), E).
+  The filename-prefix recogniser (`01 - Name`, `[01] Name`) can misread a real name such as `100 - Bullets 05`.
 - Python is required to run; a double-click `.exe` is planned.

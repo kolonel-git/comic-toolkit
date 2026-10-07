@@ -50,6 +50,9 @@ RAR, one issue that is a near-duplicate of another (same cover, different file),
   *Expect:* Issue count, Series Group, Genre, Alternate series, Publisher match what you wrote.
   If any field is blank, note which. That tells me which tags YACReader does not read.
   Result:
+- [ ] **B9. Removing the issue number.** Tick a few rows (include one with no `ComicInfo.xml`), press **Remove from checked rows** under *Issue number*, and write. Then update the YACReader library and sort the folder.
+  *Expect:* the **#** column goes blank for those rows and the status says Update; the confirmation says the number will be removed from N files; afterwards `ComicInfo.xml` has no `<Number>` but keeps its other fields, and YACReader sorts those comics by filename. **Tell me whether the sort really follows the filename.** Also try **Keep it again** before writing, and typing a number in the cell.
+  Result:
 - [ ] **B8. Layout.** Look at the Metadata page in light and dark mode, and at a narrow window.
   *Expect:* the new side-panel section and the reminder under the table are readable, nothing clipped.
   Result:
@@ -125,6 +128,56 @@ Open **Library audit** from Home (or drop a folder on it). Use `Test Library` fr
   Result:
 - [ ] **D12. Look and feel.** View the page in light and dark mode, with the window narrow, and with hundreds of rows.
   *Expect:* tables readable in both themes, buttons not clipped, scrolling smooth. Switching theme while results are shown keeps them.
+  Result:
+
+## E. Reading order (roadmap item 4)
+
+Use copies of real issues from at least two series (6 to 10 files) plus one `.cbr`. Open **Reading order** from Home.
+
+- [ ] **E1. Adding.** Drop a folder, then drop two loose files from another folder, then use **Add folder…** and the drop-area click.
+  *Expect:* every comic appears once, in a sensible order; adding the same file again does nothing ("Nothing new to add"); a text file is ignored; the `.cbr` shows "Convert to CBZ first" in red.
+  Result:
+- [ ] **E2. Ordering.** Click **Suggest order**, then drag a row to a new place, then use ▲ ▼ on a selected row. Untick one row.
+  *Expect:* suggest groups by series then issue number; dragging and the arrows renumber the **#** column instantly; the unticked row shows "Skipped" but keeps its number.
+- [ ] **E2b. Moving several at once.** Select 5 rows (click the first, Shift+click the fifth; also try Ctrl+click for a scattered selection), drag them to another place, and use ▲ ▼, **Top** and **Bottom** with the selection. Click a tick box while several are selected. Click one selected row without dragging. Press **Remove** with several selected.
+  *Expect:* the whole selection moves as one block in its existing order and stays highlighted; at the top or bottom the block stops; Top and Bottom send the whole selection (even scattered rows) to the very start or end, keeping their order; the tick box ticks or unticks all selected rows; a plain click on one of several selected rows leaves just that row selected; Remove deletes them all; numbers update after every change. Tell me if dragging feels jumpy or picks the wrong drop position.
+  Result:
+- [ ] **E2c. Preview changes.** With a name entered, press **Preview changes** (try in-place, with a filename prefix, in copy mode, with an unticked row and with a `.cbr`).
+  *Expect:* a window lists each issue in order with its new filename and each changed field (old -> new), marks unticked and blocked issues, says whether originals are backed up, replaced or copied, and nothing on disk changes (compare the folder before and after). After writing, a new preview says the issues are already correct.
+  Result:
+  Result:
+- [ ] **E3. Writing metadata.** Name the order, choose **Story arc**, write. Open one result in a zip tool and read `ComicInfo.xml`.
+  *Expect:* `<StoryArc>` is the name and `<StoryArcNumber>` is the position; other fields are intact; a `.bak` of the original is in `Archive`; the table shows "Written".
+  Result:
+- [ ] **E4. YACReader, story arc.** Enable ComicInfo import (Settings > General), update the library, turn on the **Story arc** and **Arc number** columns, and sort by Arc number.
+  *Expect:* the arc name shows on every issue and the issues sort in your order. **Report whether it sorts 1, 2, 10 correctly or as text (1, 10, 2).** If as text, tell me and I will default to zero-padded numbers.
+  Result:
+- [ ] **E5. YACReader, alternate series.** Re-write the same list choosing **Alternate series** (or **Both**), update the library.
+  *Expect:* the alternate series, its number and its count appear. Tell me which of the two reads better in YACReader for finding "what's next".
+  Result:
+- [ ] **E6. Renumbering.** Move one issue, write again.
+  *Expect:* all numbers update (1 to n); with a filename prefix on, each file is renamed with the new number and prefixes never stack (`02 - 01 - Name` must not happen).
+  Result:
+- [ ] **E7. Filename prefix.** Choose `01 - Name`, then `[01] Name`, write, and look in Explorer.
+  *Expect:* files sort in reading order by name; the confirmation said how many would be renamed; the issue still shows correctly in the Metadata and Library audit tools (prefix ignored).
+  Result:
+- [ ] **E8. Existing arc.** Include an issue that already has a different story arc (write one with the tool first).
+  *Expect:* status "Replaces “old name”"; unticking it leaves its arc untouched; ticking it overwrites it.
+  Result:
+- [ ] **E9. Copy mode.** Switch on **Copy to a new folder instead**, write, and pick a destination.
+  *Expect:* a folder named after the order appears there with prefixed, stamped copies; the originals are byte-for-byte unchanged and no `Archive` folder was created for them; the next time the dialog opens in the same parent.
+  Result:
+- [ ] **E10. Renamer interaction.** Run the Renamer on a folder of prefixed files with and without **Keep the number at the start**.
+  *Expect:* off, the prefix disappears; on, `01 - ` stays in front of the new name.
+  Result:
+- [ ] **E11. Name collision and a bad file.** Put a file named like the target (`01 - Name.cbz`) in the folder first, and delete one listed file before writing.
+  *Expect:* the collision is reported ("already exists so the file was not renamed") with the metadata still written; the deleted file reports "File not found"; the rest are written and the page recovers.
+  Result:
+- [ ] **E13. Remove issue numbers.** Switch on **Remove issue numbers** with the `01 - Name` prefix, preview, then write. Update the YACReader library.
+  *Expect:* the preview shows `Number: n -> (removed)` for each issue and a warning if the prefix is off; afterwards the comics sort in reading order by filename in YACReader. **Tell me if YACReader still sorts them by issue.**
+  Result:
+- [ ] **E12. Look and feel.** Light and dark mode, narrow window, 100+ rows.
+  *Expect:* readable, no clipping of the Status column, drag stays smooth, the side panel scrolls to every option.
   Result:
 
 ## When you're done

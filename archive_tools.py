@@ -17,7 +17,8 @@ BACKUP, REPLACE = "Keep a backup in Archive folder", "Replace the original"
 BACKUP_SUFFIX = ".bak"
 CI_TAGS = {"series": "Series", "issue": "Number", "volume": "Volume", "year": "Year", "title": "Title",
            "count": "Count", "publisher": "Publisher", "series_group": "SeriesGroup", "genre": "Genre",
-           "alternate_series": "AlternateSeries"}
+           "alternate_series": "AlternateSeries", "alternate_number": "AlternateNumber",
+           "alternate_count": "AlternateCount", "story_arc": "StoryArc", "story_arc_number": "StoryArcNumber"}
 
 
 def is_comicinfo(name):
@@ -174,7 +175,8 @@ def read_comicinfo_raw(path):
 
 
 def merge_comicinfo(raw, writes):
-    """New ComicInfo.xml bytes: existing XML (if any) with the given {field: value} set."""
+    """New ComicInfo.xml bytes: existing XML (if any) with the given {field: value} set.
+    A value of None removes that field's tag instead."""
     if raw:
         try:
             root = ET.fromstring(raw.lstrip(b"\xef\xbb\xbf"))
@@ -184,6 +186,10 @@ def merge_comicinfo(raw, writes):
         root = ET.Element("ComicInfo")
     for field, value in writes.items():
         tag = CI_TAGS[field]
+        if value is None:  # remove the tag altogether
+            for el in root.findall(tag):
+                root.remove(el)
+            continue
         el = root.find(tag)
         if el is None:
             el = ET.SubElement(root, tag)

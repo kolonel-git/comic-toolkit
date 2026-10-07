@@ -192,13 +192,13 @@ class Page(ctk.CTkFrame):
 TREE_STYLE = "Comics.Treeview"
 
 
-def build_tree(parent, columns):
+def build_tree(parent, columns, selectmode="browse"):
     """Bordered ttk table with a themed scrollbar. columns: (id, heading, width, stretch)."""
     st = ttk.Style()
     st.theme_use("clam")
     st.layout(TREE_STYLE, [("Treeview.treearea", {"sticky": "nswe"})])
     wrap = ctk.CTkFrame(parent, fg_color=BG, border_color=BORDER, border_width=1, corner_radius=8)
-    tree = ttk.Treeview(wrap, style=TREE_STYLE, show="headings", selectmode="browse",
+    tree = ttk.Treeview(wrap, style=TREE_STYLE, show="headings", selectmode=selectmode,
                         columns=[c[0] for c in columns])
     for col, text, w, stretch in columns:
         tree.heading(col, text=text, anchor="w")

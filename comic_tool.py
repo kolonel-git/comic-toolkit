@@ -13,6 +13,8 @@
     Clean-up      - strip junk files, normalise page names
   Library Audit
     Library audit - broken files, duplicates, missing issues, quality flags
+  Reading Orders
+    Reading order - arrange issues in reading order and record it in ComicInfo.xml
 
 Light and dark mode: toggle in the sidebar; first launch follows Windows.
 
@@ -31,6 +33,7 @@ from page_cleanup import CleanupPage
 from page_convert import ConvertPage
 from page_icons import IconsPage
 from page_metadata import MetadataPage
+from page_order import OrderPage
 from page_rename import RenamePage
 from page_single import SinglePage
 from ui_kit import ACCENT, BG, BORDER, FONT, HOVER, MUTED, PANEL, TEXT
@@ -59,6 +62,8 @@ TOOLS = {  # key -> glyph, tint, title, description
                 "Remove junk files and tidy page names in CBZ archives."),
     "audit": ("✓", TINT_BLUE, "Library audit",
               "Find broken files, duplicates, missing issues and low quality."),
+    "order": ("1·2", TINT_PURPLE, "Reading order",
+              "Put issues in reading order and record it inside each comic."),
 }
 GROUPS = [  # header, blurb, tool keys
     ("Comic Cover Extractor", "Pull cover images out of CBZ and CBR files.", ["single", "bulk", "icons"]),
@@ -66,6 +71,7 @@ GROUPS = [  # header, blurb, tool keys
     ("Metadata", "Fix the information stored inside your comics.", ["metadata"]),
     ("Archive Tools", "Repack and tidy the archives themselves.", ["convert", "cleanup"]),
     ("Library Audit", "Check the whole collection for problems.", ["audit"]),
+    ("Reading Orders", "Show which comic to read next.", ["order"]),
 ]
 
 
@@ -157,7 +163,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
                       "bulk": BulkPage(content), "icons": IconsPage(content),
                       "rename": RenamePage(content), "metadata": MetadataPage(content),
                       "convert": ConvertPage(content), "cleanup": CleanupPage(content),
-                      "audit": AuditPage(content)}
+                      "audit": AuditPage(content), "order": OrderPage(content)}
         self.nav = {}
         ctk.CTkLabel(side, text="Comic Toolkit", font=(FONT, 15, "bold"), text_color=TEXT,
                      anchor="w").pack(fill="x", padx=18, pady=(24, 14))
@@ -211,6 +217,10 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
     def on_drop(self, event):
         files = self.tk.splitlist(event.data)
         if not files:
+            return
+        page = self.pages[self.current]
+        if hasattr(page, "add_paths"):  # pages that take several files or folders at once
+            page.add_paths([Path(f) for f in files])
             return
         p = Path(files[0])
         if p.is_dir():

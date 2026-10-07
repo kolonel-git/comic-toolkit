@@ -12,6 +12,117 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-07 17:20 +11:00 · Session 26: removing the issue number so YACReader sorts by filename
+
+**Summary:** YACReader sorts by issue number before filename, so a comic's `Number` tag can override the order you want. The Metadata and Reading order tools can now delete that tag, which makes YACReader fall back to the filename.
+
+**Decisions**
+- Only the issue number (`Number`) is removed. `Count`, `Volume`, the story arc and everything else stay.
+- Metadata gets a per-row action (consistent with *Set for checked rows*); Reading order gets a switch that applies to every issue in the list.
+- Removal is a normal verified write with the usual `.bak` backup.
+
+**Changes by file**
+- `archive_tools.py`: `merge_comicinfo` treats a value of `None` as "remove this tag" (all matching elements; a missing tag is a no-op).
+- `page_metadata.py`: new *Issue number* section with **Remove from checked rows** and **Keep it again**; `Row.removes`; removal overrides a filename-derived issue write, shows a blank in the **#** column, and typing a value replaces it; the write confirmation says how many files lose their number.
+- `reading_order.py`: `plan_item` adds an `issue: None` write when the option is on and the file has a number; `describe_item` prints `Number: 5  ->  (removed)`.
+- `page_order.py`: new **Remove issue numbers** switch (saved with the page settings), part of the plan, and a line in the preview that warns when no filename prefix is on.
+- Docs: `tools.md`, `reading-order.md`, `known-limitations.md`, `manual-tests.md` (B9, E13).
+
+**Technical notes**
+- In Metadata, removal on a file that has no number also cancels the number the filename would have added, so the row ends up with no issue-number write. After a real write and rescan, the file has no number, so the filename would add it again unless **Issue number** is unticked under *Fields to write*; the hint says so.
+- Both tools reuse the same write path (`apply_metadata`), so verification and backups are unchanged.
+
+**Bugs found and fixed:** none in the shipped code; test-script expectations (row order, a typo) were corrected.
+
+**Verification:** a scripted test ran and passed: the XML merge removing one and several `Number` tags while keeping other fields, a missing tag and a file with no `ComicInfo.xml`; an in-place removal with a `.bak` backup; reading-order plans with the option on and off, an idempotent re-plan, and a write that removed the number and renamed; the Metadata window (nothing checked message, blank **#** column, status, a filename-derived add cancelled, the confirmation text, files written, rescan, undo, and an inline edit replacing a pending removal); and the Reading order window (preview text with and without a prefix, a write removing numbers, and the setting saved). Earlier metadata, archive, order, audit, scan and renamer tests and `ruff --select F,E9` still passed. Not run: YACReader itself, so whether it then sorts by filename is unconfirmed (manual tests B9 and E13).
+
+**Known issues:** see [Known limitations](known-limitations.md).
+
+---
+
+## 2026-10-07 16:45 +11:00 · Session 25: Reading Order Top and Bottom buttons
+
+**Summary:** The Reading order toolbar gained **Top** and **Bottom** buttons that send the selected issue or issues to the very start or end of the list, next to ▲ and ▼.
+
+**Changes by file**
+- `reading_order.py`: `send_to_edge(order, selected, top)` moves the selection, as one block in its existing order, to the top or bottom.
+- `page_order.py`: `to_edge`, two new buttons, and enable/disable handling with the other list tools. The toolbar was rearranged so it fits: the issue count sits on its own line above, and the buttons run left to right as Add folder, Suggest order, Top, ▲, ▼, Bottom, Remove, Clear.
+- Docs: `reading-order.md`, `tools.md`, `architecture.md`, `manual-tests.md` (E2b).
+
+**Technical notes**
+- A scattered selection is gathered into one block: rows keep their relative list order, not the order they were clicked.
+- Sending a block that is already at the edge, or nothing at all, changes nothing.
+
+**Bugs found and fixed:** the first layout (all buttons beside the count, packed from the right) clipped the Add folder label once two more buttons were added; found in a screenshot and fixed by moving the count to its own line.
+
+**Verification:** a scripted test ran and passed: the pure helper for single and scattered selections, both edges, an already-placed block and an empty selection; in the window, one row sent to the top, two scattered rows to the bottom, a three-row block to the top, the **#** column renumbering each time, selection kept, nothing selected doing nothing, and both buttons disabled when the list is cleared. The earlier order tests and `ruff --select F,E9` still passed, and a screenshot confirmed the toolbar fits in dark mode (light mode not viewed). Not run: use by a person with real comics (manual test E2b).
+
+**Known issues:** unchanged.
+
+---
+
+## 2026-10-07 16:28 +11:00 · Session 24: Reading Order, multi-select moves and Preview changes
+
+**Summary:** Two changes to the Reading order page requested before committing it: several issues can be selected and moved together, and a **Preview changes** button shows what a write would do without writing anything.
+
+**Changes by file**
+- `ui_kit.py`: `build_tree` takes a `selectmode` argument (default `"browse"`, so other tables are unchanged).
+- `reading_order.py`: `move_block` (shift a selection one place up or down as a block), `drop_block` (drop a selection onto a target row), `describe_item` (plain-text lines for one issue's planned change).
+- `page_order.py`: the table uses extended selection. ▲ ▼ move every selected row together; dragging a selected row drags the whole selection; a click on an unselected row, Ctrl+click and Shift+click behave normally; a tick-box click applies to all selected rows; Remove takes out all selected rows. New **Preview changes** button and window (`preview_text`, `preview`).
+- Docs: `reading-order.md`, `tools.md`, `architecture.md`, `manual-tests.md` (E2b, E2c).
+
+**Technical notes**
+- Block moves keep the selection's relative order. At an edge, items that can't move stay and the rest still move. Dragging down puts the block after the target row and dragging up puts it before, which matches the old single-row behaviour.
+- To drag a multi-selection, a press on an already-selected row (with several selected) returns `"break"` so Tk's default handling doesn't collapse the selection. If the mouse is released without moving, the selection collapses to that row, which is what a plain click normally does. Shift and Ctrl presses are left to the default and start no drag.
+- Preview text lists, in order: counts (to write, already correct, unticked, blocked), how the order is recorded, where originals or copies go, how many files would be renamed, then each issue with `old -> new` per ComicInfo field. In copy mode it shows the remembered destination, or says the folder is chosen when writing.
+- Preview reads only the in-memory plan, so it touches no file; reopening it replaces the previous window.
+
+**Bugs found and fixed:** the first version of the preview code had mangled escape sequences in two string literals (a syntax error caught by `ruff` before anything ran); fixed.
+
+**Verification:** a scripted test ran and passed. *Logic:* block moves up and down including edges and scattered selections; block drops above and below a target, onto a selected row and onto an unknown row; preview lines for changed, unchanged and blocked issues. *Window (headless):* extended selection mode; a 3-row block moved up twice, stopping at the top and moving down once with the selection kept; a block dragged to the bottom (press, motion, release) renumbering rows; a plain click on one of several selected rows selecting only it; Ctrl+click starting no drag; dragging an unselected row moving only that row; tick boxes applying to the selection or to just the clicked row; removing a 3-row block; the Preview button disabled without a name; preview text in place, copy (with and without a remembered parent) and with a group, unticked row and prefix; the preview window opening, being replaced on reopen, and following a theme switch; the folder and files unchanged after previews; and the preview saying "0 would be written, 4 already correct" after a real write. The earlier order, scan, audit, metadata, backup and renamer tests and `ruff --select F,E9` still passed. A screenshot showed a selected block moved together with the highlight intact; the preview window itself was not captured. Not run: real mouse dragging by a person, real comics, or YACReader, which are in [manual-tests.md](manual-tests.md) (E2b, E2c).
+
+**Known issues:** unchanged; see [Known limitations](known-limitations.md).
+
+---
+
+## 2026-10-07 15:35 +11:00 · Session 23: Reading Order tool (roadmap item 4)
+
+**Summary:** New Home group **Reading Orders** with the **Reading order** tool. Issues from one or several folders are arranged in the order you want to read them, and that order is written into each CBZ's `ComicInfo.xml`. Optional filename prefixes and a "copy to a new folder" mode are included. The spec in `docs/reading-order.md` was rewritten from "planned" to a description of what was built.
+
+**Decisions** (the spec left these open; each can be changed)
+- Storage choice is a menu: *Story arc* (`StoryArc` + `StoryArcNumber`, the default), *Alternate series* (`AlternateSeries` + `AlternateNumber` + `AlternateCount`) or *Both*, so YACReader can be tested with each.
+- Arc numbers can be plain or zero-padded (width follows the total, at least two digits), in case YACReader sorts the number as text. Plain is the default until tested.
+- Filename prefix is a menu (`Off`, `01 - Name`, `[01] Name`), off by default.
+- Issues already in another arc are shown as *Replaces “name”*, ticked by default; unticking skips that issue, which still keeps its place in the numbering.
+- "Copy to a new folder" asks for the parent folder at write time, names the folder after the reading order, remembers the last parent, and stamps only the copies (no backup needed).
+- Not built: cover thumbnails, a saved order file, undo (the table is text-only to keep the page light).
+
+**Changes by file**
+- `reading_order.py` (new): `suggest_key`, `writes_for`, `plan_item`, `apply_item`, `writable`, `current_arc`, number and prefix helpers, store/numbering/prefix constants. `apply_item` writes in place (metadata, then rename) or copies first and stamps the copy; a refused rename after a successful write raises a message saying so; a missing file raises "File not found".
+- `page_order.py` (new): `OrderPage` with a drop area, Add folder, Suggest order, ▲ ▼, Remove, Clear, drag-to-reorder and tick boxes in the table, live plan preview (new number, new filename, current arc, status), a load worker and a write worker reporting through queues, and a YACReader import reminder.
+- `rename_core.py`: `split_order_prefix`; `parse_filename` strips a reading-order prefix first and returns `order_prefix`; `read_comicinfo` also returns `story_arc`, `story_arc_number`, `alternate_number`, `alternate_count`.
+- `archive_tools.py`: `CI_TAGS` gains `story_arc`, `story_arc_number`, `alternate_number`, `alternate_count` (no change to the writer, as planned in item 1).
+- `page_rename.py`: new **Keep the number at the start** switch; without it the Renamer drops the prefix as it renames.
+- `comic_tool.py`: registers the page, the `order` card, the "Reading Orders" group; a drop on a page with `add_paths` passes every dropped item to it (several files or folders at once).
+- Docs: `reading-order.md` (rewritten), `tools.md`, `architecture.md`, `known-limitations.md`, `safety.md`, `roadmap.md` (item 4 done), `manual-tests.md` (section E, 12 checks), both READMEs and the docs index.
+
+**Technical notes**
+- Prefix recogniser: `^(\[\d{2,4}\]\s+|\d{2,4}\s+-\s+)` followed by text containing a letter. It is deliberately narrow, but a real name such as `100 - Bullets 05` would be misread.
+- Position `n` is the row's place in the whole list, including unticked and blocked rows, so numbers never shift when an issue is skipped.
+- Plans only list fields whose value differs from what the file has, so re-running an unchanged order shows *No change* and rewrites nothing.
+- Renumbering replaces an existing prefix (`split_order_prefix`) instead of stacking another one.
+- Drag-reorder moves the row live with `Treeview.move` and re-syncs the list on mouse release; the tick box is column 1 and starts no drag.
+- The method name `_options` collided with a Tk internal (as in an earlier session), so the page uses `_plan_options`.
+
+**Bugs found and fixed:** the first run of the page crashed on that `_options` collision. A write to a file deleted after it was added gave the misleading message "Not a zip-based archive"; `apply_item` now says the file was not found. Both were caught by the scripted tests.
+
+**Verification:** scripted tests ran and passed. *Logic:* number and prefix helpers; the three storage forms; parser recognition of `03 - Name` and `[012] Name` while `2000 AD 01` is left alone; suggested order; blocked `.cbr`; plans for new and replaced arcs; an in-place write with backup and rename; re-planning giving *No change* and a renumber replacing the prefix; a rename collision reporting that metadata was written; copy mode with unique names, untouched originals and no `Archive` folder; reading back `AlternateSeries/Number/Count`. *Window* (headless): adding a folder, loose files, a duplicate, a text file and a `.cbr`; the arc-name requirement; ▲, drag and Suggest order; tick boxes; Remove and Clear; a write with prefixes confirmed by the dialog text, files, metadata and `Archive` backups; a second write after reordering with no stacked prefixes; copy mode with a remembered parent; a failing file leaving the page usable; settings round-trip without the arc name; theme switch; the Renamer with and without **Keep the number at the start**; the whole app registering the page and routing a drop to it. The earlier scan, audit, metadata, backup, archive and renamer tests and `ruff --select F,E9` still passed, and all doc links resolved. A screenshot of the page was checked in dark mode and led to a wider Status column; light mode and the final widths were not viewed.
+Not run: real comics, YACReader (sorting and display of the arc fields), a large list, or any of the manual tests in section E of [manual-tests.md](manual-tests.md).
+
+**Known issues:** see [Known limitations](known-limitations.md): no thumbnails, no saved order, YACReader behaviour untested.
+
+---
+
 ## 2026-10-07 00:37 +11:00 · Session 22: review pass over everything built so far
 
 **Summary:** A check of the whole project before starting Reading Order: every scripted test rerun, a lint pass, a visual check of the new pages, and a read-through of the new code. It found and fixed four bugs and three layout problems. No features were added.

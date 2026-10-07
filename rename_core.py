@@ -31,6 +31,8 @@ CASES = ["Keep as is", "Title Case"]
 FOLDER_STYLES = ["Series", "Series + volume"]
 
 _YEAR = re.compile(r"[(\[]\s*((?:19|20)\d{2})(?:[-./]\d{1,2})*\s*[)\]]")
+# A reading-order prefix as written by the Reading Order tool: '03 - Name' or '[03] Name'.
+_ORDER = re.compile(r"^(?:\[(\d{2,4})\]\s+|(\d{2,4})\s+-\s+)(?=.*[A-Za-z])")
 _COUNT = re.compile(r"[(\[]\s*(?:\d+\s*)?of\s*(\d+)\s*[)\]]", re.I)  # '(of 12)', '(3 of 12)'
 _TAGS = re.compile(r"\([^)]*\)|\[[^\]]*\]")
 _VOL = re.compile(r"(?<![A-Za-z])(?:vol(?:ume)?\.?|v)\s*(\d{1,3})(?![A-Za-z\d])", re.I)
@@ -44,8 +46,15 @@ def _clean(s):
     return re.sub(r"\s+", " ", s.replace("_", " ")).strip(" -–.#:,")
 
 
+def split_order_prefix(stem):
+    """'03 - Batman 05' -> ('03 - ', 'Batman 05'); ('', stem) when there is no reading-order prefix."""
+    m = _ORDER.match(stem)
+    return (m.group(0), stem[m.end():]) if m else ("", stem)
+
+
 def parse_filename(stem):
     """'Batman #012 - The Court (2016) (of 12)' -> series/volume/issue/year/title/count (None when absent)."""
+    order_prefix, stem = split_order_prefix(stem)
     m = _YEAR.search(stem)
     year = m.group(1) if m else None
     m = _COUNT.search(stem)
@@ -66,7 +75,7 @@ def parse_filename(stem):
         issue, volume = volume, None
     series = _clean(s)
     return {"series": series or None, "volume": volume, "issue": issue, "year": year, "title": title,
-            "count": count}
+            "count": count, "order_prefix": order_prefix}
 
 
 def _rar_member(path, member):
@@ -121,7 +130,9 @@ def read_comicinfo(path):
             "issue": get("Number") or None, "year": pos_int("Year"), "title": get("Title") or None,
             "count": pos_int("Count"), "publisher": get("Publisher") or None,
             "series_group": get("SeriesGroup") or None, "genre": get("Genre") or None,
-            "alternate_series": get("AlternateSeries") or None}
+            "alternate_series": get("AlternateSeries") or None, "alternate_number": get("AlternateNumber") or None,
+            "alternate_count": pos_int("AlternateCount"), "story_arc": get("StoryArc") or None,
+            "story_arc_number": get("StoryArcNumber") or None}
 
 
 def merge(parsed, ci, use_ci):

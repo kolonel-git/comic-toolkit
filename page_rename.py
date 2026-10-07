@@ -44,7 +44,7 @@ def _scan(q, files, use_ci):
 class RenamePage(Page):
     defaults = {"recursive": True, "include_other": True, "use_ci": True, "style": STYLES[0],
                 "custom": DEFAULT_CUSTOM, "pad": "3 digits (001)", "case": CASES[0],
-                "move": False, "folder_style": FOLDER_STYLES[0]}
+                "move": False, "folder_style": FOLDER_STYLES[0], "keep_order": False}
     choices = {"style": STYLES, "pad": list(PADS), "case": CASES, "folder_style": FOLDER_STYLES}
 
     def __init__(self, parent):
@@ -91,6 +91,8 @@ class RenamePage(Page):
                      text="Tokens: " + " ".join("{%s}" % f for f in FIELDS) +
                           "\nWrap optional parts in [ ]. They vanish when a value is missing."
                      ).pack(fill="x", pady=(6, 0))
+        ctk.CTkSwitch(self.form.add("Reading-order numbers"), text="Keep the number at the start", variable=v["keep_order"],
+                      **sw).pack(anchor="w")
         menu(self.form.add("Issue number"), v["pad"], list(PADS)).pack(fill="x")
         menu(self.form.add("Series capitalisation"), v["case"], CASES).pack(fill="x")
         ctk.CTkSwitch(self.form.add("Folders"), text="Move into series folders", variable=v["move"],
@@ -105,7 +107,7 @@ class RenamePage(Page):
         self._enable(False)
 
         self.watch("recursive", "include_other", "use_ci", callback=self.rescan)
-        self.watch("style", "custom", "pad", "case", "move", "folder_style", callback=self.recompute)
+        self.watch("style", "custom", "pad", "case", "move", "folder_style", "keep_order", callback=self.recompute)
         self._toggle_rows()
 
     # --- table ---
@@ -272,6 +274,8 @@ class RenamePage(Page):
             if not it.manual:
                 stem, _ = build_stem(f, self._template(), o["pad"], o["case"])
                 it.new_stem = stem or it.src.stem
+                if o["keep_order"] and it.parsed.get("order_prefix"):  # '03 - ' written by the Reading Order tool
+                    it.new_stem = it.parsed["order_prefix"] + it.new_stem
         self._place(it)
 
     def _place(self, it):

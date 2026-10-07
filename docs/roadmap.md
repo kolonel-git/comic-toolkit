@@ -45,7 +45,7 @@ truth. CBR files are slower (whole-archive extraction), so deep reads of CBR are
 - *Quality:* flag page counts that are unusually low or high, very large or very small files, and low-resolution covers, using the same sampled
   pages instead of decoding every page. Report only.
 
-**4. Reading Order** (own Home group "Reading Orders"; full spec in [reading-order.md](reading-order.md)). Needs item 1's generic field writer and benefits from item 2.
+**4. Reading Order (done, 2026-10-07; pending the manual checks)** (own Home group "Reading Orders"; how it works in [reading-order.md](reading-order.md); built without cover thumbnails). Needs item 1's generic field writer and benefits from item 2.
 
 **5. Stats dashboard.** Totals, size on disk, issues per series / publisher / year, format mix (cbz/cbr/pdf/epub), largest files. Built on the
 scan layer; publisher needs the `Publisher` read from item 1. Drawn with simple bars on a CustomTkinter canvas (no new dependency) plus CSV

@@ -44,6 +44,7 @@ class Row:
     ci: dict
     edits: dict = field(default_factory=dict)  # values typed in the table
     sets: dict = field(default_factory=dict)  # fixed values from "Set for checked rows"
+    removes: set = field(default_factory=set)  # fields to delete from ComicInfo.xml ("Remove issue number")
     writes: dict = field(default_factory=dict)  # what will actually be written
     checked: bool = True
     status: str = ""
@@ -130,6 +131,14 @@ class MetadataPage(Page):
         ctk.CTkLabel(box, text="Applies to every checked row. Leave empty to cancel a pending value. "
                      "Genre takes a comma-separated list.", font=(FONT, 11), text_color=MUTED, anchor="w",
                      justify="left", wraplength=260).pack(fill="x", pady=(6, 0))
+
+        box = self.form.add("Issue number")
+        button(box, "Remove from checked rows", lambda: self.remove_issue(True)).pack(fill="x")
+        button(box, "Keep it again", lambda: self.remove_issue(False)).pack(fill="x", pady=(8, 0))
+        ctk.CTkLabel(box, text="YACReader sorts by issue number before filename. Removing the number from "
+                     "ComicInfo.xml makes it fall back to the filename. Untick \"Issue number\" under Fields to write so a later "
+                     "run doesn't add it back.", font=(FONT, 11), text_color=MUTED,
+                     anchor="w", justify="left", wraplength=260).pack(fill="x", pady=(6, 0))
 
         self.btn_apply = button(self.footer, "Write metadata", self.apply, primary=True)
         self.btn_apply.pack(pady=(0, 8))
@@ -257,11 +266,18 @@ class MetadataPage(Page):
         for f, value in row.sets.items():
             if (row.ci.get(f) or "") != value:
                 writes[f] = value
+        for f in row.removes:  # None = delete the tag; nothing to do if the file doesn't have it
+            if row.ci.get(f):
+                writes[f] = None
+            else:
+                writes.pop(f, None)
         row.writes = writes
         row.status = NO_CHANGE if not writes else "Update" if row.ci else "Add"
 
     def _shown(self, row, f):
-        return row.writes.get(f) or row.ci.get(f) or ""
+        if f in row.writes:
+            return row.writes[f] or ""  # None = being removed
+        return row.ci.get(f) or ""
 
     def _values(self, row):
         return ("☑" if row.checked else "☐", row.path.name, *(self._shown(row, f) for f in
@@ -307,6 +323,30 @@ class MetadataPage(Page):
         self.say(f"{label} = {value} on {len(rows)} row{'s' if len(rows) != 1 else ''}." if value
                  else f"Cancelled pending {label} on {len(rows)} row{'s' if len(rows) != 1 else ''}.")
 
+    def remove_issue(self, remove):
+        """Mark the checked rows so their issue number is deleted from ComicInfo.xml (or undo that)."""
+        if self.busy or not self.rows:
+            return
+        self._close_editor(True)
+        rows = [r for r in self.rows if r.checked]
+        if not rows:
+            self.say("Check at least one row first.", err=True)
+            return
+        have = 0
+        for r in rows:
+            if remove:
+                r.removes.add("issue")
+                r.edits.pop("issue", None)
+                have += 1 if r.ci.get("issue") else 0
+            else:
+                r.removes.discard("issue")
+            self._compute(r)
+        self._resolve()
+        n = len(rows)
+        self.say(f"Issue number will be removed from {have} of {n} checked row{'s' if n != 1 else ''} "
+                 f"({n - have} had none)." if remove else
+                 f"Issue number kept on {n} checked row{'s' if n != 1 else ''}.")
+
     def select_all(self, value):
         for r in self.rows:
             r.checked = value
@@ -350,6 +390,7 @@ class MetadataPage(Page):
         ed.destroy()
         if commit and text != self._shown(row, f):
             row.edits[f] = text
+            row.removes.discard(f)  # typing a value replaces a pending removal
             self._compute(row)
             self._resolve()
 
@@ -361,6 +402,9 @@ class MetadataPage(Page):
             return
         backup = self.vars["original"].get() == BACKUP
         msg = f"Write metadata into {len(todo)} file{'s' if len(todo) != 1 else ''}?\n\n"
+        gone = sum(1 for r in todo if "issue" in r.writes and r.writes["issue"] is None)
+        if gone:
+            msg += f"The issue number will be removed from {gone} of them.\n\n"
         msg += "Originals are kept in an Archive folder." if backup else "Files are replaced in place."
         if not messagebox.askyesno("Write metadata", msg, icon="warning"):
             return
