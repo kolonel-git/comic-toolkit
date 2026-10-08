@@ -20,8 +20,10 @@ class ConvertPage(BatchPage):
     def __init__(self, parent):
         super().__init__(parent)
         v = self.vars
-        ctk.CTkSwitch(self.form.add("Folders"), text="Include subfolders", variable=v["recursive"],
+        self.form.heading("Source")
+        ctk.CTkSwitch(self.form.add("Subfolders"), text="Include subfolders", variable=v["recursive"],
                       **switch_style()).pack(anchor="w")
+        self.form.heading("Output")
         menu(self.form.add("After converting, the .cbr"), v["original"], [MOVE, KEEP, DELETE]).pack(fill="x")
         menu(self.form.add("If the .cbz already exists"), v["exists"], EXISTS).pack(fill="x")
         self.watch("recursive", callback=self.rescan)
@@ -30,6 +32,11 @@ class ConvertPage(BatchPage):
         it = folder.rglob("*") if o["recursive"] else folder.iterdir()
         files = [p for p in it if p.is_file() and p.suffix.lower() == ".cbr" and not in_archive(p, folder)]
         return sorted(files, key=lambda p: natural_key(p.relative_to(folder)))
+
+    pick_ext = {".cbr"}
+
+    def pick_items(self, files, o):
+        return [p for p in files if p.suffix.lower() == ".cbr"]
 
     def label(self, item):
         return self.rel(item)

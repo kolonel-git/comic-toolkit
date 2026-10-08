@@ -13,7 +13,7 @@ from archive_tools import BACKUP, REPLACE
 from comic_core import COMIC_EXT, find_comics, natural_key
 from rename_core import read_comicinfo
 from ui_kit import (ACCENT, BG, BORDER, FONT, MUTED, PANEL, TEXT, DropZone, Form, Page, apply_tree_theme, build_tree,
-                    button, entry, menu, switch_style, title_block)
+                    button, entry, menu, switch_style, title_block, toolbar)
 
 
 @dataclass
@@ -60,24 +60,18 @@ class OrderPage(Page):
 
         title_block(self.main, "Reading order",
                     "Arrange issues in the order you want to read them, then record it in each comic.")
-        self.drop = DropZone(self.main, "Drop comics or folders here, or click to add files", self.add_files)
+        self.drop = DropZone(self.main, "Drop comics or folders here, or add them below", self.add_files,
+                             self.add_folder, self.add_files)
         self.drop.pack(fill="x")
         self.meta = ctk.CTkLabel(self.main, text="", font=(FONT, 13), text_color=TEXT, anchor="w")
         self.meta.pack(fill="x", pady=(14, 6))
         bar = ctk.CTkFrame(self.main, fg_color=BG)
         bar.pack(fill="x", pady=(0, 8))
-        self.tools = {}
-        for key, text, width, cmd in (("folder", "Add folder…", 92, self.add_folder),
-                                      ("suggest", "Suggest order", 104, self.suggest),
-                                      ("top", "Top", 48, lambda: self.to_edge(True)),
-                                      ("up", "▲", 34, lambda: self.shift(-1)), ("down", "▼", 34, lambda: self.shift(1)),
-                                      ("bottom", "Bottom", 64, lambda: self.to_edge(False)),
-                                      ("remove", "Remove", 72, self.remove), ("clear", "Clear", 60, self.clear)):
-            b = ctk.CTkButton(bar, text=text, width=width, height=26, corner_radius=6,
-                              font=(FONT, 12), fg_color=BG, hover_color=PANEL, text_color=TEXT, border_width=1,
-                              border_color=BORDER, command=cmd)
-            b.pack(side="left", padx=(0, 6))
-            self.tools[key] = b
+        self.tools = toolbar(
+            bar, [("suggest", "Suggest order", 104, self.suggest)],
+            [("top", "Top", 48, lambda: self.to_edge(True)), ("up", "▲", 34, lambda: self.shift(-1)),
+             ("down", "▼", 34, lambda: self.shift(1)), ("bottom", "Bottom", 64, lambda: self.to_edge(False))],
+            [("remove", "Remove", 72, self.remove), ("clear", "Clear", 60, self.clear)])
         self.progress = ctk.CTkProgressBar(self.main, height=3, corner_radius=2, fg_color=BORDER,
                                            progress_color=ACCENT)
         self.progress.set(0)
@@ -98,7 +92,8 @@ class OrderPage(Page):
 
         v = self.vars
         sw = switch_style()
-        box = self.form.add("Reading order name")
+        self.form.heading("Reading order")
+        box = self.form.add("Name")
         entry(box, self.arc).pack(fill="x")
         menu(self.form.add("Record the order as"), v["store"], ro.STORES).pack(fill="x")
         menu(self.form.add("Arc numbers"), v["numbering"], ro.NUMBERINGS).pack(fill="x")
@@ -106,12 +101,14 @@ class OrderPage(Page):
         entry(box, self.group).pack(fill="x")
         ctk.CTkLabel(box, text="Labels every issue, e.g. the event or crossover name.", font=(FONT, 11),
                      text_color=MUTED, anchor="w", justify="left", wraplength=260).pack(fill="x", pady=(4, 0))
+        self.form.heading("Filenames and sorting")
         menu(self.form.add("Also number the filenames"), v["prefix"], ro.PREFIXES).pack(fill="x")
         box = self.form.add("Sorting in YACReader")
         ctk.CTkSwitch(box, text="Remove issue numbers", variable=v["drop_issue"], **sw).pack(anchor="w")
         ctk.CTkLabel(box, text="YACReader sorts by issue number before filename. Removing it makes YACReader use "
                      "the filename, so pair it with a filename prefix.", font=(FONT, 11), text_color=MUTED,
                      anchor="w", justify="left", wraplength=260).pack(fill="x", pady=(4, 0))
+        self.form.heading("Output")
         box = self.form.add("Originals")
         ctk.CTkSwitch(box, text="Copy to a new folder instead", variable=v["copy"], **sw).pack(anchor="w")
         self.orig_row = self.form.add("Original file")

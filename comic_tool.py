@@ -39,7 +39,7 @@ from page_metadata import MetadataPage
 from page_order import OrderPage
 from page_rename import RenamePage
 from page_single import SinglePage
-from ui_kit import ACCENT, BG, BORDER, FONT, HOVER, MUTED, PANEL, TEXT
+from ui_kit import ACCENT, BG, BORDER, FONT, HOVER, MUTED, PANEL, TEXT, Splitter
 
 SETTINGS = Path(__file__).with_name("settings.json")
 
@@ -70,34 +70,39 @@ TOOLS = {  # key -> glyph, tint, title, description
     "aceo": ("▤", TINT_YELLOW, "ACEO sheets",
              "Fill full pages of 8 ACEO cards with covers and save a PDF."),
 }
-GROUPS = [  # header, blurb, tool keys
-    ("Comic Cover Extractor", "Pull cover images out of CBZ and CBR files.", ["single", "bulk", "icons"]),
-    ("Comic Renamer", "Keep file names consistent across your collection.", ["rename"]),
-    ("Metadata", "Fix the information stored inside your comics.", ["metadata"]),
-    ("Archive Tools", "Repack and tidy the archives themselves.", ["convert", "cleanup"]),
-    ("Library Audit", "Check the whole collection for problems.", ["audit"]),
-    ("Reading Orders", "Show which comic to read next.", ["order"]),
-    ("ACEO Cards", "Print covers as trading cards.", ["aceo"]),
+GROUPS = [  # header, tool keys
+    ("Comic Cover Extractor", ["single", "bulk", "icons"]),
+    ("Comic Renamer", ["rename"]),
+    ("Metadata", ["metadata"]),
+    ("Archive Tools", ["convert", "cleanup"]),
+    ("Library Audit", ["audit"]),
+    ("Reading Orders", ["order"]),
+    ("ACEO Cards", ["aceo"]),
 ]
+HOME_ROWS = [[0, 1], [2, 3, 4], [5, 6]]  # which groups share a row on Home (indexes into GROUPS)
+HOME_COLS, HOME_GAPS = 4, 2  # every row has the same number of card columns and group gaps, so cards line up
+GAP = 26  # width of the gap between two groups; cards inside a group are 8 apart
 
 
 class Card(ctk.CTkFrame):
+    """A compact tool card: icon tile and title on one line, a short description under it."""
+
     def __init__(self, parent, glyph, tint, title, text, command):
         super().__init__(parent, fg_color=BG, border_color=BORDER, border_width=1, corner_radius=10,
-                         height=138, cursor="hand2")
+                         height=104, cursor="hand2")
         self.pack_propagate(False)
         head = ctk.CTkFrame(self, fg_color="transparent")
-        head.pack(fill="x", padx=18, pady=(16, 8))
-        tile = ctk.CTkFrame(head, width=36, height=36, fg_color=tint, corner_radius=8)
+        head.pack(fill="x", padx=12, pady=(11, 4))
+        tile = ctk.CTkFrame(head, width=30, height=30, fg_color=tint, corner_radius=7)
         tile.pack(side="left")
         tile.pack_propagate(False)
-        ctk.CTkLabel(tile, text=glyph, font=(FONT, 15, "bold"), text_color=TEXT).pack(expand=True)
-        ctk.CTkLabel(head, text=title, font=(FONT, 16, "bold"), text_color=TEXT,
-                     anchor="w").pack(side="left", padx=(12, 0))
-        ctk.CTkLabel(self, text=text, font=(FONT, 13), text_color=MUTED, anchor="nw", justify="left",
-                     wraplength=250).pack(fill="x", padx=18)
-        ctk.CTkLabel(self, text="Open  →", font=(FONT, 13), text_color=ACCENT,
-                     anchor="w").pack(side="bottom", fill="x", padx=18, pady=(0, 12))
+        ctk.CTkLabel(tile, text=glyph, font=(FONT, 13, "bold"), text_color=TEXT).pack(expand=True)
+        ctk.CTkLabel(head, text=title, font=(FONT, 14, "bold"), text_color=TEXT,
+                     anchor="w").pack(side="left", padx=(9, 0))
+        self.desc = ctk.CTkLabel(self, text=text, font=(FONT, 12), text_color=MUTED, anchor="nw", justify="left",
+                                 wraplength=170)
+        self.desc.pack(fill="x", padx=12)
+        self.bind("<Configure>", lambda e: self.desc.configure(wraplength=max(90, int(e.width / self._get_widget_scaling()) - 26)))
         self._command = command
         self._bind_all(self)
 
@@ -118,32 +123,44 @@ class Card(ctk.CTkFrame):
 
 
 class HomePage(ctk.CTkFrame):
+    """Every tool on one screen: groups side by side in rows, with a wider gap between groups than between cards."""
+
     def __init__(self, parent, open_tool):
         super().__init__(parent, fg_color=BG)
-        wrap = ctk.CTkScrollableFrame(self, fg_color=BG, scrollbar_button_color=BORDER,
-                                      scrollbar_button_hover_color=MUTED)
-        wrap.pack(fill="both", expand=True, padx=(40, 24), pady=(30, 20))
-        self.scroller = wrap
-        ctk.CTkLabel(wrap, text="Comic Toolkit", font=(FONT, 32, "bold"), text_color=TEXT,
-                     anchor="w").pack(fill="x")
-        ctk.CTkLabel(wrap, text="Choose a tool to get started.", font=(FONT, 15), text_color=MUTED,
-                     anchor="w").pack(fill="x", pady=(4, 8))
-        for header, blurb, keys in GROUPS:
-            ctk.CTkLabel(wrap, text=header, font=(FONT, 18, "bold"), text_color=TEXT,
-                         anchor="w").pack(fill="x", pady=(22, 0))
-            ctk.CTkLabel(wrap, text=blurb, font=(FONT, 13), text_color=MUTED,
-                         anchor="w").pack(fill="x", pady=(2, 10))
-            grid = ctk.CTkFrame(wrap, fg_color=BG)
-            grid.pack(fill="x")
-            for i in range(3):  # same card width in every group
-                grid.columnconfigure(i, weight=1, uniform="cards")
-            for i, key in enumerate(keys):
-                glyph, tint, title, text = TOOLS[key]
-                Card(grid, glyph, tint, title, text, lambda k=key: open_tool(k)).grid(
-                    row=0, column=i, sticky="ew", padx=(0 if i == 0 else 8, 8))
+        wrap = ctk.CTkFrame(self, fg_color=BG)
+        wrap.pack(fill="both", expand=True, padx=(32, 24), pady=(28, 16))
+        ctk.CTkLabel(wrap, text="Comic Toolkit", font=(FONT, 30, "bold"), text_color=TEXT,
+                     anchor="w").pack(fill="x", padx=4)
+        ctk.CTkLabel(wrap, text="Choose a tool to get started.", font=(FONT, 14), text_color=MUTED,
+                     anchor="w").pack(fill="x", padx=4, pady=(2, 6))
+        for row_groups in HOME_ROWS:
+            row = ctk.CTkFrame(wrap, fg_color=BG)
+            row.pack(fill="x", pady=(18, 0))
+            col, gaps, cards = 0, 0, 0
+            for gi in row_groups:
+                header, keys = GROUPS[gi]
+                if col:  # a gap column between this group and the one before
+                    row.columnconfigure(col, minsize=GAP, weight=0)
+                    col, gaps = col + 1, gaps + 1
+                start = col
+                ctk.CTkLabel(row, text=header, font=(FONT, 14, "bold"), text_color=TEXT, anchor="w").grid(
+                    row=0, column=start, columnspan=len(keys), sticky="ew", padx=4, pady=(0, 6))
+                for i, key in enumerate(keys):
+                    row.columnconfigure(col, weight=1, uniform="cards")
+                    glyph, tint, title, text = TOOLS[key]
+                    Card(row, glyph, tint, title, text, lambda k=key: open_tool(k)).grid(
+                        row=1, column=col, sticky="ew", padx=4)  # equal padding keeps every card the same width
+                    col += 1
+                    cards += 1
+            while gaps < HOME_GAPS:  # pad short rows so every row splits its width the same way
+                row.columnconfigure(col, minsize=GAP, weight=0)
+                col, gaps = col + 1, gaps + 1
+            for _ in range(HOME_COLS - cards):
+                row.columnconfigure(col, weight=1, uniform="cards")
+                col += 1
         ctk.CTkLabel(wrap, text="Tip: drop a comic file anywhere to open it in Single issue, or a folder onto any "
-                                "folder tool. From Home, a dropped folder opens Bulk folder.", font=(FONT, 13), text_color=MUTED,
-                     anchor="w").pack(fill="x", pady=(30, 0))
+                                "folder tool. From Home, a dropped folder opens Bulk folder.", font=(FONT, 12),
+                     text_color=MUTED, anchor="w", justify="left", wraplength=800).pack(fill="x", side="bottom")
 
 
 class App(ctk.CTk, TkinterDnD.DnDWrapper):
@@ -161,7 +178,11 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         side = ctk.CTkFrame(self, fg_color=PANEL, width=190, corner_radius=0)
         side.pack(side="left", fill="y")
         side.pack_propagate(False)
-        ctk.CTkFrame(self, width=1, fg_color=BORDER, corner_radius=0).pack(side="left", fill="y")
+        self.sidebar_width = 190
+        self.splitter = Splitter(self, side, side="left", lo=150, hi=360, on_change=self._sidebar_changed)
+        self.splitter.pack(side="left", fill="y")
+        if isinstance(saved.get("sidebar"), (int, float)):
+            self.splitter.set_width(saved["sidebar"])
         content = ctk.CTkFrame(self, fg_color=BG)
         content.pack(side="left", fill="both", expand=True)
 
@@ -175,7 +196,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         ctk.CTkLabel(side, text="Comic Toolkit", font=(FONT, 15, "bold"), text_color=TEXT,
                      anchor="w").pack(fill="x", padx=18, pady=(24, 14))
         self._nav_item(side, "home", "Home")
-        for header, _, keys in GROUPS:
+        for header, keys in GROUPS:
             ctk.CTkLabel(side, text=header.upper(), font=(FONT, 11, "bold"), text_color=MUTED,
                          anchor="w").pack(fill="x", padx=18, pady=(14, 4))
             for key in keys:
@@ -197,6 +218,9 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.dnd_bind("<<Drop>>", self.on_drop)
         self.protocol("WM_DELETE_WINDOW", self.close)
 
+    def _sidebar_changed(self, width):
+        self.sidebar_width = width
+
     def _nav_item(self, parent, key, label):
         b = ctk.CTkButton(parent, text=label, anchor="w", height=34, corner_radius=6, font=(FONT, 13),
                           fg_color="transparent", hover_color=HOVER, text_color=TEXT,
@@ -216,8 +240,6 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             self.pages[self.current].pack_forget()
         self.current = key
         self.pages[key].pack(fill="both", expand=True)
-        if key == "home":
-            self.pages["home"].scroller._parent_canvas.yview_moveto(0)
         for k, b in self.nav.items():
             b.configure(fg_color=BORDER if k == key else "transparent")
 
@@ -247,6 +269,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
     def close(self):
         data = {k: p.state() for k, p in self.pages.items() if hasattr(p, "state")}
         data["theme"] = self.theme
+        data["sidebar"] = self.sidebar_width
         try:
             SETTINGS.write_text(json.dumps(data, indent=2), encoding="utf-8")
         except OSError:

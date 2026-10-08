@@ -131,7 +131,7 @@ with tempfile.TemporaryDirectory() as d:
 # --- whole app registers the page
 import comic_tool
 app = comic_tool.App()
-assert "audit" in app.pages and any(h == "Library Audit" for h, _, _ in comic_tool.GROUPS)
+assert "audit" in app.pages and any(h == "Library Audit" for h, _ in comic_tool.GROUPS)
 app.show("audit"); app.update()
 app.destroy(); root.destroy()
 print("AUDIT UI OK")

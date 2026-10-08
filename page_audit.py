@@ -11,9 +11,10 @@ import customtkinter as ctk
 
 import audit_core as ac
 from archive_tools import move_to_archive
+from comic_core import COMIC_EXT, common_root, picked_files
 from library_scan import scan_library
 from ui_kit import (ACCENT, BG, BORDER, FONT, MUTED, TEXT, DropZone, Page, apply_tree_theme, build_tree, button,
-                    menu, segmented, switch_style, title_block)
+                    menu, segmented, switch_style, title_block, divider)
 
 BROKEN, DUPES, MISSING, QUALITY = "Broken", "Duplicates", "Missing", "Quality"
 REPORTS = [BROKEN, DUPES, MISSING, QUALITY]
@@ -29,18 +30,18 @@ EMPTY = {BROKEN: "No broken files found.", DUPES: "No duplicates found.", MISSIN
          QUALITY: "Nothing flagged."}
 
 
-def _run(q, root, o, stop):
+def _run(q, root, o, stop, only=None):
     """Worker: scan, optionally test integrity, then compute all four reports. No Tk calls."""
     try:
-        _audit(q, root, o, stop)
+        _audit(q, root, o, stop, only)
     except Exception as e:  # noqa: BLE001 - whatever goes wrong, the page must stop waiting
         q.put(("error", f"{type(e).__name__}: {e}"))
 
 
-def _audit(q, root, o, stop):
+def _audit(q, root, o, stop, only=None):
     deep = o["deep"] or o["similar"]
     res = scan_library(root, o["recursive"], deep=deep, deep_cbr=o["deep_cbr"],
-                       progress=lambda d, t, i: q.put(("prog", "Scanning", d, t)), stop=stop)
+                       progress=lambda d, t, i: q.put(("prog", "Scanning", d, t)), stop=stop, only=only)
     issues = res.issues
     broken = []
     if o["integrity"] and not res.stopped:
@@ -72,6 +73,7 @@ class AuditPage(Page):
     def __init__(self, parent):
         super().__init__(parent)
         self.root_dir = None
+        self.picked = None  # comics chosen one by one instead of a folder
         self.results = None
         self.q = None
         self.stop = threading.Event()
@@ -79,7 +81,8 @@ class AuditPage(Page):
         self.by_iid = {}
 
         title_block(self.main, "Library audit", "Scan a library once, then check it for problems.")
-        self.drop = DropZone(self.main, "Drop a library folder here, or click to browse", self.browse)
+        self.drop = DropZone(self.main, "Drop a library folder here, or add a folder or comics below", self.browse,
+                             self.browse, self.browse_files)
         self.drop.pack(fill="x")
         bar = ctk.CTkFrame(self.main, fg_color=BG)
         bar.pack(fill="x", pady=(14, 6))
@@ -103,10 +106,12 @@ class AuditPage(Page):
 
         v = self.vars
         sw = switch_style()
+        self.form.heading("Source")
         box = self.form.add("Scan")
         ctk.CTkSwitch(box, text="Include subfolders", variable=v["recursive"], **sw).pack(anchor="w")
         ctk.CTkSwitch(box, text="Read page counts and covers", variable=v["deep"], **sw).pack(anchor="w", pady=(8, 0))
         ctk.CTkSwitch(box, text="Open real .cbr files (slow)", variable=v["deep_cbr"], **sw).pack(anchor="w", pady=(8, 0))
+        self.form.heading("Reports")
         box = self.form.add("Broken files")
         ctk.CTkSwitch(box, text="Full integrity test (slow)", variable=v["integrity"], **sw).pack(anchor="w")
         ctk.CTkLabel(box, text="Reads every file completely. Off: only problems the quick scan notices.",
@@ -123,6 +128,7 @@ class AuditPage(Page):
 
         self.btn_scan = button(self.footer, "Scan library", self.scan, primary=True)
         self.btn_scan.pack(pady=(0, 8))
+        divider(self.footer, vertical=False).pack(fill="x", pady=(2, 10))
         # report-specific buttons live directly in the footer and are packed before Export CSV on demand
         self.btn_move = button(self.footer, "Move checked to Archive", self.move_checked)
         self.btn_copy = button(self.footer, "Copy wishlist", self.copy_wishlist)
@@ -145,10 +151,28 @@ class AuditPage(Page):
         if d:
             self.set_folder(d)
 
-    def set_folder(self, folder):
+    def browse_files(self):
+        files = filedialog.askopenfilenames(title="Choose comics to audit", filetypes=[
+            ("Comic archives", "*.cbz *.cbr"), ("All", "*.*")])
+        if files:
+            self.set_files(files)
+
+    def set_files(self, paths):
+        """Audit just these comics (duplicates and gaps are then judged among them only)."""
+        if self.q:
+            return
+        files = picked_files(paths, COMIC_EXT)
+        if not files:
+            self.say("None of those files are .cbz or .cbr comics.", err=True)
+            return
+        self.set_folder(common_root(files), files)
+        self.drop.set(f"{len(files)} comic{'s' if len(files) != 1 else ''} chosen from {self.root_dir}")
+
+    def set_folder(self, folder, picked=None):
         if self.q:
             return
         self.root_dir = Path(folder)
+        self.picked = picked
         self.drop.set(str(self.root_dir))
         self.results = None
         self.checked = set()
@@ -177,7 +201,8 @@ class AuditPage(Page):
         self._show_report()
         self.meta.configure(text="Scanning…")
         self._idle()
-        threading.Thread(target=_run, args=(self.q, self.root_dir, self.state(), self.stop), daemon=True).start()
+        threading.Thread(target=_run, args=(self.q, self.root_dir, self.state(), self.stop, self.picked),
+                         daemon=True).start()
         self._poll()
 
     def _poll(self):

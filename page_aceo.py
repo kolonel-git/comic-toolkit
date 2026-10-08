@@ -13,7 +13,7 @@ from PIL import Image
 import aceo_core as ac
 import reading_order as ro
 from ui_kit import (ACCENT, BG, BORDER, DANGER, FONT, MUTED, PANEL, TEXT, DropZone, Page, apply_tree_theme, build_tree,
-                    button, entry, menu, switch_style, title_block)
+                    button, entry, menu, switch_style, title_block, Splitter, toolbar)
 
 THUMB = 900  # longest side of the in-memory preview copy of a cover
 PREVIEW_W = 300  # width of the preview column; the sheet is as tall as the space allows
@@ -72,23 +72,17 @@ class AceoPage(Page):
         self._photo = None
 
         title_block(self.main, "ACEO sheets", "Fill full pages of ACEO cards with the covers you choose, as a PDF.")
-        self.drop = DropZone(self.main, "Drop comics, folders or cover images here, or click to add files", self.add_files)
-        self.drop.configure(height=56)
+        self.drop = DropZone(self.main, "Drop comics, folders or cover images here, or add them below", self.add_files,
+                             self.add_folder, self.add_files, files_text="Choose comics or images…")
         self.drop.pack(fill="x")
         self.meta = ctk.CTkLabel(self.main, text="", font=(FONT, 13), text_color=TEXT, anchor="w")
         self.meta.pack(fill="x", pady=(12, 6))
         bar = ctk.CTkFrame(self.main, fg_color=BG)
         bar.pack(fill="x", pady=(0, 8))
-        self.tools = {}
-        for key, text, width, cmd in (("folder", "Add folder…", 92, self.add_folder),
-                                      ("top", "Top", 48, lambda: self.to_edge(True)),
-                                      ("up", "▲", 34, lambda: self.shift(-1)), ("down", "▼", 34, lambda: self.shift(1)),
-                                      ("bottom", "Bottom", 64, lambda: self.to_edge(False)),
-                                      ("remove", "Remove", 72, self.remove), ("clear", "Clear", 60, self.clear)):
-            b = ctk.CTkButton(bar, text=text, width=width, height=26, corner_radius=6, font=(FONT, 12), fg_color=BG,
-                              hover_color=PANEL, text_color=TEXT, border_width=1, border_color=BORDER, command=cmd)
-            b.pack(side="left", padx=(0, 6))
-            self.tools[key] = b
+        self.tools = toolbar(
+            bar, [("top", "Top", 48, lambda: self.to_edge(True)), ("up", "▲", 34, lambda: self.shift(-1)),
+                  ("down", "▼", 34, lambda: self.shift(1)), ("bottom", "Bottom", 64, lambda: self.to_edge(False))],
+            [("remove", "Remove", 72, self.remove), ("clear", "Clear", 60, self.clear)])
         self.progress = ctk.CTkProgressBar(self.main, height=3, corner_radius=2, fg_color=BORDER,
                                            progress_color=ACCENT)
         self.progress.set(0)
@@ -97,8 +91,9 @@ class AceoPage(Page):
         body = ctk.CTkFrame(self.main, fg_color=BG)
         body.pack(fill="both", expand=True)
         right = ctk.CTkFrame(body, fg_color=BG, width=PREVIEW_W)
-        right.pack(side="right", fill="y", padx=(16, 0))
+        right.pack(side="right", fill="y")
         right.pack_propagate(False)
+        Splitter(body, right, side="right", lo=240, hi=700).pack(side="right", fill="y", padx=(6, 6))
         left = ctk.CTkFrame(body, fg_color=BG)
         left.pack(side="left", fill="both", expand=True)
         wrap, self.tree = build_tree(left, [("num", "#", 40, False), ("name", "Cover", 180, True),

@@ -1,5 +1,6 @@
 """Archive reading, cover rendering and output-path planning. No UI code here."""
 import io
+import os
 import re
 import shutil
 import subprocess
@@ -186,6 +187,27 @@ def find_comics(folder, recursive):
     it = Path(folder).rglob("*") if recursive else Path(folder).iterdir()
     files = [p for p in it if p.is_file() and p.suffix.lower() in COMIC_EXT and not in_archive(p, folder)]
     return sorted(files, key=lambda p: natural_key(p.relative_to(folder)))
+
+
+def picked_files(paths, exts):
+    """The existing files among `paths` with one of `exts`, without repeats, in natural order. Used by the
+    'Choose comics' buttons, where the user hands over files instead of a folder."""
+    seen, out = set(), []
+    for p in map(Path, paths):
+        key = str(p).lower()
+        if key not in seen and p.is_file() and p.suffix.lower() in exts:
+            seen.add(key)
+            out.append(p)
+    return sorted(out, key=natural_key)
+
+
+def common_root(paths):
+    """The folder that contains all of `paths` (the nearest shared parent), used as the 'library' of a pick."""
+    parents = [os.path.dirname(os.path.abspath(p)) for p in paths]
+    try:
+        return Path(os.path.commonpath(parents))
+    except ValueError:  # files on different drives
+        return Path(parents[0])
 
 
 def export_cover(comic, root, o, used):

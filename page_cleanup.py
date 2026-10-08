@@ -19,9 +19,11 @@ class CleanupPage(BatchPage):
         super().__init__(parent)
         v = self.vars
         sw = switch_style()
-        box = self.form.add("What to clean")
-        ctk.CTkSwitch(box, text="Include subfolders", variable=v["recursive"], **sw).pack(anchor="w")
-        ctk.CTkSwitch(box, text="Remove non-image files", variable=v["junk"], **sw).pack(anchor="w", pady=(8, 0))
+        self.form.heading("Source")
+        ctk.CTkSwitch(self.form.add("Subfolders"), text="Include subfolders", variable=v["recursive"], **sw).pack(anchor="w")
+        self.form.heading("Clean-up")
+        box = self.form.add("Junk files")
+        ctk.CTkSwitch(box, text="Remove non-image files", variable=v["junk"], **sw).pack(anchor="w")
         ctk.CTkLabel(box, text="Thumbs.db, .nfo, __MACOSX and the like. ComicInfo.xml is always kept.",
                      font=(FONT, 11), text_color=MUTED, anchor="w", justify="left",
                      wraplength=260).pack(fill="x", pady=(4, 0))
@@ -33,6 +35,7 @@ class CleanupPage(BatchPage):
         menu(names, v["names"], [KEEP_NAMES, SEQUENTIAL]).pack(fill="x")
         ctk.CTkLabel(names, text="Sequential also flattens folders inside the archive.", font=(FONT, 11),
                      text_color=MUTED, anchor="w").pack(fill="x", pady=(4, 0))
+        self.form.heading("Output")
         menu(self.form.add("Original file"), v["original"], [BACKUP, REPLACE]).pack(fill="x")
         self.watch("recursive", callback=self.rescan)
 
@@ -40,6 +43,11 @@ class CleanupPage(BatchPage):
         it = folder.rglob("*") if o["recursive"] else folder.iterdir()
         files = [p for p in it if p.is_file() and p.suffix.lower() == ".cbz" and not in_archive(p, folder)]
         return sorted(files, key=lambda p: natural_key(p.relative_to(folder)))
+
+    pick_ext = {".cbz"}
+
+    def pick_items(self, files, o):
+        return [p for p in files if p.suffix.lower() == ".cbz"]
 
     def label(self, item):
         return self.rel(item)

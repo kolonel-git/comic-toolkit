@@ -3,7 +3,20 @@
 [< Docs index](README.md)
 
 The Home page groups the tools as cards; the sidebar mirrors the same groups. A **Dark mode** switch sits at the bottom of
-the sidebar (first launch follows Windows; your choice is remembered).
+the sidebar (first launch follows Windows; your choice is remembered). Home shows every tool on one screen, the groups side by side with a wider gap between groups than between cards.
+
+## On every page
+
+- **Adding comics.** Each page has the same box at the top: drop comics or a folder on it, or use **Add folder…** or **Choose comics…**
+  inside it. On the folder tools (Bulk folder, Folder icons, Renamer, Metadata, CBR to CBZ, Clean-up, Library audit) *Choose comics…* works on
+  just the files you pick, not the rest of their folder; choosing a folder again goes back to the whole folder. (Library audit then judges
+  duplicates and gaps among the picked comics only; Folder icons uses one folder per parent, with the first or last picked comic as its cover.)
+  Reading order and ACEO sheets add whatever you give them to their list. **Single issue** takes one comic; its folder button opens the folder in Bulk folder.
+- **Resizing.** Drag the thin divider to resize the sidebar, a page's options panel, the Renamer's file list (beside the card) and the ACEO cover list (beside the
+  preview). Drag the edge of any table heading to resize that column, and use the scrollbar under a table when its columns are wider than the window.
+  The sidebar and panel widths are remembered; column widths are not.
+- **Options panels** read in the same order on every page: *Source* (what to read), the tool's own groups, then *Output* (where results go and what happens to originals). The main button of a page sits at the bottom of the panel, with utility buttons (Rescan, Open folder) below a divider.
+- **Buttons are grouped** by what they do, with a small divider between groups (for example Reading order: *Suggest order* | *Top ▲ ▼ Bottom* | *Remove Clear*).
 
 ## Comic Cover Extractor
 

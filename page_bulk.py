@@ -7,11 +7,11 @@ from tkinter import filedialog
 
 import customtkinter as ctk
 
-from comic_core import (CONFLICTS, FORMATS, HEIGHTS, NAMES, ORG_FLAT, ORG_MIRROR, ORG_SERIES, ORGS,
+from comic_core import (COMIC_EXT, CONFLICTS, FORMATS, HEIGHTS, NAMES, ORG_FLAT, ORG_MIRROR, ORG_SERIES, ORGS,
                         WHERE_BESIDE, WHERE_CUSTOM, WHERE_SUB, WHERES, Comic, export_cover,
-                        find_comics, plan_dest, sanitize, series_name)
+                        common_root, find_comics, picked_files, plan_dest, sanitize, series_name)
 from ui_kit import (ACCENT, BORDER, FONT, MUTED, PANEL, TEXT, DropZone, Form, Page, button, entry, menu,
-                    switch_style, title_block)
+                    switch_style, title_block, divider)
 
 
 def _worker(q, files, root, o, stop):
@@ -44,13 +44,15 @@ class BulkPage(Page):
     def __init__(self, parent):
         super().__init__(parent)
         self.folder = None
+        self.picked = None  # comics chosen one by one instead of a folder
         self.files = []
         self.q = None
         self.stop = threading.Event()
         self.out_dir = None
 
         title_block(self.main, "Bulk folder", "Pull the cover from every CBZ and CBR in a folder.")
-        self.drop = DropZone(self.main, "Drop a folder here, or click to browse", self.browse)
+        self.drop = DropZone(self.main, "Drop a folder here, or add a folder or comics below", self.browse,
+                             self.browse, self.browse_files)
         self.drop.pack(fill="x")
         self.meta = ctk.CTkLabel(self.main, text="", font=(FONT, 13), text_color=TEXT, anchor="w")
         self.meta.pack(fill="x", pady=(16, 0))
@@ -66,8 +68,12 @@ class BulkPage(Page):
         self.log.configure(state="disabled")
 
         v = self.vars
-        ctk.CTkSwitch(self.form.add("Folders"), text="Include subfolders", variable=v["recursive"],
+        self.form.heading("Source")
+        ctk.CTkSwitch(self.form.add("Subfolders"), text="Include subfolders", variable=v["recursive"],
                       **switch_style()).pack(anchor="w")
+        self.form.heading("Cover image")
+        self.add_image_rows()
+        self.form.heading("Output")
         menu(self.form.add("Save covers to"), v["where"], WHERES).pack(fill="x")
         self.sub_row = self.form.add("Subfolder name")
         entry(self.sub_row, v["subfolder"]).pack(fill="x")
@@ -75,12 +81,12 @@ class BulkPage(Page):
         self.path_row(self.custom_row, v["custom"], "Save covers to")
         self.org_row = self.form.add("Organise covers")
         menu(self.org_row, v["organize"], ORGS).pack(fill="x")
-        self.add_image_rows()
         menu(self.form.add("File name"), v["name"], NAMES).pack(fill="x")
         menu(self.form.add("If the file exists"), v["conflict"], CONFLICTS).pack(fill="x")
 
         self.btn_start = button(self.footer, "Extract covers", self.start, primary=True)
         self.btn_start.pack(pady=(0, 8))
+        divider(self.footer, vertical=False).pack(fill="x", pady=(2, 10))
         self.btn_open = button(self.footer, "Open output folder", self.open_out)
         self.btn_open.pack()
         self.btn_open.configure(state="disabled")
@@ -95,13 +101,35 @@ class BulkPage(Page):
         if d:
             self.set_folder(d)
 
+    def browse_files(self):
+        files = filedialog.askopenfilenames(title="Choose comics", filetypes=[
+            ("Comic archives", "*.cbz *.cbr"), ("All", "*.*")])
+        if files:
+            self.set_files(files)
+
+    def set_files(self, paths):
+        """Take the covers of these comics only, instead of a whole folder."""
+        files = picked_files(paths, COMIC_EXT)
+        if not files:
+            self.say("None of those files are .cbz or .cbr comics.", err=True)
+            return
+        self.picked = files
+        self.folder = common_root(files)
+        self.drop.set(f"{len(files)} comic{'s' if len(files) != 1 else ''} chosen from {self.folder}")
+        self.say("")
+        self.rescan()
+
     def set_folder(self, folder):
         self.folder = Path(folder)
+        self.picked = None
         self.drop.set(str(self.folder))
         self.rescan()
 
     def rescan(self):
-        self.files = find_comics(self.folder, self.vars["recursive"].get()) if self.folder else []
+        if self.picked is not None:
+            self.files = [p for p in self.picked if p.exists()]
+        else:
+            self.files = find_comics(self.folder, self.vars["recursive"].get()) if self.folder else []
         self.refresh()
 
     def options(self):
@@ -119,7 +147,7 @@ class BulkPage(Page):
             self.meta.configure(text="")
             self.example.configure(text="")
             return
-        text = f"{n} comic{'s' if n != 1 else ''} found"
+        text = f"{n} comic{'s' if n != 1 else ''} {'chosen' if self.picked is not None else 'found'}"
         if n and where != WHERE_BESIDE:
             if org == ORG_SERIES:
                 k = len({series_name(p.stem) for p in self.files})

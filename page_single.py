@@ -26,7 +26,8 @@ class SinglePage(Page):
         self._thumbs = []
 
         title_block(self.main, "Single issue", "Preview an issue, save its cover, or convert it to ZIP.")
-        self.drop = DropZone(self.main, "Drop a .cbz or .cbr here, or click to browse", self.browse)
+        self.drop = DropZone(self.main, "Drop a .cbz or .cbr here, or choose one below", self.browse,
+                             self.browse_folder, self.browse, folder_text="Open folder in Bulk…", files_text="Choose comic…", files_first=True)
         self.drop.pack(fill="x")
         self.meta = ctk.CTkLabel(self.main, text="", font=(FONT, 13), text_color=MUTED, anchor="w")
         self.meta.pack(fill="x", pady=(16, 4))
@@ -34,7 +35,9 @@ class SinglePage(Page):
         self.preview.pack(fill="both", expand=True)
 
         v = self.vars
+        self.form.heading("Cover image")
         self.add_image_rows()
+        self.form.heading("Output")
         self.where_menu = menu(self.form.add("Save to"), v["where"], [WHERE_BESIDE, WHERE_CUSTOM])
         self.where_menu.pack(fill="x")
         self.custom_row = self.form.add("Folder")
@@ -62,6 +65,15 @@ class SinglePage(Page):
         p = filedialog.askopenfilename(filetypes=[("Comic archives", "*.cbz *.cbr"), ("All", "*.*")])
         if p:
             self.load(p)
+
+    def browse_folder(self):
+        """One issue at a time lives here, so a folder is handed to Bulk folder (as when it is dropped)."""
+        d = filedialog.askdirectory(title="Folder of comics (opens in Bulk folder)")
+        if d:
+            app = self.winfo_toplevel()
+            if hasattr(app, "pages") and "bulk" in app.pages:
+                app.show("bulk")
+                app.pages["bulk"].set_folder(d)
 
     def load(self, path):
         if self.comic:

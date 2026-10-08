@@ -26,7 +26,9 @@ class IconsPage(BatchPage):
         super().__init__(parent)
         v = self.vars
         sw = switch_style()
+        self.form.heading("Cover")
         menu(self.form.add("Cover from"), v["which"], WHICH).pack(fill="x")
+        self.form.heading("Output")
         box = self.form.add("Write")
         ctk.CTkSwitch(box, text="Folder icon (folder.ico + desktop.ini)", variable=v["ico"], **sw).pack(anchor="w")
         ctk.CTkSwitch(box, text="Cover image (folder.jpg)", variable=v["jpg"], **sw).pack(anchor="w", pady=(8, 0))
@@ -40,6 +42,14 @@ class IconsPage(BatchPage):
 
     def scan(self, folder, o):
         return plan_folders(folder, o["which"])
+
+    def pick_items(self, files, o):
+        """One icon per folder: the first (or last) of the chosen comics in it supplies the cover."""
+        by_folder = {}
+        for p in files:
+            by_folder.setdefault(p.parent, []).append(p)
+        pick = -1 if o["which"] == WHICH[1] else 0
+        return [(folder, comics[pick]) for folder, comics in sorted(by_folder.items(), key=lambda kv: str(kv[0]).lower())]
 
     def label(self, item):
         return self.rel(item[0])

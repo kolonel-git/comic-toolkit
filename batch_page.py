@@ -7,7 +7,8 @@ from tkinter import filedialog
 
 import customtkinter as ctk
 
-from ui_kit import ACCENT, BORDER, FONT, PANEL, TEXT, DropZone, Page, button, title_block
+from comic_core import COMIC_EXT, common_root, picked_files
+from ui_kit import ACCENT, BORDER, FONT, PANEL, TEXT, DropZone, Page, button, divider, title_block
 
 MARKS = {"ok": "✓", "skip": "↷", "fail": "✗"}
 
@@ -33,18 +34,20 @@ class BatchPage(Page):
     title = subtitle = ""
     noun = "file"
     run_label = "Run"
-    drop_prompt = "Drop a folder here, or click to browse"
+    drop_prompt = "Drop a folder here, or add a folder or comics below"
+    pick_ext = COMIC_EXT  # what 'Choose comics' accepts
 
     def __init__(self, parent):
         super().__init__(parent)
         self.folder = None
+        self.picked = None  # files chosen one by one instead of a folder (None = scan the folder)
         self.items = []
         self.q = None
         self.stop = threading.Event()
         self.dry = False
 
         title_block(self.main, self.title, self.subtitle)
-        self.drop = DropZone(self.main, self.drop_prompt, self.browse)
+        self.drop = DropZone(self.main, self.drop_prompt, self.browse, self.browse, self.browse_files)
         self.drop.pack(fill="x")
         self.meta = ctk.CTkLabel(self.main, text="", font=(FONT, 13), text_color=TEXT, anchor="w")
         self.meta.pack(fill="x", pady=(16, 8))
@@ -61,6 +64,7 @@ class BatchPage(Page):
         self.btn_run.pack(pady=(0, 8))
         self.btn_preview = button(self.footer, "Preview changes", lambda: self.start(True))
         self.btn_preview.pack(pady=(0, 8))
+        divider(self.footer, vertical=False).pack(fill="x", pady=(2, 10))
         self.btn_open = button(self.footer, "Open folder", self.open_folder)
         self.btn_open.pack()
         self.btn_stop = button(self.footer, "Stop", self.stop.set)
@@ -75,6 +79,10 @@ class BatchPage(Page):
         return str(item)
 
     def work(self, item, o, dry):
+        raise NotImplementedError
+
+    def pick_items(self, files, o):
+        """Items for files chosen one by one (the counterpart of scan() for a folder)."""
         raise NotImplementedError
 
     def validate(self, o):
@@ -96,8 +104,28 @@ class BatchPage(Page):
         if d:
             self.set_folder(d)
 
+    def browse_files(self):
+        exts = " ".join("*" + e for e in sorted(self.pick_ext))
+        files = filedialog.askopenfilenames(title="Choose comics", filetypes=[("Comics", exts), ("All", "*.*")])
+        if files:
+            self.set_files(files)
+
+    def set_files(self, paths):
+        """Work on these comics instead of a whole folder."""
+        files = picked_files(paths, self.pick_ext)
+        if not files:
+            self.say("None of those files can be used by this tool.", err=True)
+            return
+        self.picked = files
+        self.folder = common_root(files)
+        self.drop.set(f"{len(files)} file{'s' if len(files) != 1 else ''} chosen from {self.folder}")
+        self._log(None)
+        self.say("")
+        self.rescan()
+
     def set_folder(self, folder):
         self.folder = Path(folder)
+        self.picked = None
         self.drop.set(str(self.folder))
         self._log(None)
         self.say("")
@@ -106,7 +134,8 @@ class BatchPage(Page):
     def rescan(self):
         if not self.folder or self.q:
             return
-        self.items = self.scan(self.folder, self.state())
+        o = self.state()
+        self.items = self.pick_items(self.picked, o) if self.picked is not None else self.scan(self.folder, o)
         self.meta.configure(text=self.found_text(len(self.items)))
         self._idle()
 

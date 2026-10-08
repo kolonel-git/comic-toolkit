@@ -6,7 +6,7 @@ database. Everything works on the files and folders on disk.
 
 - **Platform:** Windows 10/11 (a few features are Windows-only)
 - **Language / UI:** Python 3, [customtkinter](https://github.com/TomSchimansky/CustomTkinter), Notion-style light and dark themes
-- **Status:** active development, currently `v0.1.0`
+- **Status:** active development, currently `v0.5.0`
 
 ## Quick start
 
@@ -20,7 +20,8 @@ Opening `.cbr` files needs a RAR-capable extractor (7-Zip, unrar, or Windows' bu
 
 ## What's inside
 
-The Home page shows the tools as cards, grouped as below. A Dark mode switch sits in the sidebar.
+The Home page shows the tools as cards, grouped as below. A Dark mode switch sits in the sidebar. Every page takes a folder or
+individual comics (drop them, or use **Add folder…** / **Choose comics…**), and the sidebar, the options panels and every table column can be dragged to the size you like.
 
 | Group | Tools | What they do |
 |---|---|---|

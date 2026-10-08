@@ -138,7 +138,7 @@ with tempfile.TemporaryDirectory() as d:
     assert rp.items[0].dest.name.startswith("03 - Batman")
 # whole app
 import comic_tool
-app = comic_tool.App(); assert "order" in app.pages and any(h == "Reading Orders" for h, _, _ in comic_tool.GROUPS)
+app = comic_tool.App(); assert "order" in app.pages and any(h == "Reading Orders" for h, _ in comic_tool.GROUPS)
 app.show("order"); app.update()
 class Ev: pass
 ev_ = Ev(); ev_.data = "{C:/does/not/exist.cbz}"

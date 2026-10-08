@@ -70,6 +70,7 @@ class Form(ctk.CTkScrollableFrame):
                          scrollbar_button_color=BORDER, scrollbar_button_hover_color=MUTED)
         self.grid_columnconfigure(0, weight=1)
         self._row = 0
+        self.headings = []  # titles of the groups, in order
 
     def add(self, text):
         lbl = ctk.CTkLabel(self, text=text, font=(FONT, 12), text_color=MUTED, anchor="w")
@@ -83,10 +84,11 @@ class Form(ctk.CTkScrollableFrame):
     def heading(self, text):
         """A bold group title with a rule under it. Hide and show it like any other row."""
         box = ctk.CTkFrame(self, fg_color=PANEL)
-        box.grid(row=self._row, column=0, sticky="ew", pady=(20, 0))
+        box.grid(row=self._row, column=0, sticky="ew", pady=(4 if self._row == 0 else 20, 0))
         ctk.CTkLabel(box, text=text, font=(FONT, 13, "bold"), text_color=TEXT, anchor="w").pack(fill="x")
         ctk.CTkFrame(box, height=1, fg_color=BORDER, corner_radius=0).pack(fill="x", pady=(4, 0))
         box.label = box
+        self.headings.append(text)
         self._row += 1
         return box
 
@@ -96,14 +98,60 @@ class Form(ctk.CTkScrollableFrame):
             w.grid() if on else w.grid_remove()
 
 
+def tool_button(parent, text, command, width=None):
+    """A small bordered button for toolbars."""
+    return ctk.CTkButton(parent, text=text, command=command, width=width or max(48, 14 + 8 * len(text)), height=26,
+                         corner_radius=6, font=(FONT, 12), fg_color=BG, hover_color=PANEL, text_color=TEXT,
+                         text_color_disabled=MUTED, border_width=1, border_color=BORDER)
+
+
+def divider(parent, vertical=True):
+    """A thin rule between groups of buttons."""
+    if vertical:
+        return ctk.CTkFrame(parent, width=1, height=18, fg_color=BORDER, corner_radius=0)
+    return ctk.CTkFrame(parent, height=1, fg_color=BORDER, corner_radius=0)
+
+
+def toolbar(parent, *groups, side="left"):
+    """Lay out groups of small buttons in a row, with a divider between the groups.
+    Each group is a list of (key, text, width, command); returns {key: button}. side="right" keeps the same
+    visual order but anchors the row to the right edge."""
+    out = {}
+    first = True
+    for group in (reversed(groups) if side == "right" else groups):
+        if not group:
+            continue
+        if not first:
+            divider(parent).pack(side=side, padx=(8, 8))
+        first = False
+        for key, text, width, cmd in (reversed(group) if side == "right" else group):
+            b = tool_button(parent, text, cmd, width)
+            b.pack(side=side, padx=(0, 4) if side == "left" else (4, 0))
+            out[key] = b
+    return out
+
+
 class DropZone(ctk.CTkFrame):
-    def __init__(self, parent, prompt, on_click):
+    """The 'add your comics' box. With on_folder / on_files it also carries an Add folder and a Choose comics button,
+    so every page offers both in the same place."""
+
+    def __init__(self, parent, prompt, on_click, on_folder=None, on_files=None,
+                 folder_text="Add folder…", files_text="Choose comics…", files_first=False):
+        pair = [("folder", folder_text, on_folder), ("files", files_text, on_files)]
+        buttons = [(k, t, None, c) for k, t, c in (pair[::-1] if files_first else pair) if c]
         super().__init__(parent, fg_color=PANEL, border_color=BORDER, border_width=1,
-                         corner_radius=8, height=84)
+                         corner_radius=8, height=100 if buttons else 84)
         self.pack_propagate(False)
         self.prompt = prompt
         self.label = ctk.CTkLabel(self, text=prompt, font=(FONT, 14), text_color=MUTED)
-        self.label.pack(expand=True)
+        self.buttons = {}
+        if buttons:
+            row = ctk.CTkFrame(self, fg_color="transparent")
+            row.pack(side="bottom", pady=(0, 10))
+            self.buttons = toolbar(row, *[[b] for b in buttons])
+            self.label.pack(expand=True, pady=(8, 0))
+        else:
+            self.label.pack(expand=True)
         for w in (self, self.label):
             w.bind("<Button-1>", lambda _: on_click())
             w.bind("<Enter>", lambda _: self.configure(border_color=ACCENT))
@@ -111,6 +159,49 @@ class DropZone(ctk.CTkFrame):
 
     def set(self, text=None):
         self.label.configure(text=text or self.prompt, text_color=TEXT if text else MUTED)
+
+
+class Splitter(ctk.CTkFrame):
+    """A thin divider you drag to resize `target`, a frame that keeps a fixed width (pack_propagate(False)).
+    side is where the target sits relative to the divider: "left" or "right"."""
+
+    def __init__(self, parent, target, side="left", lo=160, hi=520, on_change=None):
+        super().__init__(parent, width=7, fg_color="transparent", corner_radius=0, cursor="sb_h_double_arrow")
+        self.target, self.side, self.lo, self.hi, self.on_change = target, side, lo, hi, on_change
+        self.line = ctk.CTkFrame(self, width=1, fg_color=BORDER, corner_radius=0, cursor="sb_h_double_arrow")
+        self.line.place(relx=0.5, rely=0, relheight=1, anchor="n")
+        self._start = None
+        for w in (self, self.line):
+            w.bind("<ButtonPress-1>", self._press)
+            w.bind("<B1-Motion>", self._drag)
+            w.bind("<ButtonRelease-1>", self._release)
+            w.bind("<Enter>", lambda _: self.line.configure(fg_color=ACCENT))
+            w.bind("<Leave>", lambda _: self._start is None and self.line.configure(fg_color=BORDER))
+
+    def _scale(self):
+        try:
+            return float(self.target._get_widget_scaling())
+        except Exception:  # noqa: BLE001 - older customtkinter
+            return 1.0
+
+    def _press(self, e):
+        self._start = (e.x_root, self.target.winfo_width() / self._scale())
+
+    def _drag(self, e):
+        if self._start is None:
+            return
+        dx = (e.x_root - self._start[0]) / self._scale()
+        self.set_width(self._start[1] + (dx if self.side == "left" else -dx))
+
+    def _release(self, _):
+        self._start = None
+        self.line.configure(fg_color=BORDER)
+
+    def set_width(self, width):
+        width = int(max(self.lo, min(self.hi, width)))
+        self.target.configure(width=width)
+        if self.on_change:
+            self.on_change(width)
 
 
 def title_block(parent, title, subtitle):
@@ -131,10 +222,13 @@ class Page(ctk.CTkFrame):
             self.vars[k] = ctk.BooleanVar(value=v) if isinstance(v, bool) else \
                 ctk.DoubleVar(value=v) if isinstance(v, (int, float)) else ctk.StringVar(value=v)
 
-        side = ctk.CTkFrame(self, fg_color=PANEL, width=310, corner_radius=0)
+        self.side_width = 310
+        side = ctk.CTkFrame(self, fg_color=PANEL, width=self.side_width, corner_radius=0)
         side.pack(side="right", fill="y")
         side.pack_propagate(False)
-        ctk.CTkFrame(self, width=1, fg_color=BORDER, corner_radius=0).pack(side="right", fill="y")
+        self.side = side
+        self.splitter = Splitter(self, side, side="right", lo=270, hi=560, on_change=self._side_changed)
+        self.splitter.pack(side="right", fill="y")
         self.footer = ctk.CTkFrame(side, fg_color=PANEL)
         self.footer.pack(side="bottom", fill="x", padx=20, pady=(8, 20))
         self.form = Form(side)
@@ -145,6 +239,9 @@ class Page(ctk.CTkFrame):
         self.status = ctk.CTkLabel(self.footer, text="", font=(FONT, 12), text_color=MUTED,
                                    anchor="w", justify="left", wraplength=260)
         self.status.pack(fill="x", pady=(0, 8))
+
+    def _side_changed(self, width):
+        self.side_width = width
 
     def say(self, msg, err=False):
         self.status.configure(text=msg, text_color=DANGER if err else MUTED)
@@ -157,9 +254,13 @@ class Page(ctk.CTkFrame):
         out = {}
         for k, v in self.vars.items():
             out[k] = v.get()
+        out["_side_width"] = self.side_width
         return out
 
     def restore(self, saved):
+        width = (saved or {}).get("_side_width")
+        if isinstance(width, (int, float)):
+            self.splitter.set_width(width)
         for k, v in (saved or {}).items():
             if k in self.vars and (k not in self.choices or v in self.choices[k]):
                 try:
@@ -203,7 +304,8 @@ TREE_STYLE = "Comics.Treeview"
 
 
 def build_tree(parent, columns, selectmode="browse"):
-    """Bordered ttk table with a themed scrollbar. columns: (id, heading, width, stretch)."""
+    """Bordered ttk table with themed scrollbars. columns: (id, heading, width, stretch). Every column can be
+    resized by dragging the edge of its heading."""
     st = ttk.Style()
     st.theme_use("clam")
     st.layout(TREE_STYLE, [("Treeview.treearea", {"sticky": "nswe"})])
@@ -212,10 +314,13 @@ def build_tree(parent, columns, selectmode="browse"):
                         columns=[c[0] for c in columns])
     for col, text, w, stretch in columns:
         tree.heading(col, text=text, anchor="w")
-        tree.column(col, width=w, minwidth=w if not stretch else 60, stretch=stretch, anchor="w")
+        tree.column(col, width=w, minwidth=24, stretch=stretch, anchor="w")  # drag a heading's edge to resize
     sb = ctk.CTkScrollbar(wrap, command=tree.yview, button_color=BORDER, button_hover_color=MUTED)
-    tree.configure(yscrollcommand=sb.set)
+    hsb = ctk.CTkScrollbar(wrap, command=tree.xview, orientation="horizontal", height=12,
+                           button_color=BORDER, button_hover_color=MUTED)
+    tree.configure(yscrollcommand=sb.set, xscrollcommand=hsb.set)
     sb.pack(side="right", fill="y", padx=(0, 2), pady=4)
+    hsb.pack(side="bottom", fill="x", padx=4, pady=(0, 2))
     tree.pack(side="left", fill="both", expand=True, padx=4, pady=4)
     apply_tree_theme(tree)
     return wrap, tree

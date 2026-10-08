@@ -11,12 +11,14 @@ from tkinter import filedialog, messagebox
 import customtkinter as ctk
 
 import name_format as nf
+from comic_core import common_root, picked_files
 from name_format import (ARTICLE_MODES, CASE_MODES, CONFLICT_MODES, DEFAULT_TEMPLATES, EXT_CASES, FOLDER_PRESETS,
                          ILLEGAL_MODES, PADS, PRESETS, SEPARATORS, VOLUME_PADS)
 from rename_core import (AUTO_TYPE, COLLECTED_TYPES, SINGLE_TYPES, TYPE_KEYS, TYPES, apply_edits, apply_type,
                          do_rename, find_files, merge, parse_filename, read_comicinfo)
+from rename_core import OTHER_EXT, RENAME_EXT
 from ui_kit import (ACCENT, BG, BORDER, DANGER, FONT, MUTED, PANEL, TEXT, DropZone, Form, Page, apply_tree_theme,
-                    build_tree, button, entry, menu, pick, segmented, switch_style, title_block)
+                    build_tree, button, entry, menu, pick, segmented, switch_style, title_block, Splitter, toolbar, divider)
 
 OK, SAME, NUMBERED, SKIPPED = "Ready", "Unchanged", "Numbered", "Skipped"
 BAD = ("Exists", "Duplicate", "No series")
@@ -86,6 +88,7 @@ class RenamePage(Page):
     def __init__(self, parent):
         super().__init__(parent)
         self.root_dir = None
+        self.picked = None  # files chosen one by one instead of a folder
         self.items = []
         self.q = None
         self._editor = None
@@ -100,18 +103,16 @@ class RenamePage(Page):
         self._guide = None
 
         title_block(self.main, "Renamer", "Check each file, correct what is wrong, then rename. Nothing changes until Apply.")
-        self.drop = DropZone(self.main, "Drop a folder here, or click to browse", self.browse)
-        self.drop.configure(height=52)
+        self.drop = DropZone(self.main, "Drop a folder here, or add a folder or comics below", self.browse,
+                             self.browse, self.browse_files)
         self.drop.pack(fill="x")
         bar = ctk.CTkFrame(self.main, fg_color=BG)
         bar.pack(fill="x", pady=(12, 6))
         self.meta = ctk.CTkLabel(bar, text="", font=(FONT, 13), text_color=TEXT, anchor="w")
         self.meta.pack(side="left")
         segmented(bar, self.vars["view"], VIEWS, width=150).pack(side="right")
-        for text, val in (("Select none", False), ("Select all", True)):
-            ctk.CTkButton(bar, text=text, width=84, height=26, corner_radius=6, font=(FONT, 12), fg_color=BG,
-                          hover_color=PANEL, text_color=TEXT, border_width=1, border_color=BORDER,
-                          command=lambda v=val: self.select_all(v)).pack(side="right", padx=(0, 6))
+        toolbar(bar, [("all", "Select all", 84, lambda: self.select_all(True)),
+                      ("none", "Select none", 84, lambda: self.select_all(False))], side="right")
         self.progress = ctk.CTkProgressBar(self.main, height=3, corner_radius=2, fg_color=BORDER,
                                            progress_color=ACCENT)
         self.progress.set(0)
@@ -124,6 +125,7 @@ class RenamePage(Page):
 
         self.btn_apply = button(self.footer, "Apply renames", self.apply, primary=True)
         self.btn_apply.pack(pady=(0, 8))
+        divider(self.footer, vertical=False).pack(fill="x", pady=(2, 10))
         self.btn_scan = button(self.footer, "Rescan folder", self.rescan)
         self.btn_scan.pack()
         self._enable(False)
@@ -145,8 +147,9 @@ class RenamePage(Page):
     def _build_cards(self):
         self.cards = ctk.CTkFrame(self.holder, fg_color=BG)
         left = ctk.CTkFrame(self.cards, fg_color=BG, width=250)
-        left.pack(side="left", fill="y", padx=(0, 12))
+        left.pack(side="left", fill="y")
         left.pack_propagate(False)
+        Splitter(self.cards, left, side="left", lo=190, hi=560).pack(side="left", fill="y", padx=(0, 6))
         menu(left, self.vars["filter"], FILTERS, width=250).pack(fill="x", pady=(0, 6))
         wrap, self.nav_tree = build_tree(left, [("sel", "", 30, False), ("name", "File", 140, True),
                                                 ("status", "Status", 84, False)])
@@ -263,7 +266,7 @@ class RenamePage(Page):
                          wraplength=260).pack(fill="x", pady=(6, 0))
 
         # --- Detect
-        add("Detect", "Files", True)
+        add("Detect", "Source", True)
         b = add("Detect", "Where to look")
         ctk.CTkSwitch(b, text="Include subfolders", variable=v["recursive"], **sw).pack(anchor="w")
         ctk.CTkSwitch(b, text="Include PDF and EPUB", variable=v["include_other"], **sw).pack(anchor="w", pady=(8, 0))
@@ -714,8 +717,26 @@ class RenamePage(Page):
         if d:
             self.set_folder(d)
 
+    def browse_files(self):
+        files = filedialog.askopenfilenames(title="Choose comics to rename", filetypes=[
+            ("Comics and books", "*.cbz *.cbr *.pdf *.epub"), ("All", "*.*")])
+        if files:
+            self.set_files(files)
+
+    def set_files(self, paths):
+        """Rename these files only, instead of a whole folder."""
+        files = picked_files(paths, RENAME_EXT | OTHER_EXT)
+        if not files:
+            self.say("None of those files can be renamed here (.cbz .cbr .pdf .epub).", err=True)
+            return
+        self.picked = files
+        self.root_dir = common_root(files)
+        self.drop.set(f"{len(files)} file{'s' if len(files) != 1 else ''} chosen from {self.root_dir}")
+        self.rescan()
+
     def set_folder(self, folder):
         self.root_dir = Path(folder)
+        self.picked = None
         self.drop.set(str(self.root_dir))
         self.rescan()
 
@@ -731,7 +752,11 @@ class RenamePage(Page):
             self._pending = True
             return
         o = self.state()
-        files = find_files(self.root_dir, o["recursive"], o["include_other"])
+        if self.picked is not None:
+            exts = RENAME_EXT | (OTHER_EXT if o["include_other"] else set())
+            files = [p for p in self.picked if p.is_file() and p.suffix.lower() in exts]
+        else:
+            files = find_files(self.root_dir, o["recursive"], o["include_other"])
         self._close_editor(False)
         self.tree.delete(*self.tree.get_children())
         self.nav_tree.delete(*self.nav_tree.get_children())

@@ -157,7 +157,7 @@ root.destroy()
 
 # ---- the whole app
 import comic_tool
-app = comic_tool.App(); assert "aceo" in app.pages and any(h == "ACEO Cards" for h, _, _ in comic_tool.GROUPS)
+app = comic_tool.App(); assert "aceo" in app.pages and any(h == "ACEO Cards" for h, _ in comic_tool.GROUPS)
 app.show("aceo"); app.update()
 class Ev: pass
 e = Ev(); e.data = "{C:/does/not/exist.cbz}"; app.on_drop(e)

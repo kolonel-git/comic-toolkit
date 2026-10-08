@@ -5,7 +5,7 @@
 | File | Role |
 |---|---|
 | `comic_tool.py` | App shell: window, sidebar, Home cards, theme toggle, drag-and-drop routing, settings load/save |
-| `ui_kit.py` | Shared look: (light, dark) palette, styled widgets, form rows, drop zone, page scaffold, table helpers |
+| `ui_kit.py` | Shared look: (light, dark) palette, styled widgets, form rows, drop zone (with Add folder / Choose comics buttons), `Splitter` (draggable divider), `toolbar` (grouped buttons with dividers), page scaffold with a resizable options panel, table helpers (resizable columns, horizontal scrollbar) |
 | `batch_page.py` | Base page for run-per-item tools (progress, log, Preview, Stop) |
 | `page_single.py` · `page_bulk.py` · `page_icons.py` | Cover extractor pages |
 | `page_rename.py` | Renamer page: card and list views, four settings tabs, per-type template editor, conflict handling |
@@ -14,7 +14,7 @@
 | `page_order.py` | Reading order page: issue list with drag and tick boxes, plan preview, write worker, copy mode |
 | `page_aceo.py` | ACEO sheets page: cover list with ordering, sheet preview, options, PDF creation worker |
 | `page_audit.py` | Library audit page: scan worker, four report tables, CSV and wishlist export, move-to-Archive for duplicates |
-| `comic_core.py` | Archive reading (`Comic`), cover rendering, output-path planning, shared constants |
+| `comic_core.py` | Archive reading (`Comic`), cover rendering, output-path planning, shared constants; `picked_files` / `common_root` for the Choose comics buttons |
 | `rename_core.py` | Filename parsing (years in any brackets, year-like volumes, issue count, collected-edition format, volume, range, tags, series cleanup), type override and hand edits, `ComicInfo.xml` reading, file search and rename |
 | `name_format.py` | Naming: per-type templates and presets, tokens, token formats, fallbacks, escapes, template validation, text options, folder templates, the in-app format guide |
 | `archive_tools.py` | Verified zip rewriting: CBR to CBZ, clean-up, `ComicInfo.xml` stamping. `CI_TAGS` maps field names to XML tags and `merge_comicinfo` writes any of them, so new fields need only a `CI_TAGS` entry |
@@ -43,5 +43,6 @@ are `Issue` records. Tools should call it from a worker thread and read the reco
 - **Cache:** entries are keyed by lower-cased path and reused only when size and modified time match and the entry holds what the scan asks
   for (a light entry never answers a deep scan). Entries for deleted files under the scanned root are dropped, a corrupt or version-mismatched
   cache is ignored, and a cache that can't be written is silently skipped. Parsed filename fields are never cached, so parser fixes apply at once.
+- **Picked files:** `only=[files]` scans exactly those files (they must lie inside `root`) and skips the cache clean-up, so the cache entries of the other files in the folder are kept.
 - **Stop and progress:** `stop` is a `threading.Event` checked between files; `progress(done, total, issue)` is called after each file.
 - **Command line:** `python library_scan.py FOLDER [--deep] [--deep-cbr] [--no-recursive] [--no-cache] [--cache-file F] [--csv F] [--limit N]`.

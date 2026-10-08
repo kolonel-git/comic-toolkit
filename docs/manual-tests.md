@@ -247,6 +247,40 @@ Use 10 to 20 real comics (plus one loose cover image), the bundled `ACEO - Full 
   *Expect:* it stops quickly, says no file was written, and leaves no partial PDF.
   Result:
 
+## H. Layout: resizing, grouped buttons, adding comics
+
+- [ ] **H1. Sidebar.** Drag the thin divider at the right edge of the sidebar, then close and reopen the app.
+  *Expect:* the sidebar gets wider and narrower (limits about 150 to 360), the cursor changes over the divider, and the width is remembered.
+  Result:
+- [ ] **H2. Options panel.** On a few pages, drag the divider at the left edge of the right-hand options panel, including at a high display scaling (125% or 150%).
+  *Expect:* the panel follows the mouse exactly, stops at a sensible minimum and maximum, nothing in it is clipped, and the width is remembered per page.
+  Result:
+- [ ] **H3. Columns.** On the Renamer list, Metadata, Reading order, ACEO, Audit and the Renamer's file list, drag the edge of several headings to make columns much narrower and wider; widen past the table and use the scrollbar under it.
+  *Expect:* every column, including the tick-box and number columns, resizes; text in a narrow column is cut off cleanly; the horizontal scrollbar appears and works; ticking, dragging rows (Reading order) and double-click editing still work afterwards.
+  Result:
+- [ ] **H4. Panes inside a page.** In the Renamer's Cards view drag the divider between the file list and the card; in ACEO drag the divider between the cover list and the preview (then look at the preview and press Full screen).
+  *Expect:* both resize smoothly; the ACEO preview redraws to fit its new width and still shows the whole sheet.
+  Result:
+- [ ] **H5. Grouped buttons.** Look at the button rows on Reading order, ACEO, Metadata and the Renamer, and the footers of Bulk folder, CBR to CBZ and Library audit, in light and dark mode.
+  *Expect:* related buttons sit together with a thin divider between groups (Reading order: Suggest order | Top ▲ ▼ Bottom | Remove Clear), nothing is clipped, and the dividers are visible in both themes. Tell me if a grouping feels wrong.
+  Result:
+- [ ] **H6. Add folder / Choose comics.** On every page, use **Add folder…** and **Choose comics…** in the box at the top (on Single issue the folder button should open Bulk folder).
+  *Expect:* the folder button behaves like dropping a folder; Choose comics opens a file picker and the page works on just the files chosen (the summary says "N chosen"); picking a folder afterwards goes back to the whole folder. On Library audit the duplicates and gaps cover only the chosen comics.
+  Result:
+- [ ] **H7. Choose comics, real files.** Choose a handful of comics from different subfolders in the Renamer and Metadata, then apply a rename and a metadata write.
+  *Expect:* only the chosen files change; their names in the table are relative to the folder they share; Rescan reads the same chosen files.
+  Result:
+
+- [ ] **H8. Home.** Open Home at your usual window size, then resize the window and the sidebar.
+  *Expect:* all ten tools are visible without scrolling, the cards in each row are the same width, the gap between groups is clearly larger than between cards of one group, and the text in the cards is not cut off. Tell me if any description is clipped or a card looks too small to read.
+  Result:
+- [ ] **H9. Options panels.** Open each page and read its options panel from top to bottom, in light and dark mode.
+  *Expect:* every panel runs Source (or the tool's main subject) then its own groups then Output; related options sit together, nothing is out of place, and the panels look like one family. Tell me about any option you would expect somewhere else.
+  Result:
+- [ ] **H10. Single issue buttons.** Open Single issue.
+  *Expect:* the folder button (Open folder in Bulk…) is to the right of Choose comic….
+  Result:
+
 ## When you're done
 
 Send me the failed items with what you saw (a screenshot or the exact message helps). Passing results can be summarised in one line.

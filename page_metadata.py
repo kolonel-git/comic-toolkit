@@ -11,10 +11,10 @@ from tkinter import filedialog, messagebox
 import customtkinter as ctk
 
 from archive_tools import BACKUP, REPLACE, apply_metadata
-from comic_core import in_archive, natural_key
+from comic_core import COMIC_EXT, common_root, in_archive, natural_key, picked_files
 from rename_core import parse_filename, read_comicinfo
-from ui_kit import (ACCENT, BG, BORDER, FONT, MUTED, PANEL, TEXT, DropZone, Page, apply_tree_theme, build_tree,
-                    button, entry, menu, pick, switch_style, title_block)
+from ui_kit import (ACCENT, BG, BORDER, FONT, MUTED, TEXT, DropZone, Page, apply_tree_theme, build_tree,
+                    button, entry, menu, pick, switch_style, title_block, toolbar, divider)
 
 FILL, OVERWRITE = "Fill in missing fields only", "Overwrite with filename values"
 FIELDS = ("series", "issue", "volume", "year", "title", "count")
@@ -76,6 +76,7 @@ class MetadataPage(Page):
     def __init__(self, parent):
         super().__init__(parent)
         self.root_dir = None
+        self.picked = None  # comics chosen one by one instead of a folder
         self.rows, self.by_iid = [], {}
         self.skipped_cbr = 0
         self.q = None
@@ -84,16 +85,15 @@ class MetadataPage(Page):
         self._editor = None
 
         title_block(self.main, "Metadata", "Write series and issue info from filenames into ComicInfo.xml.")
-        self.drop = DropZone(self.main, "Drop a folder here, or click to browse", self.browse)
+        self.drop = DropZone(self.main, "Drop a folder here, or add a folder or comics below", self.browse,
+                             self.browse, self.browse_files)
         self.drop.pack(fill="x")
         bar = ctk.CTkFrame(self.main, fg_color=BG)
         bar.pack(fill="x", pady=(14, 6))
         self.meta = ctk.CTkLabel(bar, text="", font=(FONT, 13), text_color=TEXT, anchor="w")
         self.meta.pack(side="left")
-        for text, val in (("Select none", False), ("Select all", True)):
-            ctk.CTkButton(bar, text=text, width=84, height=26, corner_radius=6, font=(FONT, 12), fg_color=BG,
-                          hover_color=PANEL, text_color=TEXT, border_width=1, border_color=BORDER,
-                          command=lambda v=val: self.select_all(v)).pack(side="right", padx=(6, 0))
+        toolbar(bar, [("all", "Select all", 84, lambda: self.select_all(True)),
+                      ("none", "Select none", 84, lambda: self.select_all(False))], side="right")
         self.progress = ctk.CTkProgressBar(self.main, height=3, corner_radius=2, fg_color=BORDER,
                                            progress_color=ACCENT)
         self.progress.set(0)
@@ -113,15 +113,16 @@ class MetadataPage(Page):
 
         v = self.vars
         sw = switch_style()
-        box = self.form.add("Files")
-        ctk.CTkSwitch(box, text="Include subfolders", variable=v["recursive"], **sw).pack(anchor="w")
+        self.form.heading("Source")
+        ctk.CTkSwitch(self.form.add("Subfolders"), text="Include subfolders", variable=v["recursive"], **sw).pack(anchor="w")
+        self.form.heading("What to write")
         box = self.form.add("Fields to write")
         for i, f in enumerate(FIELDS):
             ctk.CTkSwitch(box, text=LABELS[f], variable=v["w_" + f], **sw).pack(anchor="w", pady=(0 if i == 0 else 8, 0))
         menu(self.form.add("Existing values"), v["existing"], [FILL, OVERWRITE]).pack(fill="x")
         ctk.CTkSwitch(self.form.add("Missing series"), text="Use the folder name", variable=v["folder_series"],
                       **sw).pack(anchor="w")
-        menu(self.form.add("Original file"), v["original"], [BACKUP, REPLACE]).pack(fill="x")
+        self.form.heading("Checked rows")
         box = self.form.add("Set for checked rows")
         self.set_field, self.set_value = ctk.StringVar(value=next(iter(SET_FIELDS))), ctk.StringVar()
         menu(box, self.set_field, list(SET_FIELDS)).pack(fill="x")
@@ -139,9 +140,12 @@ class MetadataPage(Page):
                      "ComicInfo.xml makes it fall back to the filename. Untick \"Issue number\" under Fields to write so a later "
                      "run doesn't add it back.", font=(FONT, 11), text_color=MUTED,
                      anchor="w", justify="left", wraplength=260).pack(fill="x", pady=(6, 0))
+        self.form.heading("Output")
+        menu(self.form.add("Original file"), v["original"], [BACKUP, REPLACE]).pack(fill="x")
 
         self.btn_apply = button(self.footer, "Write metadata", self.apply, primary=True)
         self.btn_apply.pack(pady=(0, 8))
+        divider(self.footer, vertical=False).pack(fill="x", pady=(2, 10))
         self.btn_scan = button(self.footer, "Rescan folder", self.rescan)
         self.btn_scan.pack()
         self._buttons(False)
@@ -159,8 +163,26 @@ class MetadataPage(Page):
         if d:
             self.set_folder(d)
 
+    def browse_files(self):
+        files = filedialog.askopenfilenames(title="Choose comics", filetypes=[
+            ("Comic archives", "*.cbz *.cbr"), ("All", "*.*")])
+        if files:
+            self.set_files(files)
+
+    def set_files(self, paths):
+        """Work on these comics only, instead of a whole folder."""
+        files = picked_files(paths, COMIC_EXT)
+        if not files:
+            self.say("None of those files are .cbz or .cbr comics.", err=True)
+            return
+        self.picked = files
+        self.root_dir = common_root(files)
+        self.drop.set(f"{len(files)} comic{'s' if len(files) != 1 else ''} chosen from {self.root_dir}")
+        self.rescan()
+
     def set_folder(self, folder):
         self.root_dir = Path(folder)
+        self.picked = None
         self.drop.set(str(self.root_dir))
         self.rescan()
 
@@ -177,8 +199,11 @@ class MetadataPage(Page):
         self._close_editor(False)
         self.tree.delete(*self.tree.get_children())
         self.rows, self.by_iid = [], {}
-        it = self.root_dir.rglob("*") if self.vars["recursive"].get() else self.root_dir.iterdir()
-        everything = [p for p in it if p.is_file() and not in_archive(p, self.root_dir)]
+        if self.picked is not None:
+            everything = [p for p in self.picked if p.is_file()]
+        else:
+            it = self.root_dir.rglob("*") if self.vars["recursive"].get() else self.root_dir.iterdir()
+            everything = [p for p in it if p.is_file() and not in_archive(p, self.root_dir)]
         files = sorted((p for p in everything if p.suffix.lower() == ".cbz"),
                        key=lambda p: natural_key(p.relative_to(self.root_dir)))
         self.skipped_cbr = sum(1 for p in everything if p.suffix.lower() == ".cbr")

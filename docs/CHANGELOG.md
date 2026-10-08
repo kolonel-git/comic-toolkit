@@ -12,6 +12,59 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-08 16:55 +11:00 · Session 34: options panels regrouped, one-screen Home
+
+**Summary:** Every page's options panel now reads in the same order under the same kind of headings, the Home page was rebuilt as a compact grid that shows every tool without scrolling, and Single issue's folder button moved to the right of the comic button.
+
+**Decisions**
+- Options panels follow one pattern: **Source** (what to read, such as subfolders) then the tool's own groups, then **Output** (where results go, what happens to originals). Rows inside a group keep their label-over-control style and the grey hint text under them.
+  - Single issue: Cover image | Output. Bulk folder: Source | Cover image | Output (the image options now come before the save options). Folder icons: Cover | Output. CBR to CBZ: Source | Output. Clean-up: Source | Clean-up | Output (the subfolder switch is no longer mixed in with the junk switch). Metadata: Source | What to write | Checked rows | Output (*Original file* moved from the middle to the end, after the bulk edits). Library audit: Source | Reports. Reading order: Reading order | Filenames and sorting | Output. ACEO sheets already had Template | Covers | Cards | Output. The Renamer keeps its four tabs; its first group is now called *Source*.
+- Footers follow one pattern: the main action (and its preview variant) at the top, a divider, then utility buttons (Rescan folder, Open folder).
+- Home: groups sit side by side in three rows (Cover Extractor and Renamer; Metadata, Archive Tools and Library Audit; Reading Orders and ACEO Cards) with compact cards (icon, title, one short description). Cards inside a group are 8 px apart, groups 34 px; every card has the same width in every row, and the cards resize with the window, so nothing scrolls. The blurb under each group name was dropped to save space.
+- Single issue's folder button now sits to the right of *Choose comic…* (the drop box takes `files_first=True`).
+
+**Changes by file**
+- `comic_tool.py`: new `Card` (compact) and `HomePage` (grid, no scroll frame); `GROUPS` entries are now `(header, tool keys)` and `HOME_ROWS` says which groups share a row.
+- `ui_kit.py`: `DropZone(files_first=...)`; `Form.headings` records the group titles; the first heading in a panel has less space above it.
+- `page_single.py`, `page_bulk.py`, `page_icons.py`, `page_convert.py`, `page_cleanup.py`, `page_metadata.py`, `page_audit.py`, `page_order.py`, `page_rename.py`: option groups and footers as above.
+- Tests: `tests/test_layout.py` (panel headings per page, button order on Single and Bulk), `tests/test_layout_app.py` (Home fits without scrolling at the narrowest and widest sidebar, equal card widths, wider gaps between groups, a card opens its tool); the three window tests that read `GROUPS` were updated for the new shape.
+- Docs: `tools.md`, `manual-tests.md` (H8 to H10).
+
+**Verification:** `python tests/run_all.py` ran all 18 scripts and every one passed, and `ruff --select F,E9` was clean. The new checks cover: the heading list of every panel; Single's button order; on Home, all ten cards present, equal width in every row, inside the page and above its bottom edge (so no scrolling) with the sidebar at its narrowest and widest, group gaps wider than card gaps, and a click opening its tool. **Not verified:** how the panels and the Home page look on screen (no screenshot was taken because the screen grab captures whichever window is in front), and the Home page at other window sizes than the two tested widths. See [manual tests](manual-tests.md), H8 to H10.
+
+**Known issues:** the Home card height is fixed, so a long description on a very narrow card could be cut off (not checked on screen).
+
+---
+
+## 2026-10-08 16:36 +11:00 · Session 33: resizable panes and columns, grouped buttons, folder and comics buttons
+
+**Summary:** Quality-of-life pass over every page. Panes and table columns can be dragged to any size, related buttons are grouped with small dividers, and every page now has an **Add folder** and a **Choose comics** button in the same box as the drop area. Two stale facts in `README.md` and `HANDOFF.md` (version and session count) were also corrected.
+
+**Decisions**
+- Resizing uses a small draggable divider (`Splitter`) rather than a fixed split: the app sidebar, each page's options panel, the Renamer's file list beside its card, and the ACEO cover list beside its preview. The sidebar and panel widths are saved with the settings.
+- Table columns: every column of every table can be dragged from its heading edge (they previously could not be made narrower than their starting width), and each table gets a horizontal scrollbar for when the columns are wider than the table.
+- Buttons are grouped by purpose with a thin divider between groups: Reading order is *Suggest order* | *Top ▲ ▼ Bottom* | *Remove Clear*; ACEO is *Top ▲ ▼ Bottom* | *Remove Clear*; *Select all / Select none* sit together; the run buttons in side-panel footers are divided from *Open folder* (Bulk folder, the batch tools, Library audit).
+- *Add folder* moved from the Reading order and ACEO toolbars into the drop box, next to *Choose comics*, so all pages work the same way.
+- On the folder tools *Choose comics…* works on just the files picked: the other files in their folder are left alone, and the root used for relative names and the Archive check is the nearest folder that contains them all. Library audit then judges duplicates and gaps among the picked comics only. Folder icons uses one folder per parent, taking its cover from the first (or last) picked comic in it. On **Single issue**, which handles one comic, the folder button hands the folder to Bulk folder, as dropping a folder there already did.
+
+**Changes by file**
+- `ui_kit.py`: `Splitter`, `tool_button`, `divider`, `toolbar` (groups of buttons with dividers, left or right anchored); `DropZone` takes `on_folder` / `on_files` and shows the two buttons; `Page` has a resizable options panel and saves its width (`_side_width` in the page state); `build_tree` columns have a small minimum width and a horizontal scrollbar.
+- `comic_core.py`: `picked_files` and `common_root`. `library_scan.py`: `scan_library(only=...)` scans a given list of files and leaves the cache entries of other files alone.
+- `comic_tool.py`: sidebar `Splitter`, width saved as `sidebar` in `settings.json`.
+- `batch_page.py` (with `page_convert.py`, `page_cleanup.py`, `page_icons.py`): `set_files`, `browse_files`, `pick_items`, a footer divider. `page_bulk.py`, `page_metadata.py`, `page_rename.py`, `page_audit.py`: `set_files` with a `picked` list; `page_single.py`: folder button; `page_order.py`, `page_aceo.py`: grouped toolbars, drop-box buttons, and (ACEO) a draggable divider before the preview; `page_rename.py`: a divider between the file list and the card.
+- `tests/test_layout.py`, `tests/test_layout_app.py` (new), `tests/README.md`.
+- Docs: `tools.md`, `architecture.md`, `known-limitations.md`, `manual-tests.md` (section H), both READMEs.
+
+**Technical notes**
+- Mouse movement is in pixels but widget widths are in scaled units, so the divider divides by the widget's display scaling before resizing (a scaled display was the case that caught this in testing).
+- `picked_files` filters by each tool's own file types, so choosing a mix keeps only what the tool can use; the shared root is worked out from the files that remain.
+
+**Verification:** `python tests/run_all.py` ran all 18 scripts and every one passed, and `ruff --select F,E9` was clean. The new tests cover: all ten pages have both drop-box buttons; the options-panel divider (drag, both limits, saved and restored width, junk ignored); the sidebar divider and its limits; every table column's minimum width and resizing a column; button grouping and order (including the Reading order buttons); and *Choose comics* on Convert, Clean-up, Folder icons, Bulk folder, Metadata, Renamer and Library audit (types filtered, relative names, a bad pick changing nothing, switching back to a folder, the audit scanning only the picked files). **Not verified:** how any of this looks on screen (a screenshot attempt captured another window, so none was checked), real mouse dragging of the dividers and of heading edges, and the Single issue folder button (hands over to Bulk; only the presence of the drop-box buttons was tested). See [manual tests](manual-tests.md), section H.
+
+**Known issues:** column widths are not remembered between runs (the panel and sidebar widths are).
+
+---
+
 ## 2026-10-08 16:20 +11:00 · Session 32: tests folder
 
 **Summary:** The test scripts, which had only existed outside the repository, were moved into `tests/` with a runner. No application code changed.

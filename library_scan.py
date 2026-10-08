@@ -196,19 +196,20 @@ def _usable(entry, st, issue_path, deep, deep_cbr):
 # ---------- the scan ----------
 
 def scan_library(root, recursive=True, deep=False, deep_cbr=False, include_other=False,
-                 use_cache=True, cache_path=None, progress=None, stop=None):
+                 use_cache=True, cache_path=None, progress=None, stop=None, only=None):
     """Scan `root` and return a ScanResult. Safe to call from a worker thread (no UI calls).
 
     deep      also read page count, cover size and cover hash (CBZ and zip-backed CBR)
     deep_cbr  with deep, also open real RAR files (slow: the whole archive is extracted)
     progress  optional callback(done, total, issue)
     stop      optional threading.Event; set it to end the scan early (partial result, `stopped=True`)
+    only      optional list of files to scan instead of walking `root` (they must lie inside `root`)
     """
     t0 = time.time()
     root = Path(root)
     cache_path = Path(cache_path) if cache_path else default_cache_path()
     entries = _load_cache(cache_path) if use_cache else {}
-    files = find_files(root, recursive, include_other)
+    files = list(only) if only is not None else find_files(root, recursive, include_other)
     result = ScanResult(root, [])
     seen = set()
     for k, p in enumerate(files):
@@ -233,7 +234,7 @@ def scan_library(root, recursive=True, deep=False, deep_cbr=False, include_other
         if progress:
             progress(k + 1, len(files), issue)
     if use_cache:
-        if not result.stopped:  # forget files that no longer exist under this root
+        if not result.stopped and only is None:  # forget files that no longer exist under this root
             prefix = _key(root).rstrip("\\/") + os.sep  # the separator stops "Comics" matching "Comics Old"
             entries = {k: v for k, v in entries.items() if not k.startswith(prefix) or k in seen}
         _save_cache(cache_path, entries)
