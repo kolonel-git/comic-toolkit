@@ -12,6 +12,19 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-08 16:20 +11:00 · Session 32: tests folder
+
+**Summary:** The test scripts, which had only existed outside the repository, were moved into `tests/` with a runner. No application code changed.
+
+**Changes**
+- `tests/` (new): 16 scripts (archive tools, backups, icons, metadata, issue-number removal, scan, audit logic and window, reading order logic and window, renamer and parser, ACEO core and window), `run_all.py` (runs each in its own process and reports pass or fail) and `README.md`. The old renamer test was replaced by `test_renamer.py`; one stale print-only script was dropped. Scripts now find the project from their own location instead of a fixed path.
+- `docs/versioning.md`: lists the tags that exist (including that `v0.4.1` was skipped and `v0.5.0` went to ACEO sheets) and moves the planned versions for the Stats dashboard, watcher and packaging up by one.
+- `docs/architecture.md`, `README.md`: mention the tests folder.
+
+**Verification:** `python tests/run_all.py` ran all 16 scripts and every one passed (about 75 seconds), and `ruff --select F,E9` was clean. The manual tests in [manual-tests.md](manual-tests.md) are still entirely unrun (68 checks, sections A to G).
+
+---
+
 ## 2026-10-07 22:04 +11:00 · Session 31: ACEO outline colour and thickness
 
 **Summary:** The card outlines on the ACEO sheets can now be given a colour (so they stay visible on a black background) and a thickness.

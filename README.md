@@ -48,4 +48,4 @@ Everything else lives in [`docs/`](docs/README.md):
 - [Getting started](docs/getting-started.md) · [The tools](docs/tools.md) · [Naming styles and templates](docs/renamer-templates.md)
 - [Safety model](docs/safety.md) · [Known limitations](docs/known-limitations.md) · [Architecture](docs/architecture.md) · [Manual tests](docs/manual-tests.md)
 - [Roadmap](docs/roadmap.md) · [Reading Order](docs/reading-order.md) · [Versioning](docs/versioning.md)
-- [Changelog](docs/CHANGELOG.md)
+- [Changelog](docs/CHANGELOG.md) · [Tests](tests/README.md)
