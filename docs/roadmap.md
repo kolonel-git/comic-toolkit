@@ -33,7 +33,7 @@ fields parsed from the name, `ComicInfo.xml` fields, and lazily page count, cove
 `%APPDATA%\ComicToolkit\cache.json`, keyed by path + size + mtime. It is a cache, not a database: safe to delete, never the source of
 truth. CBR files are slower (whole-archive extraction), so deep reads of CBR are opt-in. The audit, Stats, the browser and the pipeline sit on it.
 
-**3. Library Audit tool (done, 2026-10-07; pending the manual checks)** (new Home group "Library Audit"; built as `audit_core.py` and `page_audit.py`). The four reports and their rules are described in [The tools](tools.md#library-audit); two details differ from the plan below: the report is named *Broken*, and cover similarity levels are Strict, Normal and Loose. Results table with a segmented switch between four reports; every report can export CSV.
+**3. Library Audit tool (done, 2026-10-07; pending the manual checks)** (new Home group "Library Audit"; built as `audit_core.py` and `page_audit.py`). The four reports and their rules are described in [The tools](tools.md#library-audit); two details differ from the plan below: the report is named *Broken*, and cover similarity levels are Strict, Normal and Loose. Results table with a segmented switch between four reports; every report can export CSV. *Revamped 2026-10-14 (Session 39): Clean-up merged in, one findings list with fixes, ignore list and Archive manager; CSV export dropped (wishlist kept).*
 - *Corrupt or broken:* CBZ zip CRC test; CBR via the extractor's test command; archives with zero pages; pages Pillow can't open (sampled:
   cover, middle, last).
 - *Duplicates:* tier 1 same series + volume + issue (from `ComicInfo.xml` or the name); tier 2 identical size; optional tier 3 cover-image
@@ -47,12 +47,12 @@ truth. CBR files are slower (whole-archive extraction), so deep reads of CBR are
 
 **4. Reading Order (done, 2026-10-07; pending the manual checks)** (own Home group "Reading Orders"; how it works in [reading-order.md](reading-order.md); built without cover thumbnails). Needs item 1's generic field writer and benefits from item 2.
 
-**5. Stats dashboard.** Totals, size on disk, issues per series / publisher / year, format mix (cbz/cbr/pdf/epub), largest files. Built on the
+**5. Stats dashboard (done, 2026-10-08; pending the manual checks; built as `stats_core.py` and `page_stats.py`, see [The tools](tools.md#library-stats)).** Decisions: a Home summary line plus its own page, one saved library folder, light scan by default with optional page counts, only `.cbz` / `.cbr`, merged series volumes (switch to split), per-year bars (switch for decades), top 15 plus *Other*, click a bar to list its comics, CSV and a copyable summary. The original plan follows. Totals, size on disk, issues per series / publisher / year, format mix (cbz/cbr/pdf/epub), largest files. Built on the
 scan layer; publisher needs the `Publisher` read from item 1. Drawn with simple bars on a CustomTkinter canvas (no new dependency) plus CSV
 export; missing values go in an "Unknown" bucket.
 
 **6. Folder tree browser.** A lazily loaded folder tree with a cover and counts for the selected folder, acting as a launcher: "open in
-Single issue / Bulk folder / Renamer / Metadata / Clean-up / Library audit" using the existing `set_folder` / `load` methods. It is a navigation hub,
+Single issue / Bulk folder / Renamer / Metadata / Library audit" using the existing `set_folder` / `load` methods. It is a navigation hub,
 not a reader, so it doesn't duplicate YACReader's library view.
 
 **7. Downloads watcher and "Process new comics" pipeline.** Order matters: CBR to CBZ, clean-up, metadata from filename, rename from the

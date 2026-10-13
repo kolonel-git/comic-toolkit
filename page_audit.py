@@ -1,37 +1,58 @@
-"""Library Audit page: scan a library once, then browse four reports (broken files, duplicates,
-missing issues, quality). Reports never change files; the only action is moving checked
-duplicates into an Archive folder as .bak backups."""
+"""Library audit page: scan a library once, see every problem in one list (broken files, duplicates, missing
+issues, junk files, CBR files, warnings), tick what to fix and fix it. Findings can be ignored for good, and the
+Archive folders that fixes fill up can be reviewed and purged."""
 import csv
+import json
+import os
 import queue
+import subprocess
 import threading
+import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
 import customtkinter as ctk
 
 import audit_core as ac
-from archive_tools import move_to_archive
 from comic_core import COMIC_EXT, common_root, picked_files
 from library_scan import scan_library
-from ui_kit import (ACCENT, BG, BORDER, FONT, MUTED, TEXT, DropZone, Page, apply_tree_theme, build_tree, button,
-                    menu, segmented, switch_style, title_block, divider)
+from ui_kit import (ACCENT, BG, BORDER, FONT, MUTED, SELECT_BG, TEXT, DropZone, Page, apply_tree_theme, build_tree,
+                    button, divider, entry, menu, pick, switch_style, title_block, tool_button, toolbar)
 
-BROKEN, DUPES, MISSING, QUALITY = "Broken", "Duplicates", "Missing", "Quality"
-REPORTS = [BROKEN, DUPES, MISSING, QUALITY]
-COLUMNS = {
-    BROKEN: [("file", "File", 330, False), ("problem", "Problem", 300, True)],
-    DUPES: [("sel", "", 38, False), ("group", "#", 40, False), ("why", "Why", 235, False),
-            ("file", "File", 240, True), ("size", "Size", 74, False), ("pages", "Pages", 56, False)],
-    MISSING: [("series", "Series", 220, True), ("volume", "Vol", 56, False), ("owned", "Owned", 62, False),
-              ("missing", "Missing", 320, True)],
-    QUALITY: [("file", "File", 330, False), ("flags", "Flags", 300, True)],
+ALL = "All"
+CHIPS = [(ALL, "All"), (ac.BROKEN, "Broken"), (ac.DUPLICATE, "Duplicates"), (ac.MISSING, "Missing"),
+         (ac.JUNK, "Junk"), (ac.CBR, "CBR"), (ac.WARNING, "Warnings")]
+FILTERS = [c[0] for c in CHIPS]
+COLUMNS = [("sel", "", 38, False), ("kind", "Type", 84, False), ("what", "File or series", 300, True),
+           ("detail", "Details", 380, True)]
+EMPTY = {ALL: "No problems found.", ac.BROKEN: "No broken files found.", ac.DUPLICATE: "No duplicates found.",
+         ac.MISSING: "No gaps found.", ac.JUNK: "No junk files found.", ac.CBR: "No CBR files found.",
+         ac.WARNING: "Nothing to warn about."}
+HINTS = {
+    ALL: "Everything except warnings. Junk files and CBR files are ticked for fixing; tick anything else you want fixed, "
+         "then press Fix checked.",
+    ac.BROKEN: "Files that would not open or failed the integrity test. Fixing one moves it to an Archive folder (as .bak).",
+    ac.DUPLICATE: "The best copy of each group (most pages, then the taller cover, then the larger file) is kept. Tick the "
+                  "others to move them to an Archive folder (as .bak); nothing is deleted.",
+    ac.MISSING: "Gaps are tracked separately for issues and for each kind of collected edition. Ignore hides what a row "
+                "shows; numbers that go missing later still appear.",
+    ac.JUNK: "Thumbs.db, .nfo, __MACOSX and the like. ComicInfo.xml is always kept.",
+    ac.CBR: "Fixing converts to a verified CBZ, removes its junk, then deletes the .cbr.",
+    ac.WARNING: "Unusual page counts, file sizes and cover resolutions. Nothing to fix automatically; change the limits "
+                "under Warnings in the options.",
 }
-EMPTY = {BROKEN: "No broken files found.", DUPES: "No duplicates found.", MISSING: "No gaps found.",
-         QUALITY: "Nothing flagged."}
+
+
+def reveal(path):
+    """Show a file in Windows Explorer."""
+    try:
+        subprocess.Popen(["explorer", "/select,", str(path)])
+    except OSError:
+        pass
 
 
 def _run(q, root, o, stop, only=None):
-    """Worker: scan, optionally test integrity, then compute all four reports. No Tk calls."""
+    """Worker: scan, optionally test integrity, then find duplicates and gaps. No Tk calls."""
     try:
         _audit(q, root, o, stop, only)
     except Exception as e:  # noqa: BLE001 - whatever goes wrong, the page must stop waiting
@@ -39,8 +60,7 @@ def _run(q, root, o, stop, only=None):
 
 
 def _audit(q, root, o, stop, only=None):
-    deep = o["deep"] or o["similar"]
-    res = scan_library(root, o["recursive"], deep=deep, deep_cbr=o["deep_cbr"],
+    res = scan_library(root, o["recursive"], deep=True, deep_cbr=o["deep_cbr"],
                        progress=lambda d, t, i: q.put(("prog", "Scanning", d, t)), stop=stop, only=only)
     issues = res.issues
     broken = []
@@ -60,92 +80,129 @@ def _audit(q, root, o, stop, only=None):
         broken = [(i, [i.error]) for i in issues if i.error]
     dups = ac.find_duplicates(issues, o["similar"], ac.SIMILARITY[o["similarity"]])
     gaps, ignored = ac.find_missing(issues, o["from_one"])
-    q.put(("result", {"issues": issues, "broken": broken, "dups": dups, "gaps": gaps, "ignored": ignored,
-                      "quality": ac.find_quality(issues), "stopped": res.stopped, "seconds": res.seconds,
-                      "integrity": o["integrity"], "deep": deep, "cache_hits": res.cache_hits}))
+    q.put(("result", {"issues": issues, "broken": broken, "dups": dups, "gaps": gaps, "ignored_files": ignored,
+                      "junk": ac.find_junk(issues), "cbr": ac.find_cbr(issues), "stopped": res.stopped,
+                      "seconds": res.seconds, "integrity": o["integrity"], "cache_hits": res.cache_hits}))
+
+
+def _fix(q, plan, stop):
+    for k, (path, action, _) in enumerate(plan):
+        if stop.is_set():
+            q.put(("fix_stopped",))
+            return
+        q.put(("prog", "Fixing", k + 1, len(plan)))
+        try:
+            q.put(("fixed", path, action, ac.apply_fix(path, action)))
+        except Exception as e:  # noqa: BLE001 - one bad file must not stop the rest
+            q.put(("fix_failed", path, action, " ".join(str(e).split()) or type(e).__name__))
+    q.put(("fix_done",))
 
 
 class AuditPage(Page):
-    defaults = {"recursive": True, "deep": True, "deep_cbr": False, "integrity": False, "similar": False,
-                "similarity": "Normal", "from_one": False, "report": BROKEN}
-    choices = {"similarity": list(ac.SIMILARITY), "report": REPORTS}
+    defaults = {"recursive": True, "deep_cbr": False, "integrity": False, "similar": False, "similarity": "Normal",
+                "from_one": False, "filter": ALL, "min_pages": "10", "max_pages": "300", "small_mb": "1",
+                "big_mb": "500", "low_cover": "800", "ignored": ""}
+    choices = {"similarity": list(ac.SIMILARITY), "filter": FILTERS}
 
     def __init__(self, parent):
         super().__init__(parent)
         self.root_dir = None
         self.picked = None  # comics chosen one by one instead of a folder
         self.results = None
+        self.findings = []
         self.q = None
         self.stop = threading.Event()
-        self.checked = set()  # lower-cased paths ticked in the Duplicates table
+        self.ticks = {}  # (kind, key) -> ticked, remembered across list refreshes
+        self.fail_notes = {}  # lower-cased path -> why the last fix failed
         self.by_iid = {}
+        self._fix_note = ""
+        self._later_id = None
+        self.fixed = self.failed = 0
+        self.first_error = ""
 
-        title_block(self.main, "Library audit", "Scan a library once, then check it for problems.")
+        title_block(self.main, "Library audit", "Scan your library, see what needs attention, and fix it.")
         self.drop = DropZone(self.main, "Drop a library folder here, or add a folder or comics below", self.browse,
                              self.browse, self.browse_files)
         self.drop.pack(fill="x")
         bar = ctk.CTkFrame(self.main, fg_color=BG)
         bar.pack(fill="x", pady=(14, 6))
-        segmented(bar, self.vars["report"], REPORTS, width=360).pack(side="left")
+        self.chips = {}
+        for key, label in CHIPS:
+            b = tool_button(bar, label, lambda k=key: self.vars["filter"].set(k), 70)
+            b.pack(side="left", padx=(0, 4))
+            self.chips[key] = b
+        toolbar(bar, [("all", "Tick all", 74, lambda: self.tick_all(True)),
+                      ("none", "Untick all", 80, lambda: self.tick_all(False))], side="right")
         self.meta = ctk.CTkLabel(self.main, text="", font=(FONT, 13), text_color=TEXT, anchor="w")
         self.meta.pack(fill="x", pady=(2, 6))
-        self.progress = ctk.CTkProgressBar(self.main, height=3, corner_radius=2, fg_color=BORDER,
-                                           progress_color=ACCENT)
+        self.progress = ctk.CTkProgressBar(self.main, height=3, corner_radius=2, fg_color=BORDER, progress_color=ACCENT)
         self.progress.set(0)
         self.progress.pack(fill="x", pady=(0, 8))
-        self.holder = ctk.CTkFrame(self.main, fg_color=BG)
-        self.holder.pack(fill="both", expand=True)
-        self.trees = {}
-        for r in REPORTS:
-            wrap, tree = build_tree(self.holder, COLUMNS[r])
-            self.trees[r] = (wrap, tree)
-        self.trees[DUPES][1].bind("<Button-1>", self._click)
-        self.hint = ctk.CTkLabel(self.main, text="", font=(FONT, 12), text_color=MUTED, anchor="w",
-                                 justify="left", wraplength=620)
+        wrap, self.tree = build_tree(self.main, COLUMNS, selectmode="extended")
+        wrap.pack(fill="both", expand=True)
+        self.tree.bind("<Button-1>", self._click)
+        self.hint = ctk.CTkLabel(self.main, text="", font=(FONT, 12), text_color=MUTED, anchor="w", justify="left",
+                                 wraplength=620)
         self.hint.pack(fill="x", pady=(6, 0))
 
-        v = self.vars
-        sw = switch_style()
+        v, sw = self.vars, switch_style()
         self.form.heading("Source")
         box = self.form.add("Scan")
         ctk.CTkSwitch(box, text="Include subfolders", variable=v["recursive"], **sw).pack(anchor="w")
-        ctk.CTkSwitch(box, text="Read page counts and covers", variable=v["deep"], **sw).pack(anchor="w", pady=(8, 0))
         ctk.CTkSwitch(box, text="Open real .cbr files (slow)", variable=v["deep_cbr"], **sw).pack(anchor="w", pady=(8, 0))
-        self.form.heading("Reports")
+        self.form.heading("Checks")
         box = self.form.add("Broken files")
         ctk.CTkSwitch(box, text="Full integrity test (slow)", variable=v["integrity"], **sw).pack(anchor="w")
-        ctk.CTkLabel(box, text="Reads every file completely. Off: only problems the quick scan notices.",
-                     font=(FONT, 11), text_color=MUTED, anchor="w", justify="left",
-                     wraplength=260).pack(fill="x", pady=(4, 0))
+        ctk.CTkLabel(box, text="Reads every file completely. Off: only problems the scan notices.", font=(FONT, 11),
+                     text_color=MUTED, anchor="w", justify="left", wraplength=260).pack(fill="x", pady=(4, 0))
         box = self.form.add("Duplicates")
         ctk.CTkSwitch(box, text="Compare cover images", variable=v["similar"], **sw).pack(anchor="w")
         menu(box, v["similarity"], list(ac.SIMILARITY)).pack(fill="x", pady=(8, 0))
-        box = self.form.add("Missing issues")
+        box = self.form.add("Missing")
         ctk.CTkSwitch(box, text="Expect issues from #1", variable=v["from_one"], **sw).pack(anchor="w")
-        ctk.CTkLabel(box, text="Off: a series is checked from the lowest issue you own.",
-                     font=(FONT, 11), text_color=MUTED, anchor="w", justify="left",
-                     wraplength=260).pack(fill="x", pady=(4, 0))
+        ctk.CTkLabel(box, text="Off: a series is checked from the lowest number you own.", font=(FONT, 11),
+                     text_color=MUTED, anchor="w", justify="left", wraplength=260).pack(fill="x", pady=(4, 0))
+        self.form.heading("Warnings")
+        for key, label in (("min_pages", "Fewer pages than"), ("max_pages", "More pages than"),
+                           ("small_mb", "Smaller than (MB)"), ("big_mb", "Larger than (MB)"),
+                           ("low_cover", "Cover shorter than (px)")):
+            entry(self.form.add(label), v[key]).pack(fill="x")
 
         self.btn_scan = button(self.footer, "Scan library", self.scan, primary=True)
         self.btn_scan.pack(pady=(0, 8))
-        divider(self.footer, vertical=False).pack(fill="x", pady=(2, 10))
-        # report-specific buttons live directly in the footer and are packed before Export CSV on demand
-        self.btn_move = button(self.footer, "Move checked to Archive", self.move_checked)
-        self.btn_copy = button(self.footer, "Copy wishlist", self.copy_wishlist)
-        self.btn_save = button(self.footer, "Save wishlist…", self.save_wishlist)
-        self.btn_csv = button(self.footer, "Export CSV…", self.export_csv)
-        self.btn_csv.pack(pady=(0, 8))
+        self.btn_fix = button(self.footer, "Fix checked", self.fix_checked, primary=True)
+        self.btn_fix.pack(pady=(0, 8))
+        divider(self.footer, vertical=False).pack(fill="x", pady=(2, 8))
+        self.btn_ignore, self.btn_open = self._pair(self.footer, ("Ignore", self.ignore_selected),
+                                                    ("Open folder", self.open_selected))
+        self.btn_ignored, self.btn_archive = self._pair(self.footer, ("Ignored…", self.show_ignored),
+                                                        ("Archive…", self.show_archive))
+        self.wish_row = ctk.CTkFrame(self.footer, fg_color="transparent")
+        self.btn_copy = button(self.wish_row, "Copy wishlist", self.copy_wishlist, width=108)
+        self.btn_copy.pack(side="left", padx=(0, 6))
+        self.btn_save = button(self.wish_row, "Save wishlist…", self.save_wishlist, width=108)
+        self.btn_save.pack(side="left")
         self.btn_stop = button(self.footer, "Stop", self.stop.set)
-        self.watch("report", callback=self._show_report)
-        self._show_report()
-        self._idle()
 
-    # --- theme ---
+        for n in ("filter", "min_pages", "max_pages", "small_mb", "big_mb", "low_cover"):
+            self.vars[n].trace_add("write", lambda *_: self._later())
+        self.tree.bind("<<TreeviewSelect>>", lambda _: self._sync_buttons())
+        self._refresh()
+
+    def _pair(self, parent, a, b):
+        row = ctk.CTkFrame(parent, fg_color="transparent")
+        row.pack(pady=(0, 8))
+        ba = button(row, a[0], a[1], width=108)
+        ba.pack(side="left", padx=(0, 6))
+        bb = button(row, b[0], b[1], width=108)
+        bb.pack(side="left")
+        return ba, bb
+
+    # ------------------------------------------------------------------ theme and folder
     def apply_theme(self):
-        for _, tree in self.trees.values():
-            apply_tree_theme(tree)
+        apply_tree_theme(self.tree)
+        self._style_chips()
 
-    # --- folder ---
     def browse(self):
         d = filedialog.askdirectory(title="Library folder")
         if d:
@@ -175,12 +232,151 @@ class AuditPage(Page):
         self.picked = picked
         self.drop.set(str(self.root_dir))
         self.results = None
-        self.checked = set()
+        self.ticks = {}
         self.say("")
-        self._show_report()
-        self._idle()
+        self._refresh()
 
-    # --- running ---
+    # ------------------------------------------------------------------ ignore list (kept as JSON in a setting)
+    def ignored(self):
+        """{key: label} of everything the user has chosen to ignore."""
+        try:
+            data = json.loads(self.vars["ignored"].get() or "{}")
+            return {str(k): str(v) for k, v in data.items()} if isinstance(data, dict) else {}
+        except ValueError:
+            return {}
+
+    def _set_ignored(self, d):
+        self.vars["ignored"].set(json.dumps(d))
+
+    def ignore_selected(self):
+        sel = [self.by_iid[i] for i in self.tree.selection() if i in self.by_iid]
+        if not sel or self.q:
+            return
+        d = self.ignored()
+        for f in sel:
+            for k in f.keys:
+                d[k] = f.label
+        self._set_ignored(d)
+        self._refresh()
+        self.say(f"Ignored {len(sel)} finding{'s' if len(sel) != 1 else ''}. Ignored… lists what you've hidden.")
+
+    def show_ignored(self):
+        d = self.ignored()
+        win = ctk.CTkToplevel(self)
+        win.title("Ignored findings")
+        win.geometry("560x420")
+        win.configure(fg_color=BG)
+        win.transient(self.winfo_toplevel())
+        ctk.CTkLabel(win, text="These are hidden from every scan until you restore them.", font=(FONT, 12),
+                     text_color=MUTED, anchor="w").pack(fill="x", padx=14, pady=(12, 6))
+        box = tk.Listbox(win, selectmode="extended", activestyle="none", exportselection=False, font=(FONT, 11), bd=0,
+                         highlightthickness=1, bg=pick(BG), fg=pick(TEXT), selectbackground=pick(ACCENT),
+                         highlightbackground=pick(BORDER))
+        box.pack(fill="both", expand=True, padx=14)
+        labels = []
+
+        def fill():
+            labels[:] = list(dict.fromkeys(d.values()))
+            box.delete(0, "end")
+            for lab in labels:
+                box.insert("end", lab)
+
+        def restore(only_selected):
+            chosen = {labels[i] for i in box.curselection()} if only_selected else set(labels)
+            for k in [k for k, lab in d.items() if lab in chosen]:
+                del d[k]
+            self._set_ignored(d)
+            fill()
+            self._refresh()
+
+        row = ctk.CTkFrame(win, fg_color=BG)
+        row.pack(fill="x", padx=14, pady=10)
+        button(row, "Restore selected", lambda: restore(True), width=140).pack(side="left")
+        button(row, "Restore all", lambda: restore(False), width=110).pack(side="left", padx=6)
+        button(row, "Close", win.destroy, width=90).pack(side="right")
+        fill()
+        self._ignored_win = win
+        self._ignored_ui = {"box": box, "restore": restore, "labels": labels}
+
+    # ------------------------------------------------------------------ the Archive folders
+    def show_archive(self):
+        if not self.root_dir:
+            return
+        root = self.root_dir
+        win = ctk.CTkToplevel(self)
+        win.title("Archive folders")
+        win.geometry("760x520")
+        win.configure(fg_color=BG)
+        win.transient(self.winfo_toplevel())
+        info = ctk.CTkLabel(win, text="", font=(FONT, 13), text_color=TEXT, anchor="w")
+        info.pack(fill="x", padx=14, pady=(12, 6))
+        wrap, tree = build_tree(win, [("sel", "", 38, False), ("file", "File", 520, True), ("size", "Size", 90, False)],
+                                selectmode="extended")
+        wrap.pack(fill="both", expand=True, padx=14)
+        ticked, rows = set(), {}
+        ctk.CTkLabel(win, text="Fixes park files here as .bak. Purging deletes them for good (they do not go to the "
+                               "Recycle Bin).", font=(FONT, 12), text_color=MUTED, anchor="w", justify="left",
+                     wraplength=700).pack(fill="x", padx=14, pady=(6, 0))
+
+        def fill():
+            tree.delete(*tree.get_children())
+            rows.clear()
+            files = ac.archive_files(root)
+            for p, size in files:
+                iid = tree.insert("", "end", values=("☑" if p in ticked else "☐", str(p.relative_to(root)),
+                                                     ac.size_text(size)))
+                rows[iid] = p
+            total = sum(s for _, s in files)
+            n = len(files)
+            info.configure(text=f"{n} file{'s' if n != 1 else ''} in Archive folders, {ac.size_text(total)}" if n
+                           else "The Archive folders are empty.")
+            btn_purge.configure(state="normal" if ticked & set(rows.values()) else "disabled")
+
+        def click(e):
+            if tree.identify_region(e.x, e.y) == "cell" and tree.identify_column(e.x) == "#1":
+                p = rows.get(tree.identify_row(e.y))
+                if p:
+                    ticked.symmetric_difference_update({p})
+                    tree.set(tree.identify_row(e.y), "sel", "☑" if p in ticked else "☐")
+                    btn_purge.configure(state="normal" if ticked & set(rows.values()) else "disabled")
+                    return "break"
+            return None
+
+        def tick(value):
+            ticked.clear()
+            if value:
+                ticked.update(rows.values())
+            fill()
+
+        def purge():
+            todo = sorted(ticked & set(rows.values()))
+            if not todo:
+                return
+            size = sum(p.stat().st_size for p in todo if p.exists())
+            if not messagebox.askyesno("Purge Archive", f"Permanently delete {len(todo)} file"
+                                       f"{'s' if len(todo) != 1 else ''} ({ac.size_text(size)})?\n\n"
+                                       "This cannot be undone.", icon="warning", parent=win):
+                return
+            n, errors = ac.purge_archive(todo)
+            ticked.clear()
+            fill()
+            self.say(f"Purged {n} file{'s' if n != 1 else ''}" + (f" · {len(errors)} failed ({errors[0]})" if errors else ""),
+                     err=bool(errors))
+
+        tree.bind("<Button-1>", click)
+        row = ctk.CTkFrame(win, fg_color=BG)
+        row.pack(fill="x", padx=14, pady=10)
+        button(row, "Tick all", lambda: tick(True), width=90).pack(side="left")
+        button(row, "Untick all", lambda: tick(False), width=90).pack(side="left", padx=6)
+        btn_purge = button(row, "Purge ticked…", purge, width=130)
+        btn_purge.pack(side="left", padx=6)
+        button(row, "Open folder", lambda: os.startfile(root), width=110).pack(side="left")
+        button(row, "Close", win.destroy, width=90).pack(side="right")
+        fill()
+        self._archive_win = win
+        self._archive = {"tree": tree, "rows": rows, "ticked": ticked, "purge": purge, "fill": fill, "info": info}
+
+    # ------------------------------------------------------------------ scanning
     def _idle(self):
         busy = bool(self.q)
         self.btn_scan.configure(state="normal" if self.root_dir and not busy else "disabled")
@@ -193,14 +389,12 @@ class AuditPage(Page):
         if not self.root_dir or self.q:
             return
         self.results = None
-        self.checked = set()
+        self.findings = []
         self.stop.clear()
         self.q = queue.Queue()
         self.progress.set(0)
-        self.say("")
-        self._show_report()
+        self._refresh()
         self.meta.configure(text="Scanning…")
-        self._idle()
         threading.Thread(target=_run, args=(self.q, self.root_dir, self.state(), self.stop, self.picked),
                          daemon=True).start()
         self._poll()
@@ -209,18 +403,28 @@ class AuditPage(Page):
         try:
             for _ in range(100):
                 msg = self.q.get_nowait()
-                if msg[0] == "prog":
+                kind = msg[0]
+                if kind == "prog":
                     self.progress.set(msg[2] / max(1, msg[3]))
                     self.meta.configure(text=f"{msg[1]} {msg[2]} of {msg[3]}…")
-                elif msg[0] == "error":
+                elif kind == "error":
                     self.q = None
                     self.progress.set(0)
-                    self._show_report()
-                    self._idle()
+                    self._refresh()
                     self.say(f"Scan failed: {msg[1]}", err=True)
                     return
-                else:
+                elif kind == "result":
                     self._finish(msg[1])
+                    return
+                elif kind == "fixed":
+                    self.fixed += 1
+                    self.fail_notes.pop(str(msg[1]).lower(), None)
+                elif kind == "fix_failed":
+                    self.failed += 1
+                    self.fail_notes[str(msg[1]).lower()] = msg[3]
+                    self.first_error = self.first_error or f"{Path(msg[1]).name}: {msg[3]}"
+                elif kind in ("fix_done", "fix_stopped"):
+                    self._finish_fix(kind == "fix_stopped")
                     return
         except queue.Empty:
             pass
@@ -230,138 +434,206 @@ class AuditPage(Page):
         self.q = None
         self.results = res
         self.progress.set(0 if res["stopped"] else 1)
-        # pre-tick every copy except the biggest in each duplicate group
-        self.checked = {str(i.path).lower() for g in res["dups"] for i in g.issues[1:]}
-        self._show_report()
-        self._idle()
-        total = len(res["issues"])
-        note = f"{total} files in {res['seconds']:.1f}s"
+        self._refresh()
+        note = f"{len(res['issues'])} files in {res['seconds']:.1f}s"
         if res["cache_hits"]:
             note += f" ({res['cache_hits']} from cache)"
-        self.say(("Stopped · " if res["stopped"] else "Done · ") + note)
+        text = ("Stopped · " if res["stopped"] else "Done · ") + note
+        self.say((self._fix_note + " · " if self._fix_note else "") + text, err=bool(self._fix_note and self.failed))
+        self._fix_note = ""
 
-    # --- reports ---
-    def _show_report(self):
-        report = self.vars["report"].get()
-        for r, (wrap, _) in self.trees.items():
-            wrap.pack_forget()
-        wrap, tree = self.trees[report]
-        wrap.pack(fill="both", expand=True)
-        self._fill(report)
-        self._sync_buttons()
+    # ------------------------------------------------------------------ the list
+    def _later(self):
+        if self._later_id is not None:
+            self.after_cancel(self._later_id)
+        self._later_id = self.after(250, self._refresh)
 
-    def _fill(self, report):
-        tree = self.trees[report][1]
-        tree.delete(*tree.get_children())
+    def _data(self):
+        res = self.results
+        lim = ac.limits_from(self.state())
+        return {**res, "quality": ac.find_quality(res["issues"], lim)}
+
+    def _tick_id(self, f):
+        return (f.kind, str(f.path).lower() if f.path else f.key)
+
+    def _build(self):
+        if not self.results:
+            self.findings = []
+            return
+        self.findings = ac.build_findings(self._data(), self.ignored())
+        for f in self.findings:
+            if f.fix:
+                f.checked = self.ticks.get(self._tick_id(f), f.checked)
+            note = self.fail_notes.get(str(f.path).lower()) if f.path else None
+            if note and f.fix:
+                f.detail += f" · Fix failed: {note}"
+
+    def visible(self):
+        flt = self.vars["filter"].get()
+        return [f for f in self.findings if (f.kind != ac.WARNING if flt == ALL else f.kind == flt)]
+
+    def _counts(self):
+        counts = {k: 0 for k in FILTERS}
+        seen = set()
+        for f in self.findings:
+            if f.kind == ac.DUPLICATE:
+                if f.group in seen:
+                    continue
+                seen.add(f.group)
+            counts[f.kind] += 1
+            if f.kind != ac.WARNING:
+                counts[ALL] += 1
+        return counts
+
+    def _style_chips(self):
+        flt = self.vars["filter"].get()
+        for key, b in self.chips.items():
+            b.configure(fg_color=SELECT_BG if key == flt else BG, border_color=ACCENT if key == flt else BORDER)
+
+    def _refresh(self):
+        self._later_id = None
+        self._build()
+        counts = self._counts()
+        for key, label in CHIPS:
+            self.chips[key].configure(text=f"{label} {counts[key]}" if self.results else label,
+                                      width=max(60, 22 + 8 * len(f"{label} {counts[key]}")))
+        self._style_chips()
+        flt = self.vars["filter"].get()
+        self.tree.delete(*self.tree.get_children())
         self.by_iid = {}
+        rows = self.visible()
+        for f in rows:
+            sel = ("☑" if f.checked else "☐") if f.fix else ""
+            tags = ("bad",) if f.kind == ac.BROKEN else ("dim",) if f.keep or f.kind == ac.WARNING else ()
+            iid = self.tree.insert("", "end", values=(sel, f.kind, f.title, f.detail), tags=tags)
+            self.by_iid[iid] = f
         res = self.results
         if not res:
             if not self.q:
                 self.meta.configure(text="Choose a folder, then press Scan library." if not self.root_dir
                                     else "Press Scan library to begin.")
-            self.hint.configure(text="")
-            return
-        if report == BROKEN:
-            for i, problems in res["broken"]:
-                for p in problems:
-                    tree.insert("", "end", values=(i.rel, p), tags=("bad",))
-            n = len(res["broken"])
-            checked = res["deep"] or res["integrity"]
-            self.meta.configure(text=f"{n} file{'s' if n != 1 else ''} with problems" if n else
-                                EMPTY[BROKEN] if checked else "Nothing was checked.")
-            self.hint.configure(text="Full integrity test: zip CRC check plus cover, middle and last page decoded."
-                                if res["integrity"] else "Quick check of each file's first page." if res["deep"] else
-                                "Turn on 'Read page counts and covers' or the full integrity test, then scan again.")
-        elif report == DUPES:
-            for gi, g in enumerate(res["dups"], 1):
-                for i in g.issues:
-                    iid = tree.insert("", "end", values=(
-                        "☑" if str(i.path).lower() in self.checked else "☐", gi, g.why, i.rel,
-                        ac.size_text(i.size), i.pages if i.pages is not None else ""))
-                    self.by_iid[iid] = i
-            n = len(res["dups"])
-            self.meta.configure(text=f"{n} group{'s' if n != 1 else ''} of probable duplicates" if n else EMPTY[DUPES])
-            self.hint.configure(text="The biggest file in each group is left unticked. Ticked files can be moved "
-                                     "to an Archive folder (as .bak); nothing is deleted.")
-        elif report == MISSING:
-            for g in res["gaps"]:
-                tree.insert("", "end", values=(g.series, g.volume, g.owned, ac.ranges(g.missing)))
-            n = sum(len(g.missing) for g in res["gaps"])
-            self.meta.configure(text=f"{n} missing issue{'s' if n != 1 else ''} in {len(res['gaps'])} series"
-                                if n else EMPTY[MISSING])
-            self.hint.configure(text=f"{res['ignored']} file(s) ignored: specials, annuals, decimals or no issue number. "
-                                     "A series is checked up to the highest issue you own or its issue count.")
         else:
-            for i, flags in res["quality"]:
-                tree.insert("", "end", values=(i.rel, " · ".join(flags)))
-            n = len(res["quality"])
-            self.meta.configure(text=f"{n} file{'s' if n != 1 else ''} flagged" if n else EMPTY[QUALITY])
-            self.hint.configure(text=(f"Flags: under {ac.MIN_PAGES} or over {ac.MAX_PAGES} pages, under "
-                                      f"{ac.SMALL_BYTES // 1_000_000} MB or over {ac.BIG_BYTES // 1_000_000} MB, "
-                                      f"cover under {ac.LOW_COVER_HEIGHT}px tall." +
-                                      ("" if res["deep"] else " Page and cover checks need 'Read page counts and covers'.")))
-        if res["stopped"]:
-            self.meta.configure(text=self.meta.cget("text") + " (partial: scan was stopped)")
+            n = counts[flt]
+            word = {ALL: "problem", ac.BROKEN: "broken file", ac.DUPLICATE: "group of duplicates", ac.MISSING:
+                    "series with gaps", ac.JUNK: "comic with junk", ac.CBR: "CBR file", ac.WARNING: "warning"}[flt]
+            text = f"{n} {word}{'s' if n != 1 else ''}" if n else EMPTY[flt]
+            fixable = sum(1 for f in rows if f.checked and f.fix)
+            if fixable:
+                text += f" · {fixable} ticked to fix"
+            if res["stopped"]:
+                text += " (partial: scan was stopped)"
+            self.meta.configure(text=text)
+        hint = HINTS[flt]
+        if flt == ac.MISSING and res:
+            hint += f" {res['ignored_files']} file(s) skipped: specials, annuals, decimals or no number."
+        self.hint.configure(text=hint)
+        self._idle()
 
     def _sync_buttons(self):
-        for b in (self.btn_move, self.btn_copy, self.btn_save):
-            b.pack_forget()
-        report, res, busy = self.vars["report"].get(), self.results, bool(self.q)
-        if report == DUPES:
-            self.btn_move.pack(pady=(0, 8), before=self.btn_csv)
-            self.btn_move.configure(state="normal" if res and self.checked and not busy else "disabled")
-        elif report == MISSING:
-            for b in (self.btn_copy, self.btn_save):
-                b.pack(pady=(0, 8), before=self.btn_csv)
-                b.configure(state="normal" if res and res["gaps"] and not busy else "disabled")
-        self.btn_csv.configure(state="normal" if res and not busy else "disabled")
+        busy = bool(self.q)
+        rows = self.visible()
+        ok = bool(self.results) and not busy
+        self.btn_fix.configure(state="normal" if ok and any(f.checked and f.fix for f in rows) else "disabled")
+        sel = [self.by_iid[i] for i in self.tree.selection() if i in self.by_iid]
+        self.btn_ignore.configure(state="normal" if ok and sel else "disabled")
+        self.btn_open.configure(state="normal" if sel and sel[0].path else "disabled")
+        self.btn_ignored.configure(state="normal" if self.ignored() else "disabled")
+        self.btn_archive.configure(state="normal" if self.root_dir and not busy else "disabled")
+        show = self.vars["filter"].get() == ac.MISSING
+        if show:
+            self.wish_row.pack(pady=(0, 8))
+        else:
+            self.wish_row.pack_forget()
+        have = ok and any(f.kind == ac.MISSING for f in self.findings)
+        for b in (self.btn_copy, self.btn_save):
+            b.configure(state="normal" if have else "disabled")
 
-    # --- duplicates: ticking and moving ---
+    # ------------------------------------------------------------------ ticking and fixing
     def _click(self, e):
-        tree = self.trees[DUPES][1]
-        if tree.identify_region(e.x, e.y) == "cell" and tree.identify_column(e.x) == "#1":
-            i = self.by_iid.get(tree.identify_row(e.y))
-            if i:
-                key = str(i.path).lower()
-                self.checked.symmetric_difference_update({key})
-                tree.set(tree.identify_row(e.y), "sel", "☑" if key in self.checked else "☐")
-                self._sync_buttons()
+        if self.tree.identify_region(e.x, e.y) == "cell" and self.tree.identify_column(e.x) == "#1":
+            f = self.by_iid.get(self.tree.identify_row(e.y))
+            if f and f.fix and not self.q:
+                f.checked = not f.checked
+                self.ticks[self._tick_id(f)] = f.checked
+                self.tree.set(self.tree.identify_row(e.y), "sel", "☑" if f.checked else "☐")
+                self._refresh_meta()
                 return "break"
         return None
 
-    def move_checked(self):
+    def _refresh_meta(self):
+        rows = self.visible()
+        text = self.meta.cget("text").split(" · ")[0]
+        fixable = sum(1 for f in rows if f.checked and f.fix)
+        self.meta.configure(text=text + (f" · {fixable} ticked to fix" if fixable else ""))
+        self._sync_buttons()
+
+    def tick_all(self, value):
+        if self.q:
+            return
+        for f in self.visible():
+            if f.fix:
+                f.checked = value
+                self.ticks[self._tick_id(f)] = value
+        self._refresh()
+
+    def open_selected(self):
+        sel = [self.by_iid[i] for i in self.tree.selection() if i in self.by_iid]
+        if sel and sel[0].path:
+            reveal(sel[0].path)
+
+    def fix_checked(self):
         if not self.results or self.q:
             return
-        todo = [i for g in self.results["dups"] for i in g.issues if str(i.path).lower() in self.checked]
-        if not todo:
+        plan = ac.plan_fixes(self.visible())
+        if not plan:
             return
-        if not messagebox.askyesno(
-                "Move to Archive",
-                f"Move {len(todo)} file{'s' if len(todo) != 1 else ''} into Archive folders?\n\n"
-                "Each is renamed with a .bak suffix, so nothing is deleted and you can restore it by hand.",
-                icon="warning"):
+        n = {a: sum(1 for _, x, _ in plan if x == a) for a in (ac.CLEAN, ac.CONVERT, ac.ARCHIVE)}
+        lines = []
+        if n[ac.CLEAN]:
+            lines.append(f"• Remove junk files from {n[ac.CLEAN]} comic{'s' if n[ac.CLEAN] != 1 else ''}")
+        if n[ac.CONVERT]:
+            lines.append(f"• Convert {n[ac.CONVERT]} CBR file{'s' if n[ac.CONVERT] != 1 else ''} to CBZ (each .cbr is "
+                         "deleted once its CBZ has been verified)")
+        if n[ac.ARCHIVE]:
+            lines.append(f"• Move {n[ac.ARCHIVE]} file{'s' if n[ac.ARCHIVE] != 1 else ''} to Archive folders (as .bak)")
+        if not messagebox.askyesno("Fix checked", "This will:\n\n" + "\n".join(lines) + "\n\nContinue?", icon="warning"):
             return
-        moved, failed = set(), []
-        for i in todo:
-            try:
-                move_to_archive(i.path)
-                moved.add(str(i.path).lower())
-            except OSError as e:
-                failed.append(f"{i.path.name}: {e}")
-        res = self.results
-        for g in res["dups"]:
-            g.issues = [i for i in g.issues if str(i.path).lower() not in moved]
-        res["dups"] = [g for g in res["dups"] if len(g.issues) > 1]
-        res["issues"] = [i for i in res["issues"] if str(i.path).lower() not in moved]
-        self.checked -= moved
-        self._fill(DUPES)
-        self._sync_buttons()
-        text = f"Moved {len(moved)} file{'s' if len(moved) != 1 else ''} to Archive"
-        self.say(text + (f" · {len(failed)} failed ({failed[0]})" if failed else ""), err=bool(failed))
+        self.fixed = self.failed = 0
+        self.first_error = ""
+        for path, _, _ in plan:
+            self.fail_notes.pop(str(path).lower(), None)
+        self.stop.clear()
+        self.q = queue.Queue()
+        self.progress.set(0)
+        self.say("")
+        self._idle()
+        threading.Thread(target=_fix, args=(self.q, plan, self.stop), daemon=True).start()
+        self._poll()
 
-    # --- exports ---
+    def _finish_fix(self, stopped):
+        self.q = None
+        text = f"Fixed {self.fixed} file{'s' if self.fixed != 1 else ''}"
+        if self.failed:
+            text += f" · {self.failed} failed ({self.first_error})"
+        if stopped:
+            text = "Stopped · " + text
+        self._fix_note = text
+        self.say(text, err=bool(self.failed))
+        self.scan()  # the cache makes this quick; it also shows what is left and clears what was fixed
+        if not self.q:  # no folder to rescan
+            self._refresh()
+
+    # ------------------------------------------------------------------ wishlist
+    def _gaps(self):
+        return [g for f in self.findings if f.kind == ac.MISSING for g in f.gaps]
+
     def _lines(self):
-        return ac.wishlist_lines(self.results["gaps"]) if self.results else []
+        ign = set(self.ignored())
+        out = []
+        for g in self._gaps():
+            nums = [n for n in g.missing if ac.missing_key(g, n) not in ign]
+            out += ac.wishlist_lines([ac.Gap(g.series, g.volume, g.owned, g.first, g.last, nums, g.from_count, g.kind)])
+        return out
 
     def copy_wishlist(self):
         lines = self._lines()
@@ -374,54 +646,20 @@ class AuditPage(Page):
         lines = self._lines()
         if not lines:
             return
-        path = filedialog.asksaveasfilename(title="Save wishlist", defaultextension=".txt",
-                                            initialfile="wishlist.txt",
+        path = filedialog.asksaveasfilename(title="Save wishlist", defaultextension=".txt", initialfile="wishlist.txt",
                                             filetypes=[("Text", "*.txt"), ("CSV", "*.csv")])
         if not path:
             return
         try:
             if path.lower().endswith(".csv"):
+                ign = set(self.ignored())
                 with open(path, "w", newline="", encoding="utf-8-sig") as f:
                     w = csv.writer(f)
-                    w.writerow(["Series", "Volume", "Issue"])
-                    for g in self.results["gaps"]:
-                        w.writerows([g.series, g.volume, n] for n in g.missing)
+                    w.writerow(["Series", "Volume", "Type", "Number"])
+                    for g in self._gaps():
+                        w.writerows([g.series, g.volume, g.kind, n] for n in g.missing if ac.missing_key(g, n) not in ign)
             else:
                 Path(path).write_text("\n".join(lines) + "\n", encoding="utf-8")
             self.say(f"Saved {len(lines)} lines.")
-        except OSError as e:
-            self.say(f"Could not save: {e}", err=True)
-
-    def report_rows(self, report):
-        """(header, rows) for the CSV export of one report."""
-        res = self.results
-        if report == BROKEN:
-            return ["File", "Problem"], [[i.rel, p] for i, ps in res["broken"] for p in ps]
-        if report == DUPES:
-            return (["Group", "Why", "File", "Size (bytes)", "Pages", "Cover hash"],
-                    [[gi, g.why, i.rel, i.size, i.pages if i.pages is not None else "", i.cover_hash or ""]
-                     for gi, g in enumerate(res["dups"], 1) for i in g.issues])
-        if report == MISSING:
-            return (["Series", "Volume", "Owned", "Missing", "End from issue count"],
-                    [[g.series, g.volume, g.owned, ac.ranges(g.missing), "yes" if g.from_count else "no"]
-                     for g in res["gaps"]])
-        return ["File", "Flags"], [[i.rel, " | ".join(f)] for i, f in res["quality"]]
-
-    def export_csv(self):
-        if not self.results:
-            return
-        report = self.vars["report"].get()
-        path = filedialog.asksaveasfilename(title=f"Export {report} report", defaultextension=".csv",
-                                            initialfile=f"audit-{report.lower()}.csv",
-                                            filetypes=[("CSV", "*.csv")])
-        if not path:
-            return
-        header, rows = self.report_rows(report)
-        try:
-            with open(path, "w", newline="", encoding="utf-8-sig") as f:
-                w = csv.writer(f)
-                w.writerow(header)
-                w.writerows(rows)
-            self.say(f"Exported {len(rows)} row{'s' if len(rows) != 1 else ''}.")
         except OSError as e:
             self.say(f"Could not save: {e}", err=True)

@@ -28,9 +28,10 @@ individual comics (drop them, or use **Add folder…** / **Choose comics…**), 
 | **Comic Cover Extractor** | Single issue, Bulk folder, Folder icons | Preview an issue's first and last pages, save covers one at a time or for a whole folder, and show covers as Explorer folder icons |
 | **Comic Renamer** | Renamer | Rename a collection with a naming format for each type (issues, annuals, TPBs, omnibuses, compendiums…), correcting each file on a card before anything changes, with full control of numbers, capitalisation, separators and folders |
 | **Metadata** | Metadata | Write series, issue, volume, year, title and issue count from filenames into each CBZ's `ComicInfo.xml`, and set Series Group, Genre, Alternate series or Publisher in bulk |
-| **Archive Tools** | CBR to CBZ, Clean-up | Repack RAR comics as verified ZIPs; strip junk files and tidy page names |
-| **Library Audit** | Library audit | Scan a library for broken files, duplicates, missing issues and low-quality files, with CSV and wishlist export |
+| **Archive Tools** | CBR to CBZ | Repack RAR comics as verified ZIPs, in bulk |
+| **Library Audit** | Library audit | Scan a library once, then see broken files, duplicates, missing issues (per type), junk files and CBR files in one list, fix them in place, ignore what you don't care about, and manage the Archive folders |
 | **Reading Orders** | Reading order | Arrange issues in the order to read them and record it in each comic's `ComicInfo.xml`, optionally also in the filenames or a folder of copies |
+| **Library stats** | Dashboard (sidebar, or the summary line on Home) | Totals, size on disk, bars per series, publisher, year and format, metadata coverage and the largest files, with click-through to the comics, CSV export and a copyable summary |
 | **ACEO Cards** | ACEO sheets | Fill full pages of 8 ACEO trading cards with the covers you pick, from the blank template PDF, and save a print-ready PDF |
 
 ## Safety at a glance

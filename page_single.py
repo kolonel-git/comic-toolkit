@@ -8,6 +8,7 @@ from PIL import Image
 
 from comic_core import (CONFLICTS, FORMATS, HEIGHTS, NAMES, ORG_FLAT, WHERE_BESIDE, WHERE_CUSTOM,
                         Comic, export_cover, sanitize, unique)
+from picker_window import PickerWindow
 from ui_kit import BG, FONT, MUTED, DropZone, Form, Page, button, menu, title_block
 
 EDGE = 3  # pages previewed from each end
@@ -48,7 +49,10 @@ class SinglePage(Page):
         self.btn_cover = button(self.footer, "Save cover", self.save_cover, primary=True)
         self.btn_cover.pack(pady=(0, 8))
         self.btn_zip = button(self.footer, "Convert to ZIP", self.convert)
-        self.btn_zip.pack()
+        self.btn_zip.pack(pady=(0, 8))
+        self.btn_pick = button(self.footer, "Pick pages…", self.pick_pages)
+        self.btn_pick.pack()
+        self._picker = None
         self._enable(False)
         self.watch("format", "where", callback=self._refresh)
         self._refresh()
@@ -58,8 +62,20 @@ class SinglePage(Page):
         Form.show(self.custom_row, self.vars["where"].get() == WHERE_CUSTOM)
 
     def _enable(self, on):
-        for b in (self.btn_cover, self.btn_zip):
+        for b in (self.btn_cover, self.btn_zip, self.btn_pick):
             b.configure(state="normal" if on else "disabled")
+
+    def pick_pages(self):
+        """Open the thumbnail grid to save any pages (e.g. the covers inside a TPB) as JPGs."""
+        if self._picker is not None and self._picker.winfo_exists():
+            self._picker.lift()
+            return
+        self._picker = PickerWindow(self, self.comic)
+
+    def _close_picker(self):
+        if self._picker is not None and self._picker.winfo_exists():
+            self._picker.close()
+        self._picker = None
 
     def browse(self):
         p = filedialog.askopenfilename(filetypes=[("Comic archives", "*.cbz *.cbr"), ("All", "*.*")])
@@ -76,6 +92,7 @@ class SinglePage(Page):
                 app.pages["bulk"].set_folder(d)
 
     def load(self, path):
+        self._close_picker()
         if self.comic:
             self.comic.close()
             self.comic = None

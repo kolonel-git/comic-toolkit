@@ -24,7 +24,9 @@ pip install customtkinter tkinterdnd2 pillow pypdf
 CBR support needs 7-Zip, unrar, or Windows 11's built-in tar.exe (reads RAR).
 """
 import json
+import tkinter as tk
 from pathlib import Path
+from tkinter import filedialog
 
 import customtkinter as ctk
 from tkinterdnd2 import DND_FILES, TkinterDnD
@@ -32,14 +34,16 @@ from tkinterdnd2 import DND_FILES, TkinterDnD
 from page_aceo import AceoPage
 from page_audit import AuditPage
 from page_bulk import BulkPage
-from page_cleanup import CleanupPage
 from page_convert import ConvertPage
 from page_icons import IconsPage
+from page_intake import IntakePage
 from page_metadata import MetadataPage
 from page_order import OrderPage
 from page_rename import RenamePage
 from page_single import SinglePage
-from ui_kit import ACCENT, BG, BORDER, FONT, HOVER, MUTED, PANEL, TEXT, Splitter
+from page_stats import StatsPage
+from stats_core import snapshot_line
+from ui_kit import ACCENT, ACCENT_HOVER, BG, BORDER, FONT, HOVER, MUTED, PANEL, TEXT, Splitter, pick, tool_button
 
 SETTINGS = Path(__file__).with_name("settings.json")
 
@@ -61,57 +65,83 @@ TOOLS = {  # key -> glyph, tint, title, description
                  "Write series, issue and year from filenames into ComicInfo.xml."),
     "convert": ("⇄", TINT_ORANGE, "CBR to CBZ",
                 "Repack RAR comics as verified ZIPs, in bulk."),
-    "cleanup": ("✂", TINT_GREY, "Clean-up",
-                "Remove junk files and tidy page names in CBZ archives."),
     "audit": ("✓", TINT_BLUE, "Library audit",
-              "Find broken files, duplicates, missing issues and low quality."),
+              "Scan for broken files, duplicates, gaps and junk, then fix them."),
     "order": ("1·2", TINT_PURPLE, "Reading order",
               "Put issues in reading order and record it inside each comic."),
     "aceo": ("▤", TINT_YELLOW, "ACEO sheets",
              "Fill full pages of 8 ACEO cards with covers and save a PDF."),
+    "intake": ("＋", TINT_GREEN, "Add to library",
+               "Convert, clean and rename new comics into your Ready folder."),
 }
 GROUPS = [  # header, tool keys
     ("Comic Cover Extractor", ["single", "bulk", "icons"]),
     ("Comic Renamer", ["rename"]),
     ("Metadata", ["metadata"]),
-    ("Archive Tools", ["convert", "cleanup"]),
+    ("Archive Tools", ["convert"]),
     ("Library Audit", ["audit"]),
     ("Reading Orders", ["order"]),
     ("ACEO Cards", ["aceo"]),
+    ("Add to Library", ["intake"]),
 ]
-HOME_ROWS = [[0, 1], [2, 3, 4], [5, 6]]  # which groups share a row on Home (indexes into GROUPS)
 HOME_COLS, HOME_GAPS = 4, 2  # every row has the same number of card columns and group gaps, so cards line up
-GAP = 26  # width of the gap between two groups; cards inside a group are 8 apart
+
+
+def ordered_groups(order):
+    """GROUPS in the user's saved order (a list of headers). Unknown headers are ignored; new groups go last."""
+    by_header = {h: (h, keys) for h, keys in GROUPS}
+    out = [by_header[h] for h in dict.fromkeys(order or []) if h in by_header]
+    return out + [g for g in GROUPS if g[0] not in {h for h, _ in out}]
+
+
+def home_rows(groups):
+    """Pack groups into Home rows in order: at most HOME_COLS cards and HOME_GAPS + 1 groups to a row."""
+    rows = []
+    for g in groups:
+        if rows and sum(len(k) for _, k in rows[-1]) + len(g[1]) <= HOME_COLS and len(rows[-1]) <= HOME_GAPS:
+            rows[-1].append(g)
+        else:
+            rows.append([g])
+    return rows
+GAP = 28  # width of the gap between two groups (a hairline runs down its middle); cards inside a group are 8 apart
+DANGER = ("#E03E3E", "#EB5757")
 
 
 class Card(ctk.CTkFrame):
-    """A compact tool card: icon tile and title on one line, a short description under it."""
+    """A tool card: a tinted icon tile and the title on one line, a short description under it, an arrow that
+    lights up on hover."""
 
     def __init__(self, parent, glyph, tint, title, text, command):
-        super().__init__(parent, fg_color=BG, border_color=BORDER, border_width=1, corner_radius=10,
-                         height=104, cursor="hand2")
+        super().__init__(parent, fg_color=BG, border_color=BORDER, border_width=1, corner_radius=12,
+                         height=98, cursor="hand2")
         self.pack_propagate(False)
         head = ctk.CTkFrame(self, fg_color="transparent")
-        head.pack(fill="x", padx=12, pady=(11, 4))
-        tile = ctk.CTkFrame(head, width=30, height=30, fg_color=tint, corner_radius=7)
+        head.pack(fill="x", padx=14, pady=(12, 4))
+        tile = ctk.CTkFrame(head, width=34, height=34, fg_color=tint, corner_radius=9)
         tile.pack(side="left")
         tile.pack_propagate(False)
-        ctk.CTkLabel(tile, text=glyph, font=(FONT, 13, "bold"), text_color=TEXT).pack(expand=True)
+        ctk.CTkLabel(tile, text=glyph, font=(FONT, 14, "bold"), text_color=TEXT).pack(expand=True)
         ctk.CTkLabel(head, text=title, font=(FONT, 14, "bold"), text_color=TEXT,
-                     anchor="w").pack(side="left", padx=(9, 0))
+                     anchor="w").pack(side="left", padx=(10, 0))
+        self.arrow = ctk.CTkLabel(head, text="→", font=(FONT, 14), text_color=MUTED)
+        self.arrow.pack(side="right")
         self.desc = ctk.CTkLabel(self, text=text, font=(FONT, 12), text_color=MUTED, anchor="nw", justify="left",
                                  wraplength=170)
-        self.desc.pack(fill="x", padx=12)
-        self.bind("<Configure>", lambda e: self.desc.configure(wraplength=max(90, int(e.width / self._get_widget_scaling()) - 26)))
+        self.desc.pack(fill="x", padx=14)
+        self.bind("<Configure>", lambda e: self.desc.configure(wraplength=max(90, int(e.width / self._get_widget_scaling()) - 30)))
         self._command = command
         self._bind_all(self)
 
     def _bind_all(self, w):
         w.bind("<Button-1>", lambda _: self._command(), add="+")
-        w.bind("<Enter>", lambda _: self.configure(fg_color=PANEL, border_color=ACCENT), add="+")
+        w.bind("<Enter>", self._enter, add="+")
         w.bind("<Leave>", self._leave, add="+")
         for c in w.winfo_children():
             self._bind_all(c)
+
+    def _enter(self, _):
+        self.configure(fg_color=HOVER, border_color=ACCENT)
+        self.arrow.configure(text_color=ACCENT)
 
     def _leave(self, _):
         under = self.winfo_containing(*self.winfo_pointerxy())
@@ -120,32 +150,60 @@ class Card(ctk.CTkFrame):
                 return
             under = under.master
         self.configure(fg_color=BG, border_color=BORDER)
+        self.arrow.configure(text_color=MUTED)
+
+
+def strip_button(parent, text, command, primary=False, width=None):
+    """The larger buttons of the Home summary line: filled accent for the main action, outlined otherwise."""
+    return ctk.CTkButton(parent, text=text, command=command, width=width or 120, height=34, corner_radius=8,
+                         font=(FONT, 13, "bold" if primary else "normal"),
+                         fg_color=ACCENT if primary else BG, hover_color=ACCENT_HOVER if primary else HOVER,
+                         text_color="#FFFFFF" if primary else TEXT, border_width=0 if primary else 1, border_color=BORDER)
 
 
 class HomePage(ctk.CTkFrame):
-    """Every tool on one screen: groups side by side in rows, with a wider gap between groups than between cards."""
+    """Every tool on one screen: each row is a soft band holding one to three groups, separated by hairlines, with the
+    tool cards inside (the same width in every row)."""
 
-    def __init__(self, parent, open_tool):
+    def __init__(self, parent, open_tool, open_stats=None, scan=None):
         super().__init__(parent, fg_color=BG)
+        self.open_stats, self.scan = open_stats, scan
         wrap = ctk.CTkFrame(self, fg_color=BG)
-        wrap.pack(fill="both", expand=True, padx=(32, 24), pady=(28, 16))
+        wrap.pack(fill="both", expand=True, padx=(32, 24), pady=(26, 14))
         ctk.CTkLabel(wrap, text="Comic Toolkit", font=(FONT, 30, "bold"), text_color=TEXT,
                      anchor="w").pack(fill="x", padx=4)
         ctk.CTkLabel(wrap, text="Choose a tool to get started.", font=(FONT, 14), text_color=MUTED,
                      anchor="w").pack(fill="x", padx=4, pady=(2, 6))
-        for row_groups in HOME_ROWS:
-            row = ctk.CTkFrame(wrap, fg_color=BG)
-            row.pack(fill="x", pady=(18, 0))
+        self._build_summary(wrap)
+        self.open_tool = open_tool
+        self.bands = ctk.CTkFrame(wrap, fg_color=BG)
+        self.bands.pack(fill="x")
+        self.set_groups(GROUPS)
+        ctk.CTkLabel(wrap, text="Tip: drop a comic file anywhere to open it in Single issue, or a folder onto any "
+                                "folder tool. From Home, a dropped folder opens Bulk folder.", font=(FONT, 12),
+                     text_color=MUTED, anchor="w", justify="left", wraplength=800).pack(fill="x", side="bottom")
+
+    def set_groups(self, groups):
+        """(Re)build the bands of tool cards, with the groups in this order."""
+        open_tool = self.open_tool
+        for w in self.bands.winfo_children():
+            w.destroy()
+        for row_groups in home_rows(groups):
+            band = ctk.CTkFrame(self.bands, fg_color=PANEL, corner_radius=14)
+            band.pack(fill="x", pady=(12, 0))
+            row = ctk.CTkFrame(band, fg_color="transparent")
+            row.pack(fill="x", padx=12, pady=(10, 14))
             col, gaps, cards = 0, 0, 0
-            for gi in row_groups:
-                header, keys = GROUPS[gi]
-                if col:  # a gap column between this group and the one before
+            for header, keys in row_groups:
+                if col:  # a gap column with a hairline between this group and the one before
                     row.columnconfigure(col, minsize=GAP, weight=0)
+                    ctk.CTkFrame(row, width=1, height=1, fg_color=BORDER, corner_radius=0).grid(
+                        row=0, column=col, rowspan=2, sticky="ns", pady=2)
                     col, gaps = col + 1, gaps + 1
                 start = col
-                ctk.CTkLabel(row, text=header, font=(FONT, 14, "bold"), text_color=TEXT, anchor="w").grid(
-                    row=0, column=start, columnspan=len(keys), sticky="ew", padx=4, pady=(0, 6))
-                for i, key in enumerate(keys):
+                ctk.CTkLabel(row, text=header.upper(), font=(FONT, 11, "bold"), text_color=MUTED, anchor="w").grid(
+                    row=0, column=start, columnspan=len(keys), sticky="ew", padx=4, pady=(0, 7))
+                for key in keys:
                     row.columnconfigure(col, weight=1, uniform="cards")
                     glyph, tint, title, text = TOOLS[key]
                     Card(row, glyph, tint, title, text, lambda k=key: open_tool(k)).grid(
@@ -158,9 +216,38 @@ class HomePage(ctk.CTkFrame):
             for _ in range(HOME_COLS - cards):
                 row.columnconfigure(col, weight=1, uniform="cards")
                 col += 1
-        ctk.CTkLabel(wrap, text="Tip: drop a comic file anywhere to open it in Single issue, or a folder onto any "
-                                "folder tool. From Home, a dropped folder opens Bulk folder.", font=(FONT, 12),
-                     text_color=MUTED, anchor="w", justify="left", wraplength=800).pack(fill="x", side="bottom")
+
+    # ---- the library summary line (numbers come from the last scan of the Library stats page)
+    def _build_summary(self, parent):
+        self.strip = ctk.CTkFrame(parent, fg_color=PANEL, corner_radius=10, border_color=BORDER, border_width=1)
+        self.strip.pack(fill="x", padx=4, pady=(8, 0))
+        self.line = ctk.CTkLabel(self.strip, text="", font=(FONT, 14), text_color=TEXT, anchor="w")
+        self.line.pack(side="left", padx=16, pady=10)
+        self.strip_buttons = ctk.CTkFrame(self.strip, fg_color="transparent")
+        self.strip_buttons.pack(side="right", padx=10)
+        self.show_summary(None)
+
+    def show_summary(self, snap, scanning=None, error=None, has_root=False):
+        """One of four lines: nothing scanned yet, scanning (done, total), the numbers of the last scan, or a failure."""
+        for w in self.strip_buttons.winfo_children():
+            w.destroy()
+        if scanning:
+            done, total = scanning
+            self.line.configure(text="Scanning your library…" + (f" {done:,} of {total:,}" if total else ""), text_color=TEXT)
+            return
+        rescan = lambda: self.scan and self.scan()  # noqa: E731
+        if error:
+            self.line.configure(text=f"The library scan failed: {error}", text_color=DANGER)
+            strip_button(self.strip_buttons, "Try again", rescan, primary=True, width=110).pack(side="left")
+        elif snap:
+            self.line.configure(text=snapshot_line(snap), text_color=TEXT)
+            strip_button(self.strip_buttons, "Open Stats", lambda: self.open_stats and self.open_stats(),
+                         primary=True, width=140).pack(side="left", padx=(0, 6))
+            strip_button(self.strip_buttons, "↻", rescan, width=34).pack(side="left")
+        else:
+            self.line.configure(text="No library scanned yet.", text_color=MUTED)
+            strip_button(self.strip_buttons, "Scan your library" if has_root else "Choose your library folder and scan it",
+                         rescan, primary=True, width=150 if has_root else 270).pack(side="left")
 
 
 class App(ctk.CTk, TkinterDnD.DnDWrapper):
@@ -168,6 +255,9 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         super().__init__()
         self.TkdndVersion = TkinterDnD._require(self)
         saved = self._load_settings()
+        order, shut = saved.get("group_order"), saved.get("collapsed")
+        self.group_order = [h for h in order if isinstance(h, str)] if isinstance(order, list) else []
+        self.collapsed = {h for h in shut if isinstance(h, str)} if isinstance(shut, list) else set()
         self.theme = saved.get("theme", "system")  # light | dark | system
         ctk.set_appearance_mode(self.theme)
         self.title("Comic Toolkit")
@@ -186,33 +276,46 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         content = ctk.CTkFrame(self, fg_color=BG)
         content.pack(side="left", fill="both", expand=True)
 
-        self.pages = {"home": HomePage(content, self.show), "single": SinglePage(content),
+        self.pages = {"home": HomePage(content, self.show, lambda: self.show("stats"), self.home_scan),
+                      "stats": StatsPage(content), "single": SinglePage(content),
                       "bulk": BulkPage(content), "icons": IconsPage(content),
                       "rename": RenamePage(content), "metadata": MetadataPage(content),
-                      "convert": ConvertPage(content), "cleanup": CleanupPage(content),
+                      "convert": ConvertPage(content),
                       "audit": AuditPage(content), "order": OrderPage(content),
-                      "aceo": AceoPage(content)}
+                      "aceo": AceoPage(content), "intake": IntakePage(content)}
+        self.pages["intake"].rename_source = self.pages["rename"].state  # names follow the Renamer's settings
         self.nav = {}
+        self.current = None
         ctk.CTkLabel(side, text="Comic Toolkit", font=(FONT, 15, "bold"), text_color=TEXT,
                      anchor="w").pack(fill="x", padx=18, pady=(24, 14))
         self._nav_item(side, "home", "Home")
-        for header, keys in GROUPS:
-            ctk.CTkLabel(side, text=header.upper(), font=(FONT, 11, "bold"), text_color=MUTED,
-                         anchor="w").pack(fill="x", padx=18, pady=(14, 4))
-            for key in keys:
-                self._nav_item(side, key, TOOLS[key][2])
+        self._nav_item(side, "stats", "Library stats")
 
+        bottom = ctk.CTkFrame(side, fg_color=PANEL)  # pinned under the scrolling list
+        bottom.pack(side="bottom", fill="x")
         self.dark = ctk.BooleanVar(value=ctk.get_appearance_mode() == "Dark")
-        ctk.CTkSwitch(side, text="Dark mode", variable=self.dark, command=self.toggle_theme,
+        ctk.CTkSwitch(bottom, text="Dark mode", variable=self.dark, command=self.toggle_theme,
                       font=(FONT, 13), text_color=TEXT, progress_color=ACCENT,
                       fg_color=("#CFCDC7", "#4A4A4A"), button_color="#FFFFFF",
-                      button_hover_color="#F4F4F4").pack(side="bottom", anchor="w", padx=18, pady=20)
+                      button_hover_color="#F4F4F4").pack(side="bottom", anchor="w", padx=18, pady=(8, 20))
+        tool_button(bottom, "Reorder sections…", self.reorder_dialog).pack(side="bottom", fill="x", padx=14, pady=(10, 0))
+        self.nav_scroll = ctk.CTkScrollableFrame(side, fg_color=PANEL, corner_radius=0)
+        self.nav_scroll.pack(fill="both", expand=True)
+        self._build_nav()
+        self.pages["home"].set_groups(ordered_groups(self.group_order))
 
         for k, page in self.pages.items():
             if hasattr(page, "restore"):
                 page.restore(saved.get(k))
+        snap = saved.get("stats_snapshot")
+        self.snapshot = snap if isinstance(snap, dict) and {"comics", "series", "bytes", "when"} <= set(snap) else None
+        stats = self.pages["stats"]
+        stats.on_progress = lambda d, t: self.pages["home"].show_summary(None, scanning=(d, t))
+        stats.on_scanned = self._scanned
+        stats.on_error = lambda e: self.pages["home"].show_summary(None, error=e)
         self.current = None
         self.show("home")
+        self._home_summary()
 
         self.drop_target_register(DND_FILES)
         self.dnd_bind("<<Drop>>", self.on_drop)
@@ -221,12 +324,112 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
     def _sidebar_changed(self, width):
         self.sidebar_width = width
 
+    def _home_summary(self):
+        self.pages["home"].show_summary(self.snapshot, has_root=self.pages["stats"].root() is not None)
+
+    def _scanned(self, snap):
+        if snap:  # None: the scan was stopped, so the old numbers stay
+            self.snapshot = snap
+        self._home_summary()
+
+    def home_scan(self):
+        """Home's scan button: ask for the library folder the first time, then rescan the saved one."""
+        stats = self.pages["stats"]
+        if stats.q:
+            return
+        if stats.root() is None:
+            folder = filedialog.askdirectory(title="Choose your library folder")
+            if not folder:
+                return
+            stats.set_folder(folder)
+        else:
+            stats.scan()
+        if stats.q:
+            self.pages["home"].show_summary(None, scanning=(0, 0))
+
     def _nav_item(self, parent, key, label):
         b = ctk.CTkButton(parent, text=label, anchor="w", height=34, corner_radius=6, font=(FONT, 13),
                           fg_color="transparent", hover_color=HOVER, text_color=TEXT,
                           command=lambda: self.show(key))
         b.pack(fill="x", padx=10, pady=1)
         self.nav[key] = b
+
+    def _build_nav(self):
+        """The scrolling list of tool groups, in the saved order; a group's heading folds and unfolds it."""
+        for w in self.nav_scroll.winfo_children():
+            w.destroy()
+        for k in [k for k in self.nav if k not in ("home", "stats")]:
+            del self.nav[k]
+        self.group_heads = {}
+        for header, keys in ordered_groups(self.group_order):
+            shut = header in self.collapsed
+            arrow = "▸" if shut else "▾"
+            head = ctk.CTkButton(self.nav_scroll, text=f"{arrow}  {header.upper()}", anchor="w", height=26,
+                                 corner_radius=6, font=(FONT, 11, "bold"), fg_color="transparent", hover_color=HOVER,
+                                 text_color=MUTED, command=lambda h=header: self.toggle_group(h))
+            head.pack(fill="x", padx=10, pady=(12, 2))
+            self.group_heads[header] = head
+            if not shut:
+                for key in keys:
+                    self._nav_item(self.nav_scroll, key, TOOLS[key][2])
+        self._mark_current()
+
+    def toggle_group(self, header):
+        self.collapsed ^= {header}
+        self._build_nav()
+
+    def set_group_order(self, order):
+        """Use this order of group headings in the sidebar and on Home."""
+        self.group_order = list(order)
+        self._build_nav()
+        self.pages["home"].set_groups(ordered_groups(self.group_order))
+
+    def move_group(self, header, delta):
+        order = [h for h, _ in ordered_groups(self.group_order)]
+        i = order.index(header)
+        if 0 <= i + delta < len(order):
+            order[i], order[i + delta] = order[i + delta], order[i]
+            self.set_group_order(order)
+
+    def reorder_dialog(self):
+        """A small window to move the groups up and down; the sidebar and Home follow as you go."""
+        win = ctk.CTkToplevel(self)
+        win.title("Reorder sections")
+        win.geometry("340x430")
+        win.configure(fg_color=BG)
+        win.transient(self)
+        ctk.CTkLabel(win, text="Order of the headings in the sidebar and on Home.", font=(FONT, 12), text_color=MUTED,
+                     anchor="w").pack(fill="x", padx=14, pady=(12, 6))
+        box = tk.Listbox(win, activestyle="none", exportselection=False, font=(FONT, 12), bd=0, highlightthickness=1,
+                         bg=pick(BG), fg=pick(TEXT), selectbackground=pick(ACCENT), highlightbackground=pick(BORDER))
+        box.pack(fill="both", expand=True, padx=14)
+
+        def fill(sel=None):
+            box.delete(0, "end")
+            for h, _ in ordered_groups(self.group_order):
+                box.insert("end", h)
+            if sel is not None:
+                box.selection_set(sel)
+                box.see(sel)
+
+        def shift(d):
+            cur = box.curselection()
+            if cur:
+                self.move_group(box.get(cur[0]), d)
+                fill(max(0, min(box.size() - 1, cur[0] + d)))
+
+        def reset():
+            self.set_group_order([])
+            fill()
+
+        row = ctk.CTkFrame(win, fg_color=BG)
+        row.pack(fill="x", padx=14, pady=10)
+        for text, fn, w in (("Up", lambda: shift(-1), 60), ("Down", lambda: shift(1), 70), ("Reset", reset, 70)):
+            tool_button(row, text, fn, w).pack(side="left", padx=(0, 6))
+        tool_button(row, "Done", win.destroy, 70).pack(side="right")
+        fill()
+        self._reorder_win = win
+        self._reorder_ui = {"box": box, "shift": shift, "reset": reset}
 
     def toggle_theme(self):
         self.theme = "dark" if self.dark.get() else "light"
@@ -240,8 +443,13 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             self.pages[self.current].pack_forget()
         self.current = key
         self.pages[key].pack(fill="both", expand=True)
+        if hasattr(self.pages[key], "on_show"):
+            self.pages[key].on_show()
+        self._mark_current()
+
+    def _mark_current(self):
         for k, b in self.nav.items():
-            b.configure(fg_color=BORDER if k == key else "transparent")
+            b.configure(fg_color=BORDER if k == self.current else "transparent")
 
     def on_drop(self, event):
         files = self.tk.splitlist(event.data)
@@ -270,6 +478,9 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         data = {k: p.state() for k, p in self.pages.items() if hasattr(p, "state")}
         data["theme"] = self.theme
         data["sidebar"] = self.sidebar_width
+        data["group_order"] = self.group_order
+        data["collapsed"] = sorted(self.collapsed)
+        data["stats_snapshot"] = self.snapshot
         try:
             SETTINGS.write_text(json.dumps(data, indent=2), encoding="utf-8")
         except OSError:

@@ -19,14 +19,16 @@
   Renamer reads the new fields but has no tokens for them, and the Metadata table shows no columns for Series Group, Genre, Alternate series
   or Publisher (they appear only in what gets written).
 - YACReader reads `ComicInfo.xml` **only if you enable it** (Settings > General) **and update the library** afterwards, so metadata written
-  by the Metadata and Clean-up tools won't show until you do.
-- **The scan's deep mode reads only each archive's first page**, so it can miss corruption deeper in a file; use the Audit tool's full integrity test for that.
+  by the Metadata tool and the Library audit's fixes won't show until you do.
+- **The scan's deep mode reads only each archive's first page**, so it can miss corruption deeper in a file; use the Library audit's full integrity test for that.
   Real RAR files are skipped unless **Open real .cbr files** (or `--deep-cbr`) is on. The cover-similarity levels (Strict 4, Normal 8, Loose 12 differing bits of 64)
   are untested on real covers (see [manual tests](manual-tests.md), C7 and D5).
 - **Audit reports are heuristics.** Duplicates by series/issue depend on filename parsing; identical size can be a coincidence; covers from different editions
   of the same issue look alike (and variant covers may not). Missing-issue gaps assume numbering is continuous, so series with deliberate gaps (or issue #0, which is
-  treated as not expected) will show false gaps. The quality limits (pages, size, cover height) are fixed constants in `audit_core.py`.
-- **The audit holds its results in memory only.** Nothing is saved between runs except the scan cache; a very large library shows every row at once.
+  treated as not expected) will show false gaps. The warning limits (pages, size, cover height) are editable on the page but apply to every comic alike.
+- **The audit holds its results in memory only.** Nothing is saved between runs except the scan cache, the settings and the ignore list; a very large library shows every row at once.
+- **Ignoring a Missing row hides everything it shows.** There is no way to ignore one number inside a row; a number that goes missing later still appears. A duplicate group is ignored by its exact set of files, so adding another copy brings it back.
+- **Junk files are only found in zip-based comics.** A real RAR `.cbr` is not opened unless *Open real .cbr files* is on; fixing it converts it, which drops the junk.
 - **Removing issue numbers is one-way per file.** The number is deleted from `ComicInfo.xml` (a `.bak` backup is kept unless you chose to replace), and the Metadata tool will
   add it back from the filename on its next run unless **Issue number** is unticked under *Fields to write*. Whether YACReader then really sorts by filename is untested
   (see [manual tests](manual-tests.md), B9 and E13).
@@ -34,6 +36,7 @@
   Whether YACReader sorts the arc number numerically, and which of *Story arc* / *Alternate series* it shows best, is untested (see [manual tests](manual-tests.md), E).
   The filename-prefix recogniser (`01 - Name`, `[01] Name`) can misread a real name such as `100 - Bullets 05`.
 - **ACEO sheets reads slots from rectangles.** A template must draw each card as a plain rectangle (`x y w h re`) on its first page, as the bundled one does; a template drawn with paths, images or rotated pages is not understood and is reported as having no card outlines. Pages are rendered as pictures (JPEG inside the PDF), so the PDF is print-sized and sharp at the chosen dpi but its text is not selectable. The bundled template's rows touch (cards share cut lines), which is how it is drawn. The preview is an approximation at 96 dpi. A portrait cover in a landscape slot is turned by default; if you would rather not, set **Turn the cover** to *Never turn*. The tool has not been test-printed.
+- **Library stats groups by what the names and `ComicInfo.xml` say.** Series come from the filename (or ComicInfo) and are merged ignoring case, punctuation and a leading *The*, so `Walking Dead` and `Walking Dead Deluxe` stay separate series. *Publisher* exists only in `ComicInfo.xml`, so most libraries show a large *Unknown* publisher bar until the Metadata tool has set it. Real RAR `.cbr` files are not opened by the light scan: they count in every total but are left out of the ComicInfo.xml coverage figure. Page counts need **Read page counts** (first page only, as in the scan). The numbers on Home are a saved snapshot of the last scan and can be out of date until you Refresh; nothing watches the folder.
 - **Column widths are not remembered** between runs (the sidebar and options-panel widths are). An options panel cannot be made narrower than 270 px, because the wrapped hints in it are laid out for that width.
-- **Choose comics keeps only what a tool can use** (CBR to CBZ takes `.cbr`, Clean-up takes `.cbz`, and so on), and the folder used for relative names is the nearest one containing the files that remain. After choosing comics, *Include subfolders* has no effect until you choose a folder again.
+- **Choose comics keeps only what a tool can use** (CBR to CBZ takes `.cbr`, and so on), and the folder used for relative names is the nearest one containing the files that remain. After choosing comics, *Include subfolders* has no effect until you choose a folder again.
 - Python is required to run; a double-click `.exe` is planned.

@@ -3,26 +3,37 @@
 [< Docs index](README.md)
 
 The Home page groups the tools as cards; the sidebar mirrors the same groups. A **Dark mode** switch sits at the bottom of
-the sidebar (first launch follows Windows; your choice is remembered). Home shows every tool on one screen, the groups side by side with a wider gap between groups than between cards.
+the sidebar (first launch follows Windows; your choice is remembered). Home shows every tool on one screen: soft bands, each holding one to three groups divided by a hairline, with the tool cards inside.
 
 ## On every page
 
 - **Adding comics.** Each page has the same box at the top: drop comics or a folder on it, or use **Add folder…** or **Choose comics…**
-  inside it. On the folder tools (Bulk folder, Folder icons, Renamer, Metadata, CBR to CBZ, Clean-up, Library audit) *Choose comics…* works on
+  inside it. On the folder tools (Bulk folder, Folder icons, Renamer, Metadata, CBR to CBZ, Library audit) *Choose comics…* works on
   just the files you pick, not the rest of their folder; choosing a folder again goes back to the whole folder. (Library audit then judges
   duplicates and gaps among the picked comics only; Folder icons uses one folder per parent, with the first or last picked comic as its cover.)
   Reading order and ACEO sheets add whatever you give them to their list. **Single issue** takes one comic; its folder button opens the folder in Bulk folder.
+- **The sidebar and Home sections.** The tool list in the sidebar scrolls when the window is short; *Home* and *Library stats* stay at the top, and the *Reorder sections…* button and the dark-mode switch stay pinned at the bottom. Click a section heading (▾ / ▸) to fold or unfold its tools. **Reorder sections…** opens a small window to move the headings up and down (or Reset); the sidebar and the Home bands follow immediately, and Home repacks the groups into rows so every tool still fits on one screen. The order and which sections are folded are remembered.
 - **Resizing.** Drag the thin divider to resize the sidebar, a page's options panel, the Renamer's file list (beside the card) and the ACEO cover list (beside the
   preview). Drag the edge of any table heading to resize that column, and use the scrollbar under a table when its columns are wider than the window.
   The sidebar and panel widths are remembered; column widths are not.
 - **Options panels** read in the same order on every page: *Source* (what to read), the tool's own groups, then *Output* (where results go and what happens to originals). The main button of a page sits at the bottom of the panel, with utility buttons (Rescan, Open folder) below a divider.
 - **Buttons are grouped** by what they do, with a small divider between groups (for example Reading order: *Suggest order* | *Top ▲ ▼ Bottom* | *Remove Clear*).
 
+## Library stats
+
+| Tool | What it does |
+|---|---|
+| **Library stats** | Scan your library once and see it at a glance. Open it from the sidebar, or from the summary line at the top of Home (`4,210 comics · 86 series · 48.2 GB · scanned 2 days ago`, with a large **Open Stats** button and a small refresh icon (↻) beside it; before anything has been scanned the line offers *Choose your library folder and scan it*). Nothing is changed. |
+
+Choose the library folder by dropping it on the page or with **Change…** in the slim strip under the title (it is remembered and scanned straight away); **Rescan library** repeats the scan, which is quick for an unchanged library because of the cache. Options: include subfolders; **Read page counts** (slower, adds total pages); **Split series into volumes**; **Group years into decades**; **Show every bar** (otherwise the top 15 and an *Other* bar). Only `.cbz` and `.cbr` are counted, and `Archive` folders are skipped.
+
+The page scrolls from top to bottom: tiles (comics, series, publishers, size on disk, average size, pages), then bars for **comics per series**, **per publisher**, **per year** (in time order), **file formats**, how complete the **metadata** is (ComicInfo.xml, year, publisher, issue number; single issues versus collected editions) and the **largest files**. Click a bar to list the comics behind it in a table under that chart, with **Open folder** and **Close**. **Export CSV** saves the section chosen in *Section to export*; **Copy summary** puts a short text summary on the clipboard. Missing values are shown as *Unknown*.
+
 ## Comic Cover Extractor
 
 | Tool | What it does |
 |---|---|
-| **Single issue** | Drop in one comic. Preview the cover and first 3 pages and the last 3 pages. Save the cover (format, quality, max height, destination, file name, conflict handling), or convert the comic to a ZIP. |
+| **Single issue** | Drop in one comic. Preview the cover and first 3 pages and the last 3 pages. Save the cover (format, quality, max height, destination, file name, conflict handling), or convert the comic to a ZIP. **Pick pages…** opens a window with every page as a thumbnail (size slider, loaded in the background so a 500-page compendium opens at once); click to pick, shift-click for a range, drag a box to pick several, double-click to view a page full screen (click the page to pick it; mouse wheel changes page, or scrolls when zoomed; Ctrl+wheel or +/− zoom; drag to move; Fit resets). Pages that look like covers (first page, a page after a double-page spread, or one whose size differs from its neighbours) get an orange outline. **Select all / Clear / Invert**, a "n of N selected" count and **Reorder…** (sets the numbering order). **Extract as JPG…** asks for a folder each time and saves `<comic name> 1.jpg`, `2.jpg`… (JPG pages are copied untouched, PNG/WebP/other pages are converted at quality 95), then offers **Open folder**. |
 | **Bulk folder** | Extract the cover from every CBZ/CBR in a folder. Choose subfolders on or off; save into a named subfolder, a folder you choose, or beside each comic; organise as one folder, mirrored folders, or grouped by series name; JPG/PNG/WebP/original, quality, size, file name, overwrite/skip/keep-both. Shows a live example path, progress, a per-file log, and a Stop button. |
 | **Folder icons** | Make each series folder show its cover in Windows Explorer: builds `folder.ico`, writes `desktop.ini`, sets the Windows attributes Explorer needs, and optionally saves `folder.jpg`. Cover from first or last issue. **Custom image for a folder…** lets you pick any folder (e.g. a `DC` or `Marvel` parent) and any image. Windows only. |
 
@@ -45,34 +56,45 @@ See [Naming styles and templates](renamer-templates.md) for the eight presets an
 | Tool | What it does |
 |---|---|
 | **CBR to CBZ** | Repack RAR comics as ZIP in bulk. Each result is verified (zip integrity and matching page count) before the original is touched. Afterwards the `.cbr` is moved to `Archive` (as `.cbr.bak`), kept, or deleted. |
-| **Clean-up** | Remove non-image junk (Thumbs.db, `.nfo`, `__MACOSX`, …) and files matching patterns you type (e.g. `zzz*`); optionally rename pages to `001.jpg`, `002.jpg`, … (this also flattens folders inside the archive). `ComicInfo.xml` is always kept. |
 
 ## Library Audit
 
 | Tool | What it does |
 |---|---|
-| **Library audit** | Scans a library folder once, then shows four reports you switch between at the top of the page. Nothing is changed by scanning, and every report exports to CSV. |
+| **Library audit** | Scans a library folder once and lists everything that needs attention in one table. Nothing changes until you tick findings and press **Fix checked**. It replaces the old Library audit and Clean-up pages. |
 
-Options: include subfolders; **Read page counts and covers** (on by default, needed for the quality checks and cover comparison);
-**Open real .cbr files** (slow, because a RAR is extracted whole); **Full integrity test** (slow, reads every file completely). `Archive` folders are skipped.
-A repeat scan of an unchanged library is fast, because results are cached (see [Architecture](architecture.md#the-library-scan)).
+**Options.** *Scan:* include subfolders; **Open real .cbr files** (slow, because a RAR is extracted whole). *Checks:* **Full integrity test** (slow, reads every file completely); **Compare cover images** with Strict / Normal / Loose; **Expect issues from #1**. *Warnings:* the limits for pages, file size and cover height. `Archive` folders are skipped. A repeat scan of an unchanged library is fast, because results are cached (see [Architecture](architecture.md#the-library-scan)). Pages, covers and junk files are always read.
 
-- **Broken.** Without the integrity test: files the quick scan notices (not a valid zip, no images, a cover that won't open). With it: the zip CRC test
-  and the cover, middle and last pages must decode; real RAR files are checked with the extractor's own test command.
-- **Duplicates.** Groups of probable copies, strongest evidence first: same series, volume and issue number (from `ComicInfo.xml` or the filename);
-  identical file size; and, if **Compare cover images** is on, covers that look alike (Strict, Normal or Loose). The biggest file in each group is left
-  unticked and the others are pre-ticked. **Move checked to Archive** moves ticked files into an `Archive` folder as `.bak`, after a confirmation; nothing is deleted.
-- **Missing.** For each series and volume, the issue numbers you don't own, such as `Batman v2: #13, #27-#29`. A series is checked from the lowest issue you own
-  (or from #1 with **Expect issues from #1**) up to the highest issue you own or the issue count in `ComicInfo.xml`, whichever is larger. Annuals, specials,
-  one-shots, decimal numbers and files with no issue number are ignored. **Copy wishlist** and **Save wishlist** (`.txt` or `.csv`) give one line per missing issue.
-  Nothing is remembered between runs.
-- **Quality.** Flags files with fewer than 10 or more than 300 pages, a size under 1 MB or over 500 MB, or a cover under 800 px tall. These limits are fixed.
+**The list.** Chips above the table filter it and show a count each: **All** (every type except Warnings), **Broken**, **Duplicates** (counted in groups), **Missing** (counted in series), **Junk**, **CBR** and **Warnings**. Click the box at the left of a row to tick it; **Tick all / Untick all** work on the rows you can see.
+
+- **Broken.** Without the integrity test: files the scan notices (not a valid zip, no images, a cover that won't open). With it: the zip CRC test and the cover, middle and last pages must decode; real RAR files are checked with the extractor's own test command. Fix: move to `Archive` as `.bak`.
+- **Duplicates.** Groups of probable copies, strongest evidence first: same series, volume and issue number (a single issue is never a copy of an Annual with the same number); identical file size; and, if **Compare cover images** is on, covers that look alike. A single issue and a collected edition are never grouped together, so a TPB is not a duplicate of its issues. Two copies of the same TPB (same series, volume and format) are. The **best copy** is kept: most pages, then the taller cover, then the larger file; it has no tick box. Fix: tick the others to move them to `Archive` as `.bak`.
+- **Missing.** One row per series with a line per type, such as `Issues (v2): #13, #27-#29 · TPB vols: 3, 5`. Issues are checked from the lowest number you own (or #1 with *Expect issues from #1*) up to the highest you own or the issue count in `ComicInfo.xml`. Collected editions are tracked separately for each format (TPB, Hardcover, Omnibus, …) by volume number. Annuals, specials, one-shots, decimals, ranges (`#1-12`) and files with no number are not tracked. **Copy wishlist** and **Save wishlist** (`.txt` or `.csv`) appear on this chip: `Batman v2 #13`, `Hellboy TPB vol 3`.
+- **Junk.** Zip-based comics holding files other than pages and `ComicInfo.xml` (Thumbs.db, `.nfo`, `__MACOSX`, …). Pre-ticked. Fix: rewrite the archive without them (verified before it replaces the original).
+- **CBR.** Every `.cbr`. Pre-ticked. Fix: convert to a verified `.cbz`, remove its junk, then delete the `.cbr`.
+- **Warnings.** Fewer than 10 or more than 300 pages, under 1 MB or over 500 MB, a cover under 800 px tall (change the limits under *Warnings*; the list updates without a rescan). Hidden from **All**; nothing to fix automatically.
+
+**Fixing.** **Fix checked** acts on the ticked rows of the list you are looking at, after a confirmation that spells out what will happen (junk removed, CBR files converted and their originals deleted once verified, files moved to Archive). A file with several fixes gets one: Archive beats convert, convert already cleans. Failures are shown in the row and the status, the original is left alone, and the list rescans afterwards (quick, thanks to the cache).
+
+**Ignore.** Select rows and press **Ignore** to hide them from every scan. **Ignored…** lists what you've hidden and restores it. The list is remembered between sessions. Ignoring a Missing row hides the numbers it shows; numbers that go missing later still appear.
+
+**Archive…** shows every file in the `Archive` folders under the library, with sizes. Tick files and **Purge ticked…** deletes them permanently (after a confirmation; they do not go to the Recycle Bin).
 
 ## Reading Orders
 
 | Tool | What it does |
 |---|---|
 | **Reading order** | Arrange issues (from one or several folders) in the order you want to read them and record it in each CBZ's `ComicInfo.xml` as a story arc, an alternate series, or both. Select several issues and drag, ▲ ▼ or Top / Bottom them together, **Suggest order** pre-sorts, untick to skip an issue, and a table previews the new number, filename and any arc being replaced. **Preview changes** lists every field that would change, without writing anything. Optional filename prefixes (`01 - Name`, `[01] Name`), **Remove issue numbers** (deletes `Number` from each issue so YACReader sorts by filename, best paired with the prefix), and an option to stamp copies in a new folder instead of the originals. See [Reading Order](reading-order.md). |
+
+## Add to Library
+
+| Tool | What it does |
+|---|---|
+| **Add to library** | Take new comics from an **Inbox** folder (press *Scan inbox*) or anything you drop on the page, show what each one will become, and on **Add to library** run the whole chain: save as a verified `.cbz` (CBR/RAR repacked, CBZ copied), remove junk files, name it with the Renamer's current settings, file it into a series folder in your **Ready** folder, then deal with the original. Only `.cbz` and `.cbr` are taken. |
+
+The table shows each comic, what it **Becomes** (path inside the Ready folder), its **Steps** (convert, clean, rename) and a **Status**: *Ready* (ticked), or flagged and unticked: *Duplicate* (a comic with the same series, volume and issue is already in the Ready folder, or earlier in the same batch), *Exists* (that exact file name is taken) and *No series* (nothing to name it from, so it would keep its own name). Tick a flagged row to add it anyway; a taken name gets a free variant, so nothing is overwritten. *In place* means the comic already is where it belongs. Click a row to read the reason under the table. A comic that fails (not a real archive, a page count that does not match) is marked *Failed* with the reason, and its original is left alone; tick it to try again.
+
+Options: **Inbox folder** and *Include subfolders*; **Ready folder** and *File into series folders* (uses the Renamer's folder template and *Collected Editions* subfolder setting, and reuses an existing folder when only "The" differs); *Rename like the Renamer* (off keeps each file's own name); *Remove junk files*, *Also remove files matching* patterns, *Rename pages 001.jpg…*; and **The original comic** after adding: *Delete it* (default, only after the new file passes its checks), *Move to Archive folder* (`.bak`) or *Keep it*. A confirmation spells out what happens to the originals. Folders in the inbox left empty are removed. The names follow the Renamer's settings as they are when you open the page or press the button, so set those up first. Not done yet: placing comics into the existing library by matching series, ComicInfo.xml writing, PDF/EPUB/7z.
 
 ## ACEO Cards
 

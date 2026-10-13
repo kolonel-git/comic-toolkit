@@ -27,16 +27,13 @@ with tempfile.TemporaryDirectory() as d:
         t = time.time()
         while page.q and time.time() - t < 20: root.update(); time.sleep(0.01)
         root.update(); assert not page.q
-    # nothing checked
     mk(d / "Lib" / "X 01.cbz"); page.set_folder(d / "Lib")
-    page.vars["deep"].set(False); page.vars["integrity"].set(False)
     ls_orig = pa.scan_library
     pa.scan_library = lambda *a, **k: ls_orig(*a, cache_path=cache, **k)
     page.scan(); wait()
     print("meta:", page.meta.cget("text"), "| hint:", page.hint.cget("text"))
-    assert page.meta.cget("text") == "Nothing was checked."
-    page.vars["deep"].set(True); page.scan(); wait()
-    assert page.meta.cget("text") == "1 file with problems"  # fixture cover bytes are junk
+    page.vars["filter"].set("Broken"); page._refresh()
+    assert page.meta.cget("text") == "1 broken file"  # fixture cover bytes are junk
     # worker failure must release the page
     def boom(*a, **k): raise RuntimeError("disk exploded")
     pa.scan_library = boom

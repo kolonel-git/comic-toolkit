@@ -89,45 +89,48 @@ The scan has no window yet. It runs from a terminal in the project folder: `pyth
   *Expect:* all are listed with sensible series and issue values; the CSV opens in Excel without garbled characters.
   Result:
 
-## D. Library audit (roadmap item 3)
+## D. Library audit (roadmap item 3, revamped in Session 39)
 
-Open **Library audit** from Home (or drop a folder on it). Use `Test Library` from the setup above, plus the extra files named in each test.
+Open **Library audit** from Home (or drop a folder on it). Use `Test Library` from the setup above, plus the extra files named in each test. Make a copy of the folder first: these tests fix and delete things.
 
-- [ ] **D1. Quick scan.** Choose the folder, leave the defaults, press **Scan library**.
-  *Expect:* a progress bar and "Scanning n of N", then "Done · N files in …s". The window stays responsive; switching between the four report tabs is instant.
+- [ ] **D1. Scan.** Choose the folder, leave the defaults, press **Scan library**.
+  *Expect:* a progress bar and "Scanning n of N", then "Done · N files in …s". The window stays responsive. The chips show counts; **All** excludes Warnings; switching chips is instant.
   Result:
-- [ ] **D2. Broken files.** Add a text file renamed `Broken 01.cbz`, and copy a CBZ then damage it (open the copy in a hex editor or just truncate it by cutting the file in half). Scan, then tick **Full integrity test** and scan again.
-  *Expect:* `Broken 01.cbz` is listed as "Not a valid zip" in both scans; the truncated file shows only with the full test (or as not a valid zip). Healthy comics are never listed.
+- [ ] **D2. Broken files.** Add a text file renamed `Broken 01.cbz` and a truncated copy of a CBZ. Scan, then tick **Full integrity test** and scan again.
+  *Expect:* `Broken 01.cbz` is listed in both scans; the truncated file shows only with the full test (or as not a valid zip). Healthy comics are never listed.
   Result:
 - [ ] **D3. Real RAR files.** With real `.cbr` files present, run the full integrity test with and without **Open real .cbr files**.
-  *Expect:* without it, `.cbr` files are not tested or listed; with it they are tested, and a healthy RAR is not listed. Needs 7-Zip or Windows `tar.exe`.
+  *Expect:* without it, real RAR files are not tested; with it they are, and a healthy RAR is not listed under Broken. Needs 7-Zip or Windows `tar.exe`.
   Result:
-- [ ] **D4. Duplicates by name.** Copy a comic into another folder and rename the copy slightly (e.g. add " (Digital)").
-  *Expect:* both show in one group, the bigger file unticked and the smaller ticked.
+- [ ] **D4. Duplicates.** Copy a comic into another folder and rename the copy slightly (add " (Digital)"). Also copy a TPB.
+  *Expect:* the copy and the original are one group; the one with more pages or the taller cover is marked "best copy" with no tick box; the other is unticked. A single issue and the TPB it belongs to are not paired; two copies of the same TPB are.
   Result:
-- [ ] **D5. Duplicates by cover.** Make a copy of a comic and change its name completely (so the name no longer matches), then turn on **Compare cover images** and scan. Also include two *different* issues of the same series.
-  *Expect:* the renamed copy is found as "Similar cover"; the two different issues are not paired. Try Strict, Normal and Loose and tell me which gives the right answers on your real collection.
+- [ ] **D5. Duplicates by cover.** Rename a copy completely, turn on **Compare cover images**, scan. Include two *different* issues of one series.
+  *Expect:* the renamed copy is found as "Similar cover"; the two different issues are not paired. Try Strict, Normal and Loose and tell me which is right for your collection.
   Result:
-- [ ] **D6. Move to Archive.** Tick a file, press **Move checked to Archive**, confirm.
-  *Expect:* a confirmation dialog naming the count; the file moves to `Archive/<name>.bak` next to where it was; the row disappears; declining the dialog changes nothing. Untick a row and check that it is not moved.
+- [ ] **D6. Missing, per type.** Use a series where you know what you own: some single issues, some TPB volumes, an omnibus.
+  *Expect:* one row for the series reading like `Issues: #13, #27-#29 · TPB vols: 3, 5`; each format tracked on its own; annuals, specials and ranges not reported. Try **Expect issues from #1**. **Copy wishlist** and **Save wishlist…** (`.txt` and `.csv`) match what you see.
   Result:
-- [ ] **D7. Missing issues.** Use a series where you know which issues you own, ideally one with a `(of N)` count. Open the **Missing** tab.
-  *Expect:* the gaps match what you know, written like `#13, #27-#29`; with a count, missing issues after your highest one are listed too. Try **Expect issues from #1**. Annuals and specials should not produce gaps.
+- [ ] **D7. Junk and CBR fixes.** Make sure some CBZ files hold Thumbs.db or `.nfo`, and some `.cbr` files exist. Look at the Junk and CBR chips, then press **Fix checked** on each.
+  *Expect:* both start ticked; the confirmation lists what will happen and only covers the chip you are on; afterwards the files are clean / converted (the `.cbr` is gone once its `.cbz` exists), the list rescans, and a comic still opens in your reader.
   Result:
-- [ ] **D8. Wishlist.** Press **Copy wishlist** and paste into Notepad; press **Save wishlist…** as `.txt` and as `.csv` and open both.
-  *Expect:* one line per missing issue (`Batman v2 #13`); the CSV opens in Excel with Series, Volume and Issue columns.
+- [ ] **D8. Archive a duplicate.** On Duplicates, tick the extra copy, **Fix checked**, confirm.
+  *Expect:* the file moves to `Archive/<name>.bak` next to where it was; the group disappears; declining changes nothing; the kept copy cannot be ticked.
   Result:
-- [ ] **D9. Quality.** Open the **Quality** tab.
-  *Expect:* very short books, tiny or huge files and low-resolution covers are flagged and the flags make sense. Tell me if the limits (10 to 300 pages, 1 MB to 500 MB, 800 px) flag too much or too little in your library.
+- [ ] **D9. Ignore.** Select a Missing row and press **Ignore**; rescan; open **Ignored…**.
+  *Expect:* the row stays hidden after the rescan and after restarting the app; **Ignored…** lists it and **Restore selected** brings it back.
   Result:
-- [ ] **D10. CSV export.** Press **Export CSV…** on each tab.
-  *Expect:* a CSV that opens in Excel without garbled characters and matches what the table shows.
+- [ ] **D10. Warnings.** Open the Warnings chip and change the limits.
+  *Expect:* very short books, tiny or huge files and low-resolution covers are flagged; the list changes as soon as you edit a limit. Tell me if the defaults (10 to 300 pages, 1 MB to 500 MB, 800 px) flag too much or too little.
   Result:
-- [ ] **D11. Stop and cache.** Scan a large folder with **Full integrity test** on and press **Stop** part-way; then scan again without it.
+- [ ] **D11. Archive manager.** Press **Archive…** after a few fixes.
+  *Expect:* the `.bak` files with sizes and a total; ticking some and pressing **Purge ticked…** deletes them after a confirmation; empty Archive folders disappear.
+  Result:
+- [ ] **D12. Stop and cache.** Scan a large folder with **Full integrity test** on and press **Stop** part-way; then scan again without it.
   *Expect:* Stop ends the scan quickly with "Stopped" and a "(partial …)" note; a later scan of unchanged files is much faster ("from cache").
   Result:
-- [ ] **D12. Look and feel.** View the page in light and dark mode, with the window narrow, and with hundreds of rows.
-  *Expect:* tables readable in both themes, buttons not clipped, scrolling smooth. Switching theme while results are shown keeps them.
+- [ ] **D13. Look and feel.** View the page in light and dark mode, with the window narrow, and with hundreds of rows.
+  *Expect:* the table is readable in both themes, the footer buttons are not clipped, scrolling is smooth. Switching theme while results are shown keeps them.
   Result:
 
 ## E. Reading order (roadmap item 4)
@@ -272,13 +275,56 @@ Use 10 to 20 real comics (plus one loose cover image), the bundled `ACEO - Full 
   Result:
 
 - [ ] **H8. Home.** Open Home at your usual window size, then resize the window and the sidebar.
-  *Expect:* all ten tools are visible without scrolling, the cards in each row are the same width, the gap between groups is clearly larger than between cards of one group, and the text in the cards is not cut off. Tell me if any description is clipped or a card looks too small to read.
+  *Expect:* all ten tools are visible without scrolling, the cards in each row are the same width, the rows are soft bands with the group names in small capitals and a hairline between groups, the gap between groups is clearly larger than between cards of one group, the arrow on a card turns blue on hover, and the text in the cards is not cut off. Tell me if any description is clipped or a card looks too small to read.
   Result:
 - [ ] **H9. Options panels.** Open each page and read its options panel from top to bottom, in light and dark mode.
   *Expect:* every panel runs Source (or the tool's main subject) then its own groups then Output; related options sit together, nothing is out of place, and the panels look like one family. Tell me about any option you would expect somewhere else.
   Result:
 - [ ] **H10. Single issue buttons.** Open Single issue.
   *Expect:* the folder button (Open folder in Bulk…) is to the right of Choose comic….
+  Result:
+- [ ] **H11. Pick pages.** Load a TPB or compendium (hundreds of pages) in Single issue and press **Pick pages…**.
+  *Expect:* the window opens straight away and thumbnails fill in (the ones on screen first) without freezing; the size slider resizes the grid; click, shift-click and a dragged box pick pages; double-click shows a page full screen (click picks, wheel turns pages or scrolls when zoomed, Ctrl+wheel zooms, drag moves, arrows move, Space picks, Esc closes); likely covers have an orange outline; **Reorder…** changes the numbering; **Extract as JPG…** asks for a folder and saves `<name> 1.jpg`, `2.jpg`… in the order shown; **Open folder** opens it. Tell me how many real covers the orange outline misses or wrongly marks.
+  Result:
+
+- [ ] **H12. Add to library.** Put 5 to 10 new comics (a mix of `.cbr` and `.cbz`, one with junk files, one named oddly, one you already own) in a test inbox. In Add to library choose the inbox and an empty Ready folder, press *Scan inbox*.
+  *Expect:* every row shows the right new name and folder, the one you already own is flagged *Duplicate* and unticked, the oddly named one is *No series*. Press *Add to library* and accept the prompt: the Ready folder gets verified `.cbz` files, the originals are gone (with the default), empty inbox folders are removed, and the status line says how many were added. Open one in your reader. Tell me about any name that is wrong and any duplicate that was missed.
+  Result:
+
+- [ ] **H13. Sidebar sections.** Shrink the window height until the sidebar is full. Scroll the sidebar with the mouse wheel. Click a section heading, then click it again. Press **Reorder sections…**, move a few headings with Up and Down, press Reset.
+  *Expect:* the tool list scrolls while Home, Library stats, Reorder sections… and Dark mode stay put; a heading folds and unfolds its tools (▸ / ▾) and the tool you are on stays highlighted; the sidebar and Home both follow the new order at once, Home still shows every tool without scrolling, and the order and folded sections are still there after you close and reopen the app.
+  Result:
+
+## I. Library stats and the Home summary line
+
+Use your real library (hundreds of comics if you can) for I1 to I3 and I6.
+
+- [ ] **I1. First scan from Home.** With no saved numbers (delete `stats_snapshot` and the `stats` entry from `settings.json`, or start on a fresh copy), open Home and click *Choose your library folder and scan it*.
+  *Expect:* a folder dialog, then the line counts up ("Scanning your library… n of N") while the window stays responsive, then shows comics, series, size and "scanned just now" with a large Open Stats button and a small refresh icon (↻) to its right. Tell me how long a scan of your library takes, and again after pressing Refresh (it should be much quicker).
+  Result:
+- [ ] **I2. The numbers.** Open Library stats and compare the tiles with what you know (Explorer's folder size, a count of files, a series you know the issue count of).
+  *Expect:* comics, size on disk and the series bar for a known series match; `Archive` folders are not counted; a real `.cbr` is counted. Tell me anything that is off.
+  Result:
+- [ ] **I3. Charts.** Look at the series, publisher, year, format and metadata bars in light and dark mode; resize the window and the options panel.
+  *Expect:* labels, bars and values are readable and not clipped, bars redraw to the new width, the hover highlight follows the mouse and the pointer becomes a hand on clickable bars, and the Show every bar, Split series into volumes and Group years into decades switches each change the charts at once. Tell me if the page feels long, cramped or confusing.
+  Result:
+- [ ] **I4. Drill-down.** Click a bar in each chart; click another bar; press Open folder and Close.
+  *Expect:* a table of that bar's comics opens right under the chart, the clicked bar stays highlighted, clicking a bar in another chart moves the table there, Open folder opens the folder of the selected (or first) comic, Close hides it. The metadata-coverage bars are not clickable.
+  Result:
+- [ ] **I5. Export.** Export CSV for each section, open one in Excel; press Copy summary and paste it into Notepad.
+  *Expect:* the CSV has the section's rows with sensible headings and opens without garbled characters; the summary is short and correct.
+  Result:
+- [ ] **I6. Page counts and a changed library.** Turn on Read page counts and rescan; then add, remove or rename a few comics and rescan, and press Refresh on Home.
+  *Expect:* the Pages tile shows a total; the numbers follow your changes; Home's line updates ("scanned just now").
+  Result:
+- [ ] **I9. Folder strip.** Open Library stats.
+  *Expect:* the library folder is a slim strip right under the title (path in small text, a Change… button), not a big box; Change… picks a folder and scans it; dropping a folder on the page does the same; a very long path shows its end.
+  Result:
+- [ ] **I7. Restart.** Close and reopen the app.
+  *Expect:* Home shows the last numbers straight away (without scanning), and the Stats page remembers the folder and switches. Tell me if the numbers look stale in a way that confuses you.
+  Result:
+- [ ] **I8. Publisher and metadata.** Use the Metadata tool to set Publisher on a few series, rescan, and look at the publisher and coverage bars.
+  *Expect:* the publisher bar grows from *Unknown*, and "Have a publisher" and "Have ComicInfo.xml" go up. (Real RAR files stay out of the ComicInfo.xml figure.)
   Result:
 
 ## When you're done

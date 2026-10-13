@@ -24,9 +24,10 @@ Planned next (a guide; merge or split as the work lands):
 
 | Tag | Contents |
 |---|---|
-| `v0.6.0` | Roadmap items 5-6: Stats dashboard and folder browser |
-| `v0.7.0` | Roadmap item 7: downloads watcher and processing pipeline |
-| `v0.8.0` | Roadmap item 8: packaged Windows build |
+| `v0.6.0` | Roadmap item 5: Library stats dashboard and the Home summary line |
+| `v0.7.0` | Roadmap item 6: folder tree browser |
+| `v0.8.0` | Roadmap item 7: downloads watcher and processing pipeline |
+| `v0.9.0` | Roadmap item 8: packaged Windows build |
 | `v1.0.0` | First public release |
 
 See the [roadmap](roadmap.md) for what each planned release contains.

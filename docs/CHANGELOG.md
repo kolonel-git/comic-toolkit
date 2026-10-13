@@ -12,6 +12,128 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-14 09:40 +11:00 · Session 40: Sidebar scrolls and folds, sections can be reordered
+
+**Summary:** The sidebar tool list scrolls, each section heading folds and unfolds, and the section order (shared by the sidebar and Home) can be changed.
+
+**Changes (`comic_tool.py`)**
+- Sidebar: *Comic Toolkit*, *Home* and *Library stats* are pinned at the top; the groups sit in a `CTkScrollableFrame`; *Reorder sections…* and the dark-mode switch are pinned at the bottom. Headings are buttons (▾ open, ▸ folded) that rebuild the list (`_build_nav`, `toggle_group`); the highlight for the current page is kept (`_mark_current`).
+- Order: `ordered_groups(order)` applies a saved list of headings (unknown ones ignored, new groups last); `home_rows(groups)` packs groups into Home rows in order (at most 4 cards and 3 groups per row) in place of the fixed `HOME_ROWS`; `HomePage.set_groups` rebuilds the bands; `App.set_group_order` / `move_group` / `reorder_dialog` drive both. Saved as `group_order` and `collapsed` in `settings.json`.
+- With the default order the rows are exactly what they were before.
+
+**Verification:** `python tests/run_all.py` all pass. `test_layout_app.py` now checks the scrolling frame and pinned bottom, folding and unfolding (and the highlight), reordering in the sidebar and on Home, the Up / Down / Reset buttons, a reversed order, unknown headings, and re-runs the Home fit checks (equal card widths, gaps, no scrolling at both sidebar widths) for the reordered layouts. **Not verified:** how it looks and feels on screen (mouse-wheel scrolling over the pinned areas, the fold arrows' glyphs in other fonts) and a drag-to-reorder (not built; Up / Down buttons only).
+
+---
+
+## 2026-10-14 08:30 +11:00 · Session 39: Library audit revamp (Clean-up merged in)
+
+**Summary:** The Library audit and Clean-up pages overlapped (one found junk-like problems, the other fixed archives), so they are now one tool: a scan, one findings list, and fixes. Decided in a 20-question round with the user.
+
+**Decisions:** one list with type chips instead of report tabs; keep Broken, Duplicates (with cover comparison) and Missing; Quality becomes a hidden-by-default Warnings type with editable limits; Missing is tracked per type (issues, and each collected format by volume); a single issue and a collected edition are never duplicates; the duplicate keeper is the copy with the most pages, then the taller cover, then the larger file; fixes are junk removal, CBR conversion (original deleted once verified) and move to Archive (`.bak`), applied with **Fix checked** and a confirmation, only on the list in view; only junk and CBR are pre-ticked; Ignore list kept between sessions with a restore screen; an Archive manager that purges `.bak` files; summary chips with counts. Dropped: custom removal patterns, renaming pages to `001.jpg`, CSV export (wishlist copy/save stays), rescanning only what changed (a quick cached full rescan runs after fixing). CBR to CBZ stays as its own bulk tool.
+
+**Changes**
+- `library_scan.py`: `Issue.junk` (non-image files in a zip-based archive, ComicInfo.xml excluded), stored in the cache; `CACHE_VERSION` 2 (old caches are dropped and rebuilt).
+- `audit_core.py` rewritten around findings: `_identity` (type-aware duplicate identity), `keeper_rank`, `Gap.kind`, `gap_text`, `missing_by_series`, `limits_from` / `quality_flags(limits)`, `find_junk`, `find_cbr`, `Finding`, `build_findings(data, ignored)`, `plan_fixes`, `apply_fix` (archive, clean, convert), `archive_files`, `purge_archive`.
+- `page_audit.py` rewritten: chips, one table, tick and Fix checked, Ignore / Ignored…, Archive…, wishlist, editable warning limits.
+- `page_cleanup.py` deleted; `comic_tool.py` loses the Clean-up tool and card. `archive_tools.py` keeps the clean-up engine (used by the audit fixes and Add to library).
+- Tests: `tests/test_audit_findings.py` (new), `test_audit_ui.py` rewritten, `test_fixes.py`, `test_layout.py`, `test_layout_app.py` updated. Docs: `tools.md`, `safety.md`, `architecture.md`, `known-limitations.md`, `manual-tests.md` (section D rewritten), `roadmap.md`, `tests/README.md`, `README.md`, `HANDOFF.md`.
+
+**Technical notes:** an ignored Missing row stores one key per number it showed, so later gaps still appear; a duplicate group is ignored by its exact file set. The ignore list is kept as JSON in the page's `ignored` setting. A file with several ticked fixes gets one: Archive, then Convert (which also cleans), then Clean. A fix that fails leaves the original untouched and is noted in the row.
+
+**Verification:** `python tests/run_all.py`: 25 of 25 pass; `ruff --select F,E9` clean. New tests cover junk detection and the cache, best-copy ordering, singles versus collected editions in duplicates, per-type gaps and wishlist lines, warning limits, findings and ignore keys, fix planning, each fix (clean, convert, archive, failures leaving no `.part`), the Archive folders, and the page end to end (chips, ticking, scoped fixes, rescan, failure notes, ignore and restore, Archive purge, settings round trip). **Not verified:** how the page looks on screen (the footer now holds more buttons), speed on a very large library, real RAR `.cbr` conversion (tests use zip-backed files), and the quality of the best-copy choice on real duplicates (manual tests D4 and D8).
+
+---
+
+## 2026-10-14 05:10 +11:00 · Session 38: Add to library (new comics: convert, clean, rename, file)
+
+**Summary:** New tool that takes new comics from an Inbox folder or a drop, shows a preview table, then converts to a verified CBZ, removes junk, names with the Renamer's settings, files into series folders in a Ready folder and deletes the original after verification.
+
+**Decisions (from a question round with the user):** intake by drop and by a remembered Inbox folder with a manual *Scan inbox* button (no live watching); preview first, one Apply; steps are convert, clean junk and rename (metadata writing was not chosen); output is a Ready folder the user picks; originals are deleted once verified (menu also offers Archive and Keep); duplicates are flagged and skipped by default. Placing comics into the existing library by matching series was deliberately postponed ("a few other features first").
+
+**Changes**
+- `intake_core.py` (new): `rename_settings`, `plan` (name, folder, status, steps for each item), `dup_key` / `library_index` (series + volume + issue + collected title, from names only), `add_comic` (copy or repack to `.part`, verify, clean with the Clean-up code, verify, swap in, then dispose of the original), `prune_empty`, `find_sources`.
+- `page_intake.py` (new): the page. ComicInfo.xml is read in a thread, planning is on the UI thread, the run is a worker thread with a queue.
+- `comic_tool.py`: tool card, group *Add to Library* (third Home row), `IntakePage` wired to the Renamer's `state()`, and an optional `on_show()` hook so a page can refresh when opened.
+- Tests: `tests/test_intake.py`, `tests/test_intake_ui.py`; `test_layout_app.py` expects 11 tools. Docs: `tools.md`, `architecture.md`, `manual-tests.md` (H12), `tests/README.md`.
+
+**Technical notes:** a comic is only deleted after `verify_zip` passes on the finished file; a failure removes the `.part` and leaves the original. Names that exist get a free variant instead of being overwritten. Name building mirrors the Renamer (`name_for` / `plan` follow `_compute` / `_place`), so a change to one should be made in both. Folder name matching reuses an existing top-level folder when only a leading The/A/An differs.
+
+**Verification:** `python tests/run_all.py`: 24 of 24 pass; `ruff --select F,E9` clean. The new tests cover naming from the filename and ComicInfo, the folder-name fallback, duplicate and exists flags, ticks surviving a recompute, the pipeline (junk removal, name collisions, keep / archive / delete, sequential page names, a corrupt archive failing cleanly), and the page end to end (scan, plan, decline then accept, files in place, originals and empty folders gone, failure and retry). **Not verified:** how the page looks on screen, behaviour on a real inbox of hundreds of comics, `.cbr` files that need the external extractor (tests use zip content), and drag-and-drop onto the page.
+
+---
+
+## 2026-10-14 03:20 +11:00 · Session 37: Pick pages from a comic (TPB / compendium covers)
+
+**Summary:** Single issue gets a **Pick pages…** button: every page of the loaded comic as a thumbnail, pick any, save them as JPGs. Aimed at collected editions where the covers of the original issues sit inside one archive. Purely additive; Save cover and Convert to ZIP are unchanged.
+
+**Decisions (from a 15-question round with the user):** lives in Single issue; scrollable grid with a size slider; click, shift-click range and rubber-band selection; double-click for a full-screen view; files named `<comic name> <n>` in numbering order (not page number); folder asked on every extract; JPG pages copied untouched, other formats converted to JPG; thumbnails load lazily in a background thread; page number on each thumbnail plus a likely-cover highlight; one archive at a time; Select all / Clear / Invert, count, Reorder; "Open folder" after extracting; tests and docs. Not built (not chosen): page-range text box, keyboard shortcuts in the grid, remembered thumbnail size, PDF support.
+
+**Changes**
+- `picker_core.py` (new): `layout` / `cell_rect` / `cells_in` grid maths, `likely_covers` (portrait page that is first, follows a double-page spread, or differs in size from both neighbours), selection helpers (`toggle`, `add_all`, `invert`, `range_between`, `move`), `to_jpg`, `extract_pages`.
+- `picker_window.py` (new): `PickerWindow`, a canvas grid that draws only visible cells; a loader thread (visible pages first) feeds a queue polled by the UI; reorder dialog; full-view window.
+- `page_single.py`: **Pick pages…** button; the grid closes when another comic is loaded.
+- `tests/test_picker.py` (new).
+- **Full view revised (same session):** the page is on a canvas that can be zoomed (Ctrl+wheel, +/−, buttons; Fit resets) and dragged, the wheel scrolls when zoomed and turns pages at fit size, and clicking the page picks or unpicks it (a drag does not). A blue border shows a picked page. Reported by the user: the first version could not be scrolled. Test extended.
+
+**Technical notes:** transparent PNG/WebP pages are flattened on white before JPEG encoding. Extra names never overwrite (`unique`). Numbers are zero-padded to the picked count so they sort.
+
+**Bugs found and fixed:** raw Tk canvas/listbox options were given the (light, dark) colour tuple and raised `TclError` inside Tk callbacks, which Tk swallows; the first test run still passed. Fixed with `pick()`, and the test now records callback errors and fails on any.
+
+**Verification:** `python tests/run_all.py`: 22 of 22 pass, including the new `test_picker.py` (grid maths, cover guessing, selection, JPG pass-through and conversion, naming, window with 60 pages: lazy load, click, shift, box select, invert, extract through a stubbed folder dialog, full view, closing on load). **Not verified:** how it looks and feels on screen, speed on a real 500-page CBR, and how well cover guessing works on real compendiums (manual test H11).
+
+---
+
+## 2026-10-08 22:40 +11:00 · Session 36: Home summary line, slim stats folder strip, nicer Home grid
+
+**Summary:** Three polish items on the new Library stats work.
+
+**Changes**
+- **Home summary line:** *Open Stats* is now a larger, filled accent button on the left, and *Refresh* is a small square icon button (↻) to its right. The other states use the same larger buttons (*Scan your library*, *Choose your library folder and scan it*, *Try again*).
+- **Library stats page:** the big drop box is gone. The library folder is a slim one-line strip right under the title (the word *Library*, the path in small text, a small **Change…** button); the *Library folder* row was removed from the options panel (the *Source* group keeps the scan switches). Dropping a folder anywhere on the page still sets and scans it.
+- **Home grid:** each row is now a soft rounded band holding one to three groups. The group names are small capitals at the top, a hairline separates neighbouring groups, and the cards (white, rounded, a larger tinted icon tile, title and description, an arrow that turns blue on hover) sit inside the band. Cards are still the same width in every row and nothing scrolls.
+
+**Files:** `comic_tool.py` (`Card`, `strip_button`, `HomePage`), `page_stats.py` (`FolderBar` replaces the drop box), tests `test_stats_home.py`, `test_stats_ui.py`, docs `tools.md`, `manual-tests.md` (H8, I1, I7).
+
+**Bugs found and fixed:** the first version of the hairline between groups was a frame with the default height of 200 pixels, which stretched every row of the Home grid so the last row ran off the page. The Home fit test caught it; the divider now has a height of 1 and stretches with the row.
+
+**Verification:** `python tests/run_all.py` ran all 21 scripts and every one passed, and `ruff --select F,E9` was clean. The tests now check that *Open Stats* comes before the refresh icon and is more than twice as wide, that the folder strip is slim (under 50 px) and shows the path, and the earlier Home checks still hold (all ten cards, equal widths, group gaps wider than card gaps, no scrolling at the narrowest and widest sidebar). Measured once on a 125% display: the last card ends at 806 of 975 px of the Home page. **Not verified:** how any of it looks on screen (a screenshot would capture whichever window is in front), and the ↻ glyph in other fonts or Windows versions.
+
+---
+
+## 2026-10-08 18:44 +11:00 · Session 35: Library stats dashboard (roadmap item 5)
+
+**Summary:** A read-only dashboard for the whole collection, and a one-line summary of it at the top of Home. It is not a tool (it changes nothing): it has its own page, **Library stats**, reached from the sidebar or from the Home line.
+
+**Scope (agreed in 15 questions before building)**
+- One saved library folder, set on the Stats page (drop it, or Browse); other tools keep their own pickers. Choosing a folder scans it at once.
+- Only `.cbz` and `.cbr` are counted (as in the Audit); `Archive` folders are skipped. The scan is light by default (names, sizes and `ComicInfo.xml`); **Read page counts** adds total pages.
+- One scrolling page: tiles (comics, series, publishers, size on disk, average size, pages), then bars for series, publishers, years and formats, a metadata-coverage section, and the largest files.
+- Bars show the top 15 plus an *Other* bar (**Show every bar** expands them). Series volumes are merged (**Split series into volumes** separates them); years are per year (**Group years into decades**). Missing values are in *Unknown*.
+- **Click a bar** to list the comics behind it in a table under that chart, with **Open folder** and **Close**.
+- Output: **Export CSV** for one chosen section and **Copy summary** (plain text on the clipboard).
+- Home shows `4,210 comics · 86 series · 48.2 GB · scanned 2 days ago` with **Refresh** and **Open Stats**. The numbers are saved with the settings, so the line appears at launch without scanning. Before anything is scanned it offers *Choose your library folder and scan it* (a folder dialog, then a background scan with progress in the line).
+
+**Changes by file**
+- `stats_core.py` (new, no UI): `compute_stats` (totals, grouped rows per series, publisher, year and format, coverage, largest and smallest files), `top_n`, `years_view`, `coverage_lines`, `summary_text`, `section_table` (CSV rows), `snapshot` / `snapshot_line`, `human_size`, `ago`.
+- `page_stats.py` (new): `StatsPage` (options panel *Source | Display | Output*, scan worker with Stop, dashboard), `BarChart` (bars drawn on a canvas in the theme colours, hover, click), `Tile`.
+- `comic_tool.py`: the page and a *Library stats* sidebar item; the Home summary line (four states: nothing scanned, scanning, last numbers, failed); `stats_snapshot` saved in `settings.json`; the page's folder is saved with its other settings.
+- Tests (new): `tests/test_stats.py`, `tests/test_stats_ui.py`, `tests/test_stats_home.py`; `tests/test_layout_app.py` now runs with the summary line on Home.
+- Docs: `tools.md`, `architecture.md`, `roadmap.md`, `known-limitations.md`, `manual-tests.md` (section I), `versioning.md`, `tests/README.md`, both READMEs.
+
+**Technical notes**
+- A series is one bar per name ignoring case, punctuation and a leading *The*; the first spelling seen is the one shown. Publisher and year come from `ComicInfo.xml` where present, else from the filename (publisher only exists in `ComicInfo.xml`, so many comics land in *Unknown*).
+- Real RAR `.cbr` files are not opened by the light scan, so their `ComicInfo.xml` is unknown: they are left out of the "Have ComicInfo.xml" count and the section says how many were not opened.
+- An *Other (n more)* bar must not set the scale for the real bars (it lumps many rows), so bars are scaled to the biggest real row.
+- Settings from a damaged `stats_snapshot` are ignored.
+
+**Bugs found and fixed:** scanning an empty folder first showed the previous library's numbers (the page regrouped only when the scan returned comics). Found by the new test.
+
+**Verification:** `python tests/run_all.py` ran all 21 scripts and every one passed, and `ruff --select F,E9` was clean. The new tests cover: every grouping (merged and split volumes, a leading *The*, publishers, years and decades, formats), *Unknown* last, top 15 plus *Other* and Show every bar, coverage with an unopened RAR, largest and smallest files, empty libraries, the summary text, CSV tables for all six sections, human sizes and ages; through the real page, scanning a generated library (an `Archive` folder ignored, a RAR, ComicInfo publishers and years), every tile, bar clicks listing the right comics, the table under the clicked chart, Close, CSV export (and a cancelled dialog), Copy summary, page counts, a stopped scan, the theme switch, state restore and an empty folder; and in the app, the Home line in all four states, the one-click scan, Refresh, Open Stats, a scan started from the Stats page updating Home, and the numbers and folder surviving a restart (with settings kept in a temporary file). **Not verified:** how the dashboard and the Home line look on screen (the bars, spacing and colours in light and dark), clicking with a real mouse, and speed on a real library of thousands of comics. See [manual tests](manual-tests.md), section I.
+
+**Known issues:** see [Known limitations](known-limitations.md).
+
+---
+
 ## 2026-10-08 16:55 +11:00 · Session 34: options panels regrouped, one-screen Home
 
 **Summary:** Every page's options panel now reads in the same order under the same kind of headings, the Home page was rebuilt as a compact grid that shows every tool without scrolling, and Single issue's folder button moved to the right of the comic button.

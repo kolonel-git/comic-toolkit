@@ -26,7 +26,8 @@ from PIL import Image
 from comic_core import Comic, is_page, natural_key
 from rename_core import find_files, merge, parse_filename, read_comicinfo
 
-CACHE_VERSION = 1
+CACHE_VERSION = 2  # 2: added `junk`
+JUNK_KEEP = 200  # junk names remembered per comic
 HASH_SIZE = 8  # dHash: 8x8 comparisons -> 64 bits -> 16 hex characters
 
 
@@ -50,6 +51,7 @@ class Issue:
     cover_h: int | None = None
     cover_hash: str | None = None
     error: str | None = None  # why deep reading failed (no images, bad cover, ...)
+    junk: list | None = None  # non-image files inside a zip-based archive (None = not looked at); ComicInfo.xml is not junk
 
     @property
     def info(self):
@@ -103,8 +105,11 @@ def _deep_read(issue, deep_cbr):
     try:
         if zipfile.is_zipfile(issue.path):
             with zipfile.ZipFile(issue.path) as z:
-                pages = sorted((n for n in z.namelist() if is_page(n)), key=natural_key)
+                names = z.namelist()
+                pages = sorted((n for n in names if is_page(n)), key=natural_key)
                 data = z.read(pages[0]) if pages else None
+                issue.junk = [n for n in names if not n.endswith("/") and not is_page(n)
+                              and Path(n).name.lower() != "comicinfo.xml"][:JUNK_KEEP]
         elif deep_cbr:
             comic = Comic(issue.path)
             try:
@@ -171,13 +176,14 @@ def _key(p):
 def _from_cache(entry, issue):
     issue.ci, issue.ci_read = entry["ci"], entry["ci_read"]
     issue.deep, issue.pages, issue.error = entry["deep"], entry["pages"], entry["error"]
+    issue.junk = entry.get("junk")
     issue.cover_w, issue.cover_h, issue.cover_hash = entry["cover_w"], entry["cover_h"], entry["cover_hash"]
 
 
 def _to_cache(issue):
     return {"size": issue.size, "mtime": issue.mtime, "ci": issue.ci, "ci_read": issue.ci_read,
             "deep": issue.deep, "pages": issue.pages, "error": issue.error, "cover_w": issue.cover_w,
-            "cover_h": issue.cover_h, "cover_hash": issue.cover_hash}
+            "cover_h": issue.cover_h, "cover_hash": issue.cover_hash, "junk": issue.junk}
 
 
 def _usable(entry, st, issue_path, deep, deep_cbr):

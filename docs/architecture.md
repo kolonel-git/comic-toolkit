@@ -8,24 +8,28 @@
 | `ui_kit.py` | Shared look: (light, dark) palette, styled widgets, form rows, drop zone (with Add folder / Choose comics buttons), `Splitter` (draggable divider), `toolbar` (grouped buttons with dividers), page scaffold with a resizable options panel, table helpers (resizable columns, horizontal scrollbar) |
 | `batch_page.py` | Base page for run-per-item tools (progress, log, Preview, Stop) |
 | `page_single.py` · `page_bulk.py` · `page_icons.py` | Cover extractor pages |
+| `picker_core.py` · `picker_window.py` | Pick pages from a comic: grid layout, cover guessing, selection helpers and JPG extraction (no UI) · the thumbnail window (canvas grid, background loader thread, rubber band, reorder and full-view dialogs), opened from the Single issue page |
+| `intake_core.py` · `page_intake.py` | Add to library: plan names, places, duplicates and steps (using the Renamer settings) and run convert, clean, verify and dispose of the original · the page (drop and inbox intake, review table, worker thread) |
 | `page_rename.py` | Renamer page: card and list views, four settings tabs, per-type template editor, conflict handling |
 | `page_metadata.py` | Metadata page |
-| `page_convert.py` · `page_cleanup.py` | Archive tool pages |
+| `page_convert.py` | CBR to CBZ page |
 | `page_order.py` | Reading order page: issue list with drag and tick boxes, plan preview, write worker, copy mode |
 | `page_aceo.py` | ACEO sheets page: cover list with ordering, sheet preview, options, PDF creation worker |
-| `page_audit.py` | Library audit page: scan worker, four report tables, CSV and wishlist export, move-to-Archive for duplicates |
+| `page_audit.py` | Library audit page: scan and fix workers, type chips over one findings list, tick and Fix checked, Ignore list (JSON in the `ignored` setting), Ignored and Archive dialogs, wishlist |
 | `comic_core.py` | Archive reading (`Comic`), cover rendering, output-path planning, shared constants; `picked_files` / `common_root` for the Choose comics buttons |
 | `rename_core.py` | Filename parsing (years in any brackets, year-like volumes, issue count, collected-edition format, volume, range, tags, series cleanup), type override and hand edits, `ComicInfo.xml` reading, file search and rename |
 | `name_format.py` | Naming: per-type templates and presets, tokens, token formats, fallbacks, escapes, template validation, text options, folder templates, the in-app format guide |
 | `archive_tools.py` | Verified zip rewriting: CBR to CBZ, clean-up, `ComicInfo.xml` stamping. `CI_TAGS` maps field names to XML tags and `merge_comicinfo` writes any of them, so new fields need only a `CI_TAGS` entry |
 | `reading_order.py` | Reading-order logic: ordering key, ComicInfo field mapping (story arc / alternate series), per-issue plan, block moves and send-to-top/bottom for multi-selection, preview text, in-place or copy write with optional filename prefix |
 | `aceo_core.py` | ACEO sheets: reads the card slots from a template PDF, loads covers from comics or images, fits them into the slots, renders each page and draws the template's card outlines on top in the chosen colour and thickness (`pypdf` and Pillow) |
-| `audit_core.py` | Audit logic: integrity checks, duplicate grouping, missing-issue gaps, quality flags, thresholds. Never changes a file |
+| `stats_core.py` | Library statistics: `compute_stats` over `Issue` records (totals, groups per series, publisher, year and format, metadata coverage, largest and smallest files), top-N with an *Other* row, summary text, CSV tables, the Home snapshot. No UI code |
+| `page_stats.py` | Library stats page: scan worker, tiles, `BarChart` (canvas bars with hover and click), drill-down table, CSV export and summary copy |
+| `audit_core.py` | Audit logic: integrity checks, type-aware duplicate grouping with a best-copy keeper, missing gaps per type, warning limits, junk and CBR findings, `build_findings`, `plan_fixes` / `apply_fix` (the only code that changes files), Archive folder listing and purge |
 | `library_scan.py` | Shared library scan: one `Issue` record per comic (name fields, `ComicInfo.xml` fields, and in deep mode page count, cover size and cover hash) with a disposable cache in `%APPDATA%\ComicToolkit\cache.json`. Also a command-line report. See below |
 | `tests/` | Test scripts and `run_all.py` (`python tests/run_all.py`); see `tests/README.md` |
 | `folder_icons.py` | `folder.ico` / `desktop.ini` / `folder.jpg` generation (Windows) |
 
-Logic modules (`*_core.py`, `archive_tools.py`, `folder_icons.py`, `library_scan.py`, `audit_core.py`, `reading_order.py`, `name_format.py`, `aceo_core.py`) contain no UI code so they can be tested or reused
+Logic modules (`*_core.py`, `archive_tools.py`, `folder_icons.py`, `library_scan.py`, `audit_core.py`, `stats_core.py`, `reading_order.py`, `name_format.py`, `aceo_core.py`) contain no UI code so they can be tested or reused
 from a command line.
 
 ## The library scan

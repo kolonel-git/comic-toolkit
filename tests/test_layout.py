@@ -8,7 +8,6 @@ import comic_core as cc
 from page_aceo import AceoPage
 from page_audit import AuditPage
 from page_bulk import BulkPage
-from page_cleanup import CleanupPage
 from page_convert import ConvertPage
 from page_icons import IconsPage
 from page_metadata import MetadataPage
@@ -28,7 +27,7 @@ def ev(x): return types.SimpleNamespace(x_root=x)
 
 
 root = ctk.CTk(); root.geometry("1300x800")
-PAGES = [SinglePage, BulkPage, IconsPage, RenamePage, MetadataPage, ConvertPage, CleanupPage, AuditPage, OrderPage, AceoPage]
+PAGES = [SinglePage, BulkPage, IconsPage, RenamePage, MetadataPage, ConvertPage, AuditPage, OrderPage, AceoPage]
 pages = [P(root) for P in PAGES]
 
 # every page offers a folder button and a comics button in the same box as the drop area
@@ -46,8 +45,8 @@ sg.pack_forget()
 # every options panel is grouped under headings, always starting with the source or main subject and ending with the output
 def headings(pg): return pg.form.headings
 EXPECT = {SinglePage: ["Cover image", "Output"], BulkPage: ["Source", "Cover image", "Output"], IconsPage: ["Cover", "Output"],
-          ConvertPage: ["Source", "Output"], CleanupPage: ["Source", "Clean-up", "Output"],
-          MetadataPage: ["Source", "What to write", "Checked rows", "Output"], AuditPage: ["Source", "Reports"],
+          ConvertPage: ["Source", "Output"],
+          MetadataPage: ["Source", "What to write", "Checked rows", "Output"], AuditPage: ["Source", "Checks", "Warnings"],
           OrderPage: ["Reading order", "Filenames and sorting", "Output"], AceoPage: ["Template", "Covers", "Cards", "Output"]}
 for pg in pages:
     if type(pg) in EXPECT:
@@ -98,7 +97,7 @@ f2 = ctk.CTkFrame(root); f2.pack()
 tb2 = uk.toolbar(f2, [("x", "X", 40, lambda: 1), ("y", "Y", 40, lambda: 1)], side="right"); root.update()
 assert tb2["x"].winfo_x() < tb2["y"].winfo_x(), "right-anchored rows keep the visual order"
 # the reading-order buttons sit together, divided from the other actions
-od = pages[8]; root.update()
+od = pages[7]; root.update()
 xs = {k: b.winfo_rootx() for k, b in od.tools.items()}
 assert xs["top"] < xs["up"] < xs["down"] < xs["bottom"]
 assert xs["up"] - xs["top"] < 70 and xs["remove"] - xs["bottom"] > xs["bottom"] - xs["down"], "dividers separate groups"
@@ -120,15 +119,11 @@ with tempfile.TemporaryDirectory() as d:
             root.update(); time.sleep(0.01)
         root.update()
 
-    # Convert / Clean-up: only their own file type, labelled relative to the shared parent
+    # Convert: only its own file type, labelled relative to the shared parent
     cv = pages[5]; cv.pack(fill="both", expand=True); cv.set_files(chosen)
     assert cv.items == [r1] and cv.folder == r1.parent and "1 file chosen" in cv.drop.label.cget("text"), cv.items
     cv.set_folder(d / "Lib"); assert cv.picked is None and len(cv.items) == 1
     cv.pack_forget()
-    cl = pages[6]; cl.pack(fill="both", expand=True); cl.set_files(chosen)
-    assert cl.items == [a1, a2, b1] and cl.rel(a1) == str(Path("Batman") / "Batman 01.cbz"), cl.items
-    cl.set_files([junk]); assert "None of those" in cl.status.cget("text") and cl.items == [a1, a2, b1], "bad pick changes nothing"
-    cl.pack_forget()
     # Folder icons: one folder per parent, using the first or last chosen comic
     ic = pages[2]; ic.pack(fill="both", expand=True); ic.set_files(chosen)
     assert ic.items == [(a1.parent, a1), (b1.parent, b1)], ic.items
@@ -152,9 +147,9 @@ with tempfile.TemporaryDirectory() as d:
     rn.set_files([junk]); assert "None of those" in rn.status.cget("text")
     rn.pack_forget()
     # Audit scans only the chosen comics
-    au = pages[7]; au.pack(fill="both", expand=True); au.set_files([a1, b1]); root.update()
+    au = pages[6]; au.pack(fill="both", expand=True); au.set_files([a1, b1]); root.update()
     assert au.picked == [a1, b1] and au.root_dir == d / "Lib"
-    au.vars["deep"].set(False); au.scan()
+    au.scan()
     settle(au, lambda: au.results is not None)
     assert sorted(i.rel for i in au.results["issues"]) == ["Batman/Batman 01.cbz", "Robin/Robin 01.cbz"], au.results["issues"]
     au.set_folder(d / "Lib"); assert au.picked is None
