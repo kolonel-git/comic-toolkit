@@ -8,7 +8,8 @@ def ev(x): return types.SimpleNamespace(x_root=x)
 
 
 # the app: the sidebar can be resized and its width is kept
-import comic_tool as ct
+import comic_tool as ct, tempfile
+ct.SETTINGS = Path(tempfile.mkdtemp()) / "settings.json"  # never read or write the real settings (they hold the owner's section order)
 app = ct.App(); app.update()
 w = app.splitter.target.winfo_width() / app.splitter._scale()  # may start from a width saved in settings.json
 app.splitter._press(ev(100)); app.splitter._drag(ev(160)); app.splitter._release(None); app.update()

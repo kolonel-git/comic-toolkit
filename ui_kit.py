@@ -1,6 +1,9 @@
 """Shared look and widgets: palette, styled controls, form rows, drop zone, page scaffold."""
 import random
+import sys
+import time
 import tkinter as tk
+from pathlib import Path
 import weakref
 from tkinter import filedialog, ttk
 
@@ -19,6 +22,7 @@ BORDER = INK                            # canvas to a dusky slate so black edges
 HOVER = ("#FFD3EA", "#4B4B5E")
 TEXT = ("#111111", "#F6F6FA")
 MUTED = ("#4A4A4A", "#C6C6D4")
+FOCUS = ("#1F4FFF", "#7FE0FF")                # the keyboard focus ring
 DISABLED_FILL = ("#CFCAE6", "#4A4A5C")    # fill of a main button that cannot be used yet
 SCROLL = ("#111111", "#9A9AAE")         # scrollbar thumbs (black would vanish on dark panels)
 YELLOW = ("#FFD60A", "#FFD60A")
@@ -65,8 +69,26 @@ class Slider(tk.Canvas):
         self.bind("<Configure>", lambda _: self.redraw())
         self.bind("<Button-1>", self._move)
         self.bind("<B1-Motion>", self._move)
+        self.configure(takefocus=1)
+        self.focused = False
+        self.bind("<FocusIn>", lambda _: self._focus(True), add="+")
+        self.bind("<FocusOut>", lambda _: self._focus(False), add="+")
+        self.bind("<Left>", lambda _: self._nudge(-1))
+        self.bind("<Right>", lambda _: self._nudge(1))
         self.var.trace_add("write", lambda *_: self.redraw())
         _TOGGLES.add(self)
+
+    def _focus(self, on):
+        self.focused = on
+        self.redraw()
+
+    def _nudge(self, direction):
+        """Arrow keys move the handle one step."""
+        step = (self.hi - self.lo) / (self.steps or 20)
+        val = min(self.hi, max(self.lo, float(self.var.get()) + direction * step))
+        self.var.set(val)
+        if self.command:
+            self.command(val)
 
     def _move(self, e):
         k = self.KNOB
@@ -101,11 +123,330 @@ class Slider(tk.Canvas):
         if x > 4:
             self.create_rectangle(4, top + 2, x + k / 2, bot - 2, fill=pick(PINK), outline=pick(PINK))
         self.create_rectangle(x + 3, 6, x + k + 3, h - 1, fill=ink, outline=ink)  # hard shadow of the handle
-        self.create_rectangle(x, 3, x + k, h - 4, fill=pick(ACCENT), outline=ink, width=3)
+        self.create_rectangle(x, 3, x + k, h - 4, fill=pick(ACCENT), outline=pick(FOCUS) if self.focused else ink, width=3)
 
 
 def slider(parent, **kw):
     return Slider(parent, **kw)
+
+
+# ---------- hints and run feedback ----------
+
+class _Tip:
+    """A small yellow label that appears under a control after the pointer rests on it."""
+
+    def __init__(self, widget, text):
+        self.widget, self.text, self.win, self._job = widget, text, None, None
+        widget.bind("<Enter>", self._later, add="+")
+        widget.bind("<Leave>", self._hide, add="+")
+        widget.bind("<ButtonPress-1>", self._hide, add="+")
+
+    def _later(self, _=None):
+        self._hide()
+        self._job = self.widget.after(550, self._show)
+
+    def _show(self):
+        self._job = None
+        try:
+            x, y = self.widget.winfo_rootx(), self.widget.winfo_rooty() + self.widget.winfo_height() + 6
+            self.win = tk.Toplevel(self.widget)
+            self.win.wm_overrideredirect(True)
+            self.win.wm_geometry(f"+{x}+{y}")
+            tk.Label(self.win, text=self.text, font=(FONT, 10, "bold"), bg=pick(YELLOW), fg="#111111", bd=0,
+                     padx=8, pady=3, highlightthickness=2, highlightbackground=pick(INK)).pack()
+        except tk.TclError:
+            self.win = None
+
+    def _hide(self, _=None):
+        if self._job is not None:
+            try:
+                self.widget.after_cancel(self._job)
+            except tk.TclError:
+                pass
+            self._job = None
+        if self.win is not None:
+            try:
+                self.win.destroy()
+            except tk.TclError:
+                pass
+            self.win = None
+
+
+def popup_menu(anchor, items):
+    """A square, bordered pop-up list with a hard shadow under `anchor`, in place of the native Windows menu.
+    items is a list of (label, command); a command of None makes a greyed, unclickable line. It closes on a click,
+    Esc or when focus leaves; Up, Down and Enter work too."""
+    top = tk.Toplevel(anchor)
+    top.wm_overrideredirect(True)
+    top.attributes("-topmost", True)
+    key = "#010203"
+    top.configure(bg=key)
+    try:
+        top.attributes("-transparentcolor", key)  # Windows: the corner outside the shadow stays see-through
+    except tk.TclError:
+        pass
+    ink, depth = pick(INK), 5
+    tk.Frame(top, bg=ink).place(x=depth, y=depth, relwidth=1, relheight=1, width=-depth, height=-depth)
+    body = tk.Frame(top, bg=pick(PANEL), highlightthickness=EDGE, highlightbackground=ink, bd=0)
+    body.place(x=0, y=0, relwidth=1, relheight=1, width=-depth, height=-depth)
+    rows, state = [], {"i": -1}
+
+    def close(_=None):
+        try:
+            top.destroy()
+        except tk.TclError:
+            pass
+
+    def paint():
+        for n, (lab, cmd) in enumerate(rows):
+            on = n == state["i"] and cmd is not None
+            lab.configure(bg=pick(PINK) if on else pick(PANEL), fg="#111111" if on else (pick(TEXT) if cmd else pick(MUTED)))
+
+    def run(n):
+        cmd = items[n][1]
+        if cmd is not None:
+            close()
+            cmd()
+
+    for n, (text, cmd) in enumerate(items):
+        lab = tk.Label(body, text=text, anchor="w", font=(FONT, 11), padx=14, pady=7, bd=0,
+                       cursor="hand2" if cmd else "arrow")
+        lab.pack(fill="x", padx=EDGE, pady=(EDGE if n == 0 else 0, EDGE if n == len(items) - 1 else 0))
+        lab.bind("<Enter>", lambda _, n=n: (state.update(i=n), paint()))
+        lab.bind("<Button-1>", lambda _, n=n: run(n))
+        rows.append((lab, cmd))
+    paint()
+
+    def move(d):
+        usable = [n for n, (_, c) in enumerate(items) if c is not None]
+        if usable:
+            cur = usable.index(state["i"]) if state["i"] in usable else (-1 if d > 0 else 0)
+            state["i"] = usable[(cur + d) % len(usable)]
+            paint()
+        return "break"
+    top.bind("<Up>", lambda _: move(-1))
+    top.bind("<Down>", lambda _: move(1))
+    top.bind("<Return>", lambda _: run(state["i"]) if state["i"] >= 0 else None)
+    top.bind("<Escape>", close)
+    top.update_idletasks()
+    # the pieces are placed, not packed, so the window does not size itself: add the rows up
+    w = max(max(lab.winfo_reqwidth() for lab, _ in rows) + 2 * EDGE, anchor.winfo_width())
+    h = sum(lab.winfo_reqheight() for lab, _ in rows) + 2 * EDGE
+    top.geometry(f"{w + depth}x{h + depth}+{anchor.winfo_rootx()}+{anchor.winfo_rooty() + anchor.winfo_height() + 4}")
+    top.focus_force()
+    top.after(150, lambda: top.bind("<FocusOut>", close))  # not at once: opening may move focus around
+    top.popup_rows = rows  # for tests
+    return top
+
+
+def _result_icon(c, key, size=38):
+    """The small white tile in front of a search result: the page's line icon, or a plain symbol for actions."""
+    ink = "#111111"
+    c.delete("all")
+    c.create_rectangle(0, 0, size, size, fill="#FFFFFF", outline="#FFFFFF")  # a white tile, whatever the row colour
+    mid = size / 2
+    if key == "__theme__":
+        c.create_oval(mid - 11, mid - 11, mid + 11, mid + 11, fill="#FFFFFF", outline=ink, width=3)
+        c.create_arc(mid - 11, mid - 11, mid + 11, mid + 11, start=90, extent=180, fill=ink, outline=ink)
+    elif key == "__library__":
+        draw_icon(c, "icons", mid, mid, size - 10, ink, pick(YELLOW))
+    else:
+        draw_icon(c, key, mid, mid, size - 10, ink, pick(YELLOW))
+    c.create_rectangle(1.5, 1.5, size - 1.5, size - 1.5, outline=ink, width=3)
+
+
+def spotlight(app, entries, on_pick, placeholder="Search pages and actions"):
+    """A floating search bar in the upper middle of the app with results under it, each a bold title over a smaller
+    description. entries: (key, title, description, kind). Type to filter, Up and Down to move, Enter to open,
+    Esc or a click elsewhere to close. on_pick(key) runs after it closes."""
+    W, DEPTH, ROWS, ROW_H = 660, 7, 7, 60
+    top = tk.Toplevel(app)
+    top.wm_overrideredirect(True)
+    top.attributes("-topmost", True)
+    keycolor = "#010203"
+    top.configure(bg=keycolor)
+    try:
+        top.attributes("-transparentcolor", keycolor)
+    except tk.TclError:
+        pass
+    ink = pick(INK)
+    tk.Frame(top, bg=ink).place(x=DEPTH, y=DEPTH, relwidth=1, relheight=1, width=-DEPTH, height=-DEPTH)
+    body = tk.Frame(top, bg=pick(PANEL), highlightthickness=EDGE, highlightbackground=ink, bd=0)
+    body.place(x=0, y=0, relwidth=1, relheight=1, width=-DEPTH, height=-DEPTH)
+
+    # the search bar
+    bar = tk.Frame(body, bg=pick(WELL))
+    bar.pack(fill="x", padx=EDGE, pady=(EDGE, 0))
+    glass = tk.Canvas(bar, width=34, height=34, bg=pick(WELL), highlightthickness=0, bd=0)
+    glass.pack(side="left", padx=(20, 4), pady=14)
+    glass.create_oval(5, 5, 21, 21, outline=pick(TEXT), width=3)
+    glass.create_line(19, 19, 29, 29, fill=pick(TEXT), width=4)
+    query = tk.StringVar()
+    box = tk.Entry(bar, textvariable=query, font=(FONT, 20), bd=0, highlightthickness=0, bg=pick(WELL), fg=pick(TEXT),
+                   insertbackground=pick(TEXT), insertwidth=3)
+    box.pack(side="left", fill="x", expand=True, padx=(8, 20), pady=14, ipady=4)
+    tk.Frame(body, bg=ink, height=EDGE).pack(fill="x", padx=EDGE)
+    holder = tk.Frame(body, bg=pick(PANEL))
+    holder.pack(fill="x", padx=EDGE)
+    foot = tk.Label(body, font=(FONT, 10), bg=pick(PANEL), fg=pick(MUTED), anchor="w", padx=18, pady=7,
+                    text="Up and Down to move  ·  Enter to open  ·  Esc to close")
+    foot.pack(fill="x", padx=EDGE, pady=(0, EDGE))
+
+    # a fixed set of result rows, filled in as you type
+    rows = []
+    for n in range(ROWS):
+        row = tk.Frame(holder, height=ROW_H, bd=0)
+        row.pack_propagate(False)
+        icon = tk.Canvas(row, width=38, height=38, highlightthickness=0, bd=0)
+        icon.pack(side="left", padx=(18, 14))
+        words = tk.Frame(row, bd=0)
+        words.pack(side="left", fill="x", expand=True)
+        title = tk.Label(words, font=(FONT, 13, "bold"), anchor="w", bd=0)
+        title.pack(fill="x", pady=(10, 0))
+        sub = tk.Label(words, font=(FONT, 11), anchor="w", bd=0)
+        sub.pack(fill="x")
+        kind = tk.Label(row, font=(FONT, 10, "bold"), bd=0, padx=18)
+        kind.pack(side="right")
+        parts = (row, icon, words, title, sub, kind)
+        for w in parts:
+            w.bind("<Enter>", lambda _, n=n: select(n))
+            w.bind("<Button-1>", lambda _, n=n: go(n))
+        rows.append(dict(row=row, icon=icon, words=words, title=title, sub=sub, kind=kind))
+    state = {"shown": [], "first": 0, "sel": 0}
+
+    def match(text):
+        text = text.strip().lower()
+        if not text:
+            return list(entries)
+        scored = []
+        for e in entries:
+            t, d = e[1].lower(), e[2].lower()
+            if t.startswith(text):
+                scored.append((0, e))
+            elif text in t:
+                scored.append((1, e))
+            elif text in d:
+                scored.append((2, e))
+        return [e for _, e in sorted(scored, key=lambda s: s[0])]
+
+    def paint():
+        shown, first, sel = state["shown"], state["first"], state["sel"]
+        for n, r in enumerate(rows):
+            i = first + n
+            if i >= len(shown):
+                r["row"].pack_forget()
+                continue
+            key, name, desc, kind = shown[i]
+            on = i == sel
+            bg = pick(PINK) if on else pick(PANEL)
+            fg, sub = ("#111111", "#2B2B2B") if on else (pick(TEXT), pick(MUTED))
+            r["row"].pack(fill="x")
+            for w in (r["row"], r["words"]):
+                w.configure(bg=bg)
+            r["icon"].configure(bg=bg)
+            _result_icon(r["icon"], key)
+            r["title"].configure(text=name, bg=bg, fg=fg)
+            r["sub"].configure(text=desc, bg=bg, fg=sub)
+            r["kind"].configure(text=kind.upper(), bg=bg, fg=sub)
+        if not shown:  # nothing matches: say so in the first row
+            r = rows[0]
+            r["row"].pack(fill="x")
+            for w in (r["row"], r["words"], r["icon"]):
+                w.configure(bg=pick(PANEL))
+            r["icon"].delete("all")
+            r["title"].configure(text=f"No match for “{query.get().strip()}”", bg=pick(PANEL), fg=pick(TEXT))
+            r["sub"].configure(text="Try part of a page name, such as rename or stats", bg=pick(PANEL), fg=pick(MUTED))
+            r["kind"].configure(text="", bg=pick(PANEL))
+        top.update_idletasks()
+        height = body.winfo_reqheight()
+        top.geometry(f"{W + DEPTH}x{height + DEPTH}+{top.winfo_x()}+{top.winfo_y()}")
+
+    def refresh(*_):
+        state.update(shown=match(query.get()), first=0, sel=0)
+        paint()
+
+    def select(n):
+        i = state["first"] + n
+        if i < len(state["shown"]) and i != state["sel"]:
+            state["sel"] = i
+            paint()
+
+    def move(d):
+        count = len(state["shown"])
+        if count:
+            sel = (state["sel"] + d) % count
+            state["sel"] = sel
+            if sel < state["first"]:
+                state["first"] = sel
+            elif sel >= state["first"] + ROWS:
+                state["first"] = sel - ROWS + 1
+            paint()
+        return "break"
+
+    def close(_=None):
+        try:
+            top.destroy()
+        except tk.TclError:
+            pass
+
+    def go(n=None):
+        i = state["sel"] if n is None else state["first"] + n
+        if i < len(state["shown"]):
+            key = state["shown"][i][0]
+            close()
+            on_pick(key)
+
+    def focus_lost(_=None):
+        top.after(150, lambda: close() if top.winfo_exists() and top.focus_displayof() is None else None)
+
+    query.trace_add("write", refresh)
+    box.bind("<Down>", lambda _: move(1))
+    box.bind("<Up>", lambda _: move(-1))
+    box.bind("<Return>", lambda _: go())
+    box.bind("<Escape>", close)
+    top.bind("<Escape>", close)
+    x = app.winfo_rootx() + (app.winfo_width() - W) // 2
+    y = app.winfo_rooty() + int(app.winfo_height() * 0.2)
+    top.geometry(f"+{x}+{y}")
+    refresh()
+    top.focus_force()
+    box.focus_set()
+    top.after(250, lambda: top.bind("<FocusOut>", focus_lost))
+    top.query, top.entry, top.go = query, box, go  # for tests
+    top.titles = lambda: [e[1] for e in state["shown"]]
+    top.visible = lambda: [r for r in rows if r["row"].winfo_manager()]
+    return top
+
+
+def tooltip(widget, text):
+    """Name a control that only shows an icon or a symbol."""
+    return _Tip(widget, text)
+
+
+def eta_text(done, total, started):
+    """'37 of 120, about 40s left'. The estimate waits for a few items so it is not wild."""
+    elapsed = time.time() - started
+    if done < 3 or elapsed < 2 or total <= done:
+        return f"{done} of {total}"
+    left = elapsed / done * (total - done)
+    return f"{done} of {total}, about " + (f"{int(left)}s" if left < 90 else f"{round(left / 60)} min") + " left"
+
+
+def flash_taskbar(window):
+    """Make the app's taskbar button flash until it is clicked (a long run has finished). Windows only."""
+    if sys.platform != "win32":
+        return
+
+    import ctypes
+
+    class FLASHWINFO(ctypes.Structure):
+        _fields_ = [("cbSize", ctypes.c_uint), ("hwnd", ctypes.c_void_p), ("dwFlags", ctypes.c_uint),
+                    ("uCount", ctypes.c_uint), ("dwTimeout", ctypes.c_uint)]
+    try:
+        info = FLASHWINFO(ctypes.sizeof(FLASHWINFO), int(window.wm_frame(), 16), 3 | 12, 0, 0)  # all, until focused
+        ctypes.windll.user32.FlashWindowEx(ctypes.byref(info))
+    except (OSError, ValueError, AttributeError, tk.TclError):
+        pass
 
 
 # ---------- the hard shadow ----------
@@ -132,6 +473,43 @@ class Shadow(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
         if motion:
             self._bind_motion(self)
+
+    # -- keyboard
+    def make_focusable(self, on_activate=None, ring="border"):
+        """Let Tab reach this control. A blue ring shows while it has focus; Enter or Space presses it (the wrapped
+        widget's invoke(), or on_activate). ring says what turns blue: the widget's "border", the black frame round it
+        ("slot"), or its fill ("fg")."""
+        tk.Frame.configure(self.slot, takefocus=1)
+        self.__dict__["_activate"] = on_activate
+        self.__dict__["_ring_mode"] = ring
+        # CTkFrame.bind binds its inner canvas; the frame itself is what takes the focus
+        tk.Frame.bind(self.slot, "<FocusIn>", lambda _: self._ring(True), "+")
+        tk.Frame.bind(self.slot, "<FocusOut>", lambda _: self._ring(False), "+")
+        for key in ("<Return>", "<space>"):
+            tk.Frame.bind(self.slot, key, self._fire, "+")
+        return self
+
+    def _ring(self, on):
+        mode = self.__dict__.get("_ring_mode", "border")
+        try:
+            if mode == "slot":
+                self.slot.configure(fg_color=FOCUS if on else INK)
+            elif mode == "fg":
+                self.inner.configure(fg_color=FOCUS if on else INK)
+            else:
+                self.inner.configure(border_color=FOCUS if on else BORDER)
+        except (tk.TclError, ValueError):
+            pass
+
+    def _fire(self, _=None):
+        if self._disabled():
+            return "break"
+        act = self.__dict__.get("_activate")
+        if act:
+            act()
+        else:
+            self.inner.invoke()
+        return "break"
 
     # -- shadow and motion
     def show_shadow(self, on):
@@ -232,28 +610,42 @@ def button(parent, text, command, primary=False, width=260, color=None):
         border_width=EDGE, border_color=BORDER), depth=4, motion=True)
     if loud:
         sh.dim = (fill, DISABLED_FILL)
-    return sh
+    return sh.make_focusable()
 
 
 def menu(parent, var, values, width=260):
-    return Shadow(parent, lambda p: ctk.CTkOptionMenu(
+    sh = Shadow(parent, lambda p: ctk.CTkOptionMenu(
         p, variable=var, values=values, width=width, height=32, corner_radius=0, anchor="w",
         font=(FONT, 13), dropdown_font=(FONT, 13), fg_color=RAISED, button_color=ACCENT,
         button_hover_color=ACCENT_HOVER, text_color=TEXT, dropdown_fg_color=RAISED,
         dropdown_text_color=TEXT, dropdown_hover_color=HOVER), depth=3, edge=EDGE)
+    # Tab reaches it; Enter or Space opens the list
+    return sh.make_focusable(lambda: sh.inner._open_dropdown_menu(), ring="slot")
 
 
 def segmented(parent, var, values, width=260):
-    return Shadow(parent, lambda p: ctk.CTkSegmentedButton(
+    sh = Shadow(parent, lambda p: ctk.CTkSegmentedButton(
         p, variable=var, values=values, width=width, height=30, corner_radius=0, border_width=EDGE,
         font=(FONT, 12, "bold"), fg_color=INK, unselected_color=SEG_OFF, unselected_hover_color=HOVER,
         selected_color=SEG_ON, selected_hover_color=SEG_ON, text_color=ON_ACCENT), depth=3)
 
+    def step(d):
+        vals = list(values)
+        cur = vals.index(var.get()) if var.get() in vals else 0
+        var.set(vals[(cur + d) % len(vals)])
+    sh.make_focusable(lambda: step(1), ring="fg")  # Enter or Space: next choice; Left and Right: previous and next
+    tk.Frame.bind(sh.slot, "<Left>", lambda _: step(-1), "+")
+    tk.Frame.bind(sh.slot, "<Right>", lambda _: step(1), "+")
+    return sh
+
 
 def entry(parent, var, **kw):
-    return Shadow(parent, lambda p: ctk.CTkEntry(
+    sh = Shadow(parent, lambda p: ctk.CTkEntry(
         p, textvariable=var, height=34, corner_radius=0, font=(FONT, 13),
         fg_color=WELL, border_color=BORDER, border_width=EDGE, text_color=TEXT, **kw), depth=3)
+    sh.inner.bind("<FocusIn>", lambda _: sh.inner.configure(border_color=FOCUS), add="+")
+    sh.inner.bind("<FocusOut>", lambda _: sh.inner.configure(border_color=BORDER), add="+")
+    return sh
 
 
 def textbox(parent, **kw):
@@ -269,7 +661,7 @@ def tool_button(parent, text, command, width=None):
     return Shadow(parent, lambda p: ctk.CTkButton(
         p, text=text, command=command, width=width or max(48, 14 + 8 * len(text)), height=28,
         corner_radius=0, font=(FONT, 12, "bold"), fg_color=RAISED, hover_color=HOVER, text_color=TEXT,
-        text_color_disabled=MUTED, border_width=2, border_color=BORDER), depth=3, motion=True)
+        text_color_disabled=MUTED, border_width=2, border_color=BORDER), depth=3, motion=True).make_focusable()
 
 
 class Form(ctk.CTkScrollableFrame):
@@ -381,12 +773,14 @@ class DropZone(Shadow):
             height=104 if buttons else 88), depth=5)
         box = self.inner
         box.pack_propagate(False)
+        self._row = None
         self.prompt = prompt
         self.label = ctk.CTkLabel(box, text=prompt, font=(FONT, 14, "bold"), text_color=MUTED)
         self.buttons = {}
         if buttons:
             row = ctk.CTkFrame(box, fg_color="transparent")
             row.pack(side="bottom", pady=(0, 12))
+            self._row = row
             self.buttons = toolbar(row, *[[b] for b in buttons])
             first = next(iter(self.buttons.values()))
             first.configure(fg_color=ACCENT, text_color=ON_ACCENT, hover_color=ACCENT_HOVER)  # the main way in
@@ -400,6 +794,26 @@ class DropZone(Shadow):
 
     def set(self, text=None):
         self.label.configure(text=text or self.prompt, text_color=TEXT if text else MUTED)
+
+    def add_shortcuts(self, on_library, get_recent, on_open):
+        """Two quick ways in on a line under Add folder: *Library folder* (the folder Library stats scans) and *Recent*, a menu of the folders
+        used lately. get_recent() returns folder paths; on_open(path) uses one."""
+        if self._row is None:
+            return
+        row = ctk.CTkFrame(self.inner, fg_color="transparent")  # a second, smaller line under the main buttons
+        row.pack(side="bottom", pady=(0, 8), before=self._row)
+        self.inner.configure(height=140)
+        self.buttons["library"] = tool_button(row, "Library folder", on_library, 116)
+        self.buttons["library"].pack(side="left", padx=(0, 6))
+
+        def show_recent():
+            def where(p):  # the folder's parent, shortened from the left so the list stays narrow
+                text = str(Path(p).parent)
+                return text if len(text) <= 42 else "…" + text[-41:]
+            items = [(f"{Path(p).name}    {where(p)}", lambda p=p: on_open(p)) for p in get_recent()]
+            popup_menu(self.buttons["recent"], items or [("No recent folders yet", None)])
+        self.buttons["recent"] = tool_button(row, "Recent ▾", show_recent, 88)
+        self.buttons["recent"].pack(side="left")
 
 
 class Toggle(ctk.CTkFrame):
@@ -420,9 +834,17 @@ class Toggle(ctk.CTkFrame):
         self.label.pack(side="left", padx=(10, 0))
         for w in (self, self.cv, self.label):
             w.bind("<Button-1>", self.toggle, add="+")
-        self.cv.bind("<space>", self.toggle, add="+")
+        self.focused = False
+        for key in ("<space>", "<Return>"):
+            self.cv.bind(key, self.toggle, add="+")
+        self.cv.bind("<FocusIn>", lambda _: self._focus(True), add="+")
+        self.cv.bind("<FocusOut>", lambda _: self._focus(False), add="+")
         self.var.trace_add("write", lambda *_: self.redraw())
         _TOGGLES.add(self)
+        self.redraw()
+
+    def _focus(self, on):
+        self.focused = on
         self.redraw()
 
     def toggle(self, _=None):
@@ -443,7 +865,8 @@ class Toggle(ctk.CTkFrame):
         c.delete("all")
         w, h = self.W, self.H
         c.create_rectangle(4, 4, w - 1, h - 1, fill=ink, outline=ink)  # hard shadow
-        c.create_rectangle(2, 2, w - 4, h - 4, fill=pick(PINK if on else SWITCH_OFF), outline=ink, width=3)
+        c.create_rectangle(2, 2, w - 4, h - 4, fill=pick(PINK if on else SWITCH_OFF),
+                        outline=pick(FOCUS) if self.focused else ink, width=3)
         knob = 16
         x = w - 4 - 3 - knob - 1 if on else 2 + 3 + 1
         c.create_rectangle(x, 2 + 3 + 1, x + knob, h - 4 - 3 - 1, fill=ink, outline=ink)
@@ -597,7 +1020,17 @@ class NavItem(Shadow):
             w.bind("<Enter>", self._enter, add="+")
             w.bind("<Leave>", self._leave, add="+")
         self.inner.configure(cursor="hand2")
+        self.focused = False
+        tk.Frame.configure(self.inner, takefocus=1)
+        tk.Frame.bind(self.inner, "<FocusIn>", lambda _: self._focus(True), "+")
+        tk.Frame.bind(self.inner, "<FocusOut>", lambda _: self._focus(False), "+")
+        for key in ("<Return>", "<space>"):
+            tk.Frame.bind(self.inner, key, lambda _: self.command(), "+")
         _TOGGLES.add(self)
+        self.redraw()
+
+    def _focus(self, on):
+        self.focused = on
         self.redraw()
 
     def _enter(self, _=None):
@@ -620,7 +1053,8 @@ class NavItem(Shadow):
     def redraw(self):
         fill = self.active_color if self.active else HOVER if self.hot else RAISED if self.big else None
         bg = pick(fill if fill else PANEL)
-        self.inner.configure(fg_color=fill or "transparent", border_width=EDGE if (self.active or self.big) else 0)
+        self.inner.configure(fg_color=fill or "transparent", border_width=EDGE if (self.active or self.big or self.focused) else 0,
+                             border_color=FOCUS if self.focused else BORDER)
         self.label.configure(text_color=ON_ACCENT if self.active else TEXT)
         ink = "#111111" if self.active else pick(TEXT)
         if self.icon is not None:
@@ -779,6 +1213,22 @@ class Page(ctk.CTkFrame):
 
     def _side_changed(self, width):
         self.side_width = width
+
+    def primary_action(self):
+        """Press the page's main (yellow) button if it can be used: the Ctrl+Enter shortcut."""
+        for w in self.footer.winfo_children():
+            dim = w.__dict__.get("dim")
+            if dim and dim[0] == ACCENT:
+                if str(w.cget("state")) != "disabled":
+                    w.invoke()
+                return True
+        return False
+
+    def stop_action(self):
+        """Press Stop while a run is going: the Esc shortcut."""
+        b = getattr(self, "btn_stop", None)
+        if b is not None and b.winfo_ismapped() and str(b.cget("state")) != "disabled":
+            b.invoke()
 
     def say(self, msg, err=False):
         self.status.configure(text=msg, text_color=DANGER if err else MUTED)

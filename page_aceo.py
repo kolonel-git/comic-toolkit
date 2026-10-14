@@ -12,7 +12,7 @@ from PIL import Image
 
 import aceo_core as ac
 import reading_order as ro
-from ui_kit import (Toggle, ACCENT, BG, BORDER, DANGER, FONT, MUTED, PANEL, TEXT, DropZone, Page, apply_tree_theme, build_tree,
+from ui_kit import (tooltip, Toggle, ACCENT, BG, BORDER, DANGER, FONT, MUTED, PANEL, TEXT, DropZone, Page, apply_tree_theme, build_tree,
                     button, entry, menu, switch_style, title_block, Splitter, toolbar)
 
 THUMB = 900  # longest side of the in-memory preview copy of a cover
@@ -83,6 +83,8 @@ class AceoPage(Page):
             bar, [("top", "Top", 48, lambda: self.to_edge(True)), ("up", "▲", 34, lambda: self.shift(-1)),
                   ("down", "▼", 34, lambda: self.shift(1)), ("bottom", "Bottom", 64, lambda: self.to_edge(False))],
             [("remove", "Remove", 72, self.remove), ("clear", "Clear", 60, self.clear)])
+        for key, tip in (("up", "Move the selected covers up"), ("down", "Move the selected covers down")):
+            tooltip(self.tools[key], tip)
         self.progress = ctk.CTkProgressBar(self.main, height=14, corner_radius=0, border_width=3, border_color=BORDER, fg_color=BORDER,
                                            progress_color=ACCENT)
         self.progress.set(0)

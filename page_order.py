@@ -12,7 +12,7 @@ import reading_order as ro
 from archive_tools import BACKUP, REPLACE
 from comic_core import COMIC_EXT, find_comics, natural_key
 from rename_core import read_comicinfo
-from ui_kit import (Toggle, textbox, ACCENT, BG, BORDER, FONT, MUTED, PANEL, TEXT, DropZone, Form, Page, apply_tree_theme, build_tree,
+from ui_kit import (tooltip, Toggle, textbox, ACCENT, BG, BORDER, FONT, MUTED, PANEL, TEXT, DropZone, Form, Page, apply_tree_theme, build_tree,
                     button, entry, menu, switch_style, title_block, toolbar)
 
 
@@ -72,6 +72,8 @@ class OrderPage(Page):
             [("top", "Top", 48, lambda: self.to_edge(True)), ("up", "▲", 34, lambda: self.shift(-1)),
              ("down", "▼", 34, lambda: self.shift(1)), ("bottom", "Bottom", 64, lambda: self.to_edge(False))],
             [("remove", "Remove", 72, self.remove), ("clear", "Clear", 60, self.clear)])
+        for key, tip in (("up", "Move the selected rows up"), ("down", "Move the selected rows down")):
+            tooltip(self.tools[key], tip)
         self.progress = ctk.CTkProgressBar(self.main, height=14, corner_radius=0, border_width=3, border_color=BORDER, fg_color=BORDER,
                                            progress_color=ACCENT)
         self.progress.set(0)

@@ -2,13 +2,14 @@
 import os
 import queue
 import threading
+import time
 from pathlib import Path
 from tkinter import filedialog
 
 import customtkinter as ctk
 
 from comic_core import COMIC_EXT, common_root, picked_files
-from ui_kit import textbox, ACCENT, BORDER, FONT, TEXT, WELL, DropZone, Page, button, divider, title_block
+from ui_kit import eta_text, flash_taskbar, textbox, ACCENT, BORDER, FONT, TEXT, WELL, DropZone, Page, button, divider, title_block
 
 MARKS = {"ok": "✓", "skip": "↷", "fail": "✗"}
 
@@ -162,6 +163,7 @@ class BatchPage(Page):
             self.say(f"Pick a folder that contains {self.noun}s.", err=True)
             return
         self.dry = dry
+        self._t0 = time.time()
         self.counts = {"ok": 0, "skip": 0, "fail": 0}
         self.stop.clear()
         self.q = queue.Queue()
@@ -182,7 +184,7 @@ class BatchPage(Page):
                 msg = self.q.get_nowait()
                 if msg[0] == "start":
                     self.progress.set(msg[1] / msg[2])
-                    self.say(f"{msg[1] + 1} of {msg[2]}")
+                    self.say(eta_text(msg[1], msg[2], self._t0))
                 elif msg[0] == "line":
                     self.counts[msg[1]] += 1
                     mark = "•" if self.dry and msg[1] == "ok" else MARKS[msg[1]]
@@ -204,6 +206,8 @@ class BatchPage(Page):
             parts.append(f"{c['fail']} failed")
         lead = "Stopped · " if stopped else "Preview · " if self.dry else "Done · "
         self.progress.set(0 if stopped else 1)
+        if time.time() - self._t0 > 5:
+            flash_taskbar(self.winfo_toplevel())  # a long run is over: let the taskbar say so
         self.say(lead + ", ".join(parts), err=bool(c["fail"]))
         if not self.dry:
             self.rescan()  # counts change after a real run

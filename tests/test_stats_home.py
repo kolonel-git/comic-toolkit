@@ -43,9 +43,9 @@ with tempfile.TemporaryDirectory() as d:
     line = home.line.cget("text")
     assert line.startswith("4 comics · 2 series · ") and line.endswith("scanned just now"), line
     app.update()
-    stats_btn, refresh_btn = home.strip_buttons.winfo_children()
+    stats_btn, refresh_btn, folder_btn = home.strip_buttons.winfo_children()
     assert stats_btn.winfo_x() < refresh_btn.winfo_x() and stats_btn.winfo_width() > 2 * refresh_btn.winfo_width(), "Open Stats is first and bigger"
-    assert buttons(home) == ["Open Stats", "↻"] and app.snapshot["comics"] == 4 and app.snapshot["root"] == str(lib)
+    assert buttons(home) == ["Open Stats", "↻", "Library folder…"] and app.snapshot["comics"] == 4 and app.snapshot["root"] == str(lib)
 
     # Refresh rescans the saved folder without asking again; Open Stats opens the page
     cbz(lib / "Saga" / "Saga 002 (2012).cbz")
@@ -75,7 +75,7 @@ with tempfile.TemporaryDirectory() as d:
     assert saved["stats_snapshot"]["comics"] == 5 and saved["stats"]["root"] == str(lib)
     app = ct.App(); app.update()
     line = app.pages["home"].line.cget("text")
-    assert line.startswith("5 comics · 2 series") and buttons(app.pages["home"]) == ["Open Stats", "↻"], line
+    assert line.startswith("5 comics · 2 series") and buttons(app.pages["home"]) == ["Open Stats", "↻", "Library folder…"], line
     assert app.pages["stats"].root() == lib
 
     # saved numbers that are damaged are ignored

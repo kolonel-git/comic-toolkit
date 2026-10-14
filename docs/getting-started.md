@@ -29,3 +29,18 @@ python library_scan.py "D:\Comics" --deep --csv library.csv
 
 This lists every comic with the series, issue, year and (with `--deep`) page count and cover size, and can write the table to CSV.
 See [Architecture](architecture.md#the-library-scan) for the options.
+
+## Keyboard and shared folders
+
+| Keys | What it does |
+|---|---|
+| Ctrl+K | A floating search bar: type part of a page or action name (or a word from its description), Up and Down to choose, Enter to open, Esc to close |
+| Ctrl+1, Ctrl+2 | Home, Library stats |
+| Ctrl+O | Add a folder (the first button of the drop box) |
+| Ctrl+Enter | Press the page's main yellow button, when it can be used |
+| Esc | Stop a running job |
+| Tab, Enter or Space | Move between buttons, cards, switches, sliders, drop-down lists, format pickers and text fields (a blue ring shows the focus); arrow keys move a slider or a format picker |
+
+Every tool with a drop box has **Library folder** and **Recent** under *Add folder*. *Library folder* opens the folder that Library stats scans
+(it asks for it the first time; change it any time with *Library folder…* on Home, *Change…* on Library stats, or Ctrl+K). *Recent* lists the last eight folders any tool opened (saved in `settings.json`). Long runs show an
+estimate of the time left and flash the taskbar button when they finish.

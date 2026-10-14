@@ -133,7 +133,7 @@ class FolderBar(ctk.CTkFrame):
         super().__init__(parent, fg_color=PANEL, corner_radius=0, height=36)
         self.pack_propagate(False)
         self.prompt = "No library folder chosen"
-        ctk.CTkLabel(self, text="Library", font=(FONT, 11, "bold"), text_color=MUTED).pack(side="left", padx=(12, 8))
+        ctk.CTkLabel(self, text="Library folder", font=(FONT, 11, "bold"), text_color=MUTED).pack(side="left", padx=(12, 8))
         self.label = ctk.CTkLabel(self, text=self.prompt, font=(FONT, 12), text_color=MUTED, anchor="w")
         self.label.pack(side="left", fill="x", expand=True)
         self.button = tool_button(self, "Change…", on_change, 76)

@@ -12,6 +12,55 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-15 14:30 +11:00 · Session 49: Ctrl+K as a floating search bar
+
+**Summary:** The Ctrl+K window is now a Spotlight-style search bar: a large field at the top middle of the app with results listed under it, each a bold title over a smaller description.
+
+**Changes**
+- `ui_kit.spotlight`: borderless window (thick border, hard shadow), centred across the app and about a fifth of the way down; a 20 pt search field with a magnifier; seven result rows, each with a white icon tile, a bold title, a description line and a small *Page* or *Action* tag on the right; the chosen row is pink. Names that start with what you typed come first, then names that contain it, then descriptions. An empty search lists everything; no match gets a one-line explanation; Up and Down scroll past seven results; hovering selects; Enter or a click opens; Esc, Ctrl+K again or clicking elsewhere closes it. The old list-in-a-window version is gone.
+- `comic_tool.App.open_palette` builds the entries (pages with their descriptions from the Home cards, plus *Switch light and dark mode* and *Choose the library folder*) and calls it.
+- `tests/test_shortcuts.py`: filter order, description matches, the empty and no-match states, centring and Ctrl+K toggling.
+
+**Verification:** `ruff check --select F,E9 .` passes; `python tests/run_all.py`: 26 of 26 pass. The window was captured in light and dark mode and looked as intended; the dark icons first sat on a dark row and were hard to see, so the tiles are now always white.
+
+**Known issues:** the window uses a transparent colour for the shadow corner, which only Windows honours; results are not grouped under headings (the tag on each row says Page or Action).
+
+---
+
+## 2026-10-15 13:10 +11:00 · Session 48: Styled pop-ups, focus on every control, library folder naming, Ctrl+K hint
+
+**Summary:** Four follow-ups from the Session 47 review.
+
+**Changes**
+- `ui_kit.popup_menu`: the Recent list is now a square pop-up with a thick border and a hard shadow (Up, Down, Enter, Esc, click, closes when focus leaves) instead of the native Windows menu; long folder paths are shortened from the left. The Ctrl+K list is wrapped in a `Shadow` too.
+- Focus ring on drop-down lists (`menu`: Tab, Enter or Space opens), format pickers (`segmented`: Enter or Space and Left or Right change the choice) and text fields (`entry`): `Shadow.make_focusable(ring=...)` can turn the widget's border, the black frame round it, or its fill blue.
+- The *My library* button is now *Library folder*. The folder can be chosen from Home (*Library folder…* beside the scan buttons, `App.choose_library`, which also rescans), from Ctrl+K (*Choose the library folder*), and on Library stats (the strip is labelled *Library folder*).
+- Home tip now starts with *press Ctrl+K to jump to any page*.
+- Tests: `test_shortcuts.py` covers the pop-up, the new focus rings, the segmented keys and `choose_library`; `test_stats_home.py` expects the third strip button.
+
+**Verification:** `ruff check --select F,E9 .` passes; `python tests/run_all.py`: 26 of 26 pass. The Recent pop-up was captured in dark mode and looked right after its width was fixed (it first cut long paths off); the Ctrl+K window and the focus rings were checked by tests only, not by eye.
+
+**Known issues:** pop-up Up, Down and Enter need real window focus and were not exercised by hand; the pop-up uses a transparent colour for its shadow corner, which only Windows honours.
+
+---
+
+## 2026-10-15 11:30 +11:00 · Session 47: Shared folders, keyboard, run feedback
+
+**Summary:** First batch of the UX review: one library folder and a recent-folder list shared by every tool, a keyboard layer with visible focus, time-left estimates, a taskbar flash and tooltips. Also two test and layout problems found on the way.
+
+**Changes**
+- `comic_tool.py`: `App.library_root` (the folder Library stats scans), `note_folder` / `recent_dirs` (last eight folders, saved as `recent` in `settings.json`), `_wire_folders` wraps every page's `set_folder` to remember folders and gives eight tools a *My library* and *Recent* line under *Add folder* (`DropZone.add_shortcuts`). Ctrl+K command palette (`open_palette`), Ctrl+1/2, Ctrl+O, Ctrl+Enter (`Page.primary_action`), Esc (`Page.stop_action`). Sidebar hint *Ctrl+K jump to a tool*.
+- `ui_kit.py`: `Shadow.make_focusable` (Tab reaches buttons and cards, blue `FOCUS` ring, Enter or Space presses), focus ring and keys on `Toggle` (Space or Enter), `Slider` (arrow keys), `NavItem`; `tooltip()`, `eta_text()`, `flash_taskbar()`. CTkFrame binds its inner canvas, so focus and key bindings on a frame use `tk.Frame.bind`.
+- `batch_page.py`: status shows *37 of 120, about 40s left*; the taskbar flashes when a run longer than 5 s ends. Tooltips on the up and down arrows (Reading order, ACEO) and on the Home rescan icon.
+- Home is shorter (banner 72, stats card 86, tool cards 108 px, tighter rows): at the app's own minimum size (1040 x 720) the last row of cards was cut off with the default section order.
+- `tests/test_layout_app.py` read the owner's real `settings.json`, so it compared against the saved section order and always failed on the default-order check; it now uses a temporary settings file and passes. New `tests/test_shortcuts.py`.
+
+**Verification:** `ruff check --select F,E9 .` passes; `python tests/run_all.py`: 26 of 26 pass. Keys are tested by calling the same handlers (key events need real window focus); the Ctrl shortcuts and the visual look of the new drop-box line were not checked by hand.
+
+**Known issues:** the blue focus ring is only drawn on buttons, cards, switches, sliders and sidebar entries (menus, segmented controls and entries use their own look). The taskbar flash and the Recent menu need a manual check.
+
+---
+
 ## 2026-10-14 22:30 +11:00 · Session 46: Home rows fill their width
 
 **Summary:** Home tool cards stretch to fill each row instead of leaving blank columns.

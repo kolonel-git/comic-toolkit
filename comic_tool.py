@@ -43,8 +43,8 @@ from page_rename import RenamePage
 from page_single import SinglePage
 from page_stats import StatsPage
 from stats_core import snapshot_line
-from ui_kit import (Toggle, ACCENT, BG, BORDER, CYAN, DANGER, WELL, EDGE, FONT, HEAD, HOVER, MUTED, ON_ACCENT, PANEL, PINK,
-                    TEXT, YELLOW, AbstractStrip, IconTile, Logo, NavItem, Shadow, Splitter, pick, refresh_strips, switch_style,
+from ui_kit import (Toggle, spotlight, tooltip, ACCENT, BG, BORDER, CYAN, DANGER, WELL, EDGE, FONT, HEAD, HOVER, MUTED, ON_ACCENT, PANEL, PINK,
+                    TEXT, YELLOW, AbstractStrip, DropZone, IconTile, Logo, NavItem, Shadow, Splitter, pick, refresh_strips, switch_style,
                     tool_button)
 from ui_kit import button  # noqa: F401 - used by strip_button
 
@@ -115,7 +115,7 @@ class Card(Shadow):
     def __init__(self, parent, glyph, color, title, text, command):
         def build(p):
             face = ctk.CTkFrame(p, fg_color=color, border_color=BORDER, border_width=EDGE, corner_radius=0,
-                                height=118, cursor="hand2")
+                                height=108, cursor="hand2")
             face.pack_propagate(False)
             head = ctk.CTkFrame(face, fg_color="transparent")
             head.pack(fill="x", padx=12, pady=(10, 6))
@@ -130,6 +130,7 @@ class Card(Shadow):
 
         super().__init__(parent, build, depth=6, motion=True)
         self._command = command
+        self.make_focusable(lambda: self._command())
         self.inner.bind("<Configure>", lambda e: self.desc.configure(
             wraplength=max(90, int(e.width / self._get_widget_scaling()) - 30)))
         self._bind_click(self.inner)
@@ -151,12 +152,12 @@ class HomePage(ctk.CTkFrame):
     """Every tool on one screen: each row is a soft band holding one to three groups, separated by hairlines, with the
     tool cards inside (the same width in every row)."""
 
-    def __init__(self, parent, open_tool, open_stats=None, scan=None):
+    def __init__(self, parent, open_tool, open_stats=None, scan=None, choose=None):
         super().__init__(parent, fg_color=BG)
-        self.open_stats, self.scan = open_stats, scan
+        self.open_stats, self.scan, self.choose = open_stats, scan, choose
         wrap = ctk.CTkFrame(self, fg_color=BG)
         wrap.pack(fill="both", expand=True, padx=(32, 24), pady=(26, 14))
-        Shadow(wrap, lambda p: AbstractStrip(p, seed="home", height=84, title="COMIC TOOLKIT",
+        Shadow(wrap, lambda p: AbstractStrip(p, seed="home", height=72, title="COMIC TOOLKIT",
                                              subtitle="Choose a tool to get started.", fill=YELLOW),
                depth=6).pack(fill="x", padx=(4, 10))
         self._build_summary(wrap)
@@ -164,8 +165,8 @@ class HomePage(ctk.CTkFrame):
         self.bands = ctk.CTkFrame(wrap, fg_color=BG)
         self.bands.pack(fill="x")
         self.set_groups(GROUPS)
-        ctk.CTkLabel(wrap, text="Tip: drop a comic file anywhere to open it in Single issue, or a folder onto any "
-                                "folder tool. From Home, a dropped folder opens Bulk folder.", font=(FONT, 12),
+        ctk.CTkLabel(wrap, text="Tip: press Ctrl+K to jump to any page. Drop a comic file anywhere to open it in Single "
+                                "issue, or a folder onto any folder tool. From Home, a dropped folder opens Bulk folder.", font=(FONT, 12),
                      text_color=MUTED, anchor="w", justify="left", wraplength=800).pack(fill="x", side="bottom")
 
     def set_groups(self, groups):
@@ -176,9 +177,9 @@ class HomePage(ctk.CTkFrame):
         colors, gi = (YELLOW, PINK, CYAN), 0  # one saturated colour per group, rotating
         for ri, row_groups in enumerate(home_rows(groups)):
             band = ctk.CTkFrame(self.bands, fg_color="transparent")
-            band.pack(fill="x", pady=(8, 0))
+            band.pack(fill="x", pady=(6, 0))
             row = ctk.CTkFrame(band, fg_color="transparent")
-            row.pack(fill="x", padx=0, pady=(4, 8))
+            row.pack(fill="x", padx=0, pady=(2, 6))
             col, gaps, cards = 0, 0, 0
             for header, keys in row_groups:
                 if col:  # a gap column with a hairline between this group and the one before
@@ -202,7 +203,7 @@ class HomePage(ctk.CTkFrame):
     # ---- the library summary line (numbers come from the last scan of the Library stats page)
     def _build_summary(self, parent):
         self.strip = Shadow(parent, lambda p: ctk.CTkFrame(p, fg_color=WELL, corner_radius=0, border_color=BORDER,
-                                                           border_width=EDGE, height=96), depth=7)
+                                                           border_width=EDGE, height=86), depth=7)
         self.strip.pack(fill="x", padx=(4, 10), pady=(14, 0))
         box = self.strip.inner
         box.pack_propagate(False)
@@ -229,7 +230,12 @@ class HomePage(ctk.CTkFrame):
             self.line.configure(text=snapshot_line(snap), text_color=TEXT)
             strip_button(self.strip_buttons, "Open Stats", lambda: self.open_stats and self.open_stats(),
                          primary=True, width=140).pack(side="left", padx=(0, 6))
-            strip_button(self.strip_buttons, "↻", rescan, width=34).pack(side="left")
+            again = strip_button(self.strip_buttons, "↻", rescan, width=34)
+            again.pack(side="left", padx=(0, 6))
+            tooltip(again, "Scan the library again")
+            folder = strip_button(self.strip_buttons, "Library folder…", lambda: self.choose and self.choose(), width=140)
+            folder.pack(side="left")
+            tooltip(folder, "Choose which folder is your library")
         else:
             self.line.configure(text="No library scanned yet.", text_color=MUTED)
             strip_button(self.strip_buttons, "Scan your library" if has_root else "Choose your library folder and scan it",
@@ -244,6 +250,8 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         order, shut = saved.get("group_order"), saved.get("collapsed")
         self.group_order = [h for h in order if isinstance(h, str)] if isinstance(order, list) else []
         self.collapsed = {h for h in shut if isinstance(h, str)} if isinstance(shut, list) else set()
+        recent = saved.get("recent")
+        self.recent = [p for p in recent if isinstance(p, str)][:8] if isinstance(recent, list) else []
         self.theme = saved.get("theme", "system")  # light | dark | system
         ctk.set_appearance_mode(self.theme)
         self.title("Comic Toolkit")
@@ -262,7 +270,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         content = ctk.CTkFrame(self, fg_color=BG)
         content.pack(side="left", fill="both", expand=True)
 
-        self.pages = {"home": HomePage(content, self.show, lambda: self.show("stats"), self.home_scan),
+        self.pages = {"home": HomePage(content, self.show, lambda: self.show("stats"), self.home_scan, self.choose_library),
                       "stats": StatsPage(content), "single": SinglePage(content),
                       "bulk": BulkPage(content), "icons": IconsPage(content),
                       "rename": RenamePage(content), "metadata": MetadataPage(content),
@@ -283,6 +291,8 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.dark = ctk.BooleanVar(value=ctk.get_appearance_mode() == "Dark")
         Toggle(bottom, text="Dark mode", variable=self.dark, command=self.toggle_theme,
                       **switch_style()).pack(side="bottom", anchor="w", padx=18, pady=(8, 20))
+        ctk.CTkLabel(bottom, text="Ctrl+K  jump to a tool", font=(FONT, 11), text_color=MUTED,
+                     anchor="w").pack(side="bottom", fill="x", padx=18, pady=(0, 10))
         tool_button(bottom, "Reorder sections…", self.reorder_dialog).pack(side="bottom", fill="x", padx=(14, 18), pady=(10, 0))
         self.nav_scroll = ctk.CTkScrollableFrame(side, fg_color=PANEL, corner_radius=0)
         self.nav_scroll.pack(fill="both", expand=True)
@@ -292,6 +302,11 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         for k, page in self.pages.items():
             if hasattr(page, "restore"):
                 page.restore(saved.get(k))
+        self._wire_folders()
+        for seq, fn in (("<Control-k>", self.open_palette), ("<Control-Key-1>", lambda: self.show("home")),
+                        ("<Control-Key-2>", lambda: self.show("stats")), ("<Control-o>", self._shortcut_add),
+                        ("<Control-Return>", self._shortcut_run), ("<Escape>", self._shortcut_stop)):
+            self.bind_all(seq, lambda _, fn=fn: fn())
         snap = saved.get("stats_snapshot")
         self.snapshot = snap if isinstance(snap, dict) and {"comics", "series", "bytes", "when"} <= set(snap) else None
         stats = self.pages["stats"]
@@ -305,6 +320,87 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.drop_target_register(DND_FILES)
         self.dnd_bind("<<Drop>>", self.on_drop)
         self.protocol("WM_DELETE_WINDOW", self.close)
+
+    # ---- folders: one library folder and the recent ones, shared by every tool
+    def library_root(self):
+        return self.pages["stats"].root()
+
+    def note_folder(self, folder):
+        p = str(Path(folder))
+        self.recent = [p] + [q for q in self.recent if q != p]
+        self.recent = self.recent[:8]
+
+    def recent_dirs(self):
+        return [p for p in self.recent if Path(p).is_dir()]
+
+    def _open_path(self, page, path):
+        if hasattr(page, "set_folder"):
+            page.set_folder(path)
+        else:
+            page.add_paths([Path(path)])
+
+    def _open_library(self, page):
+        root = self.library_root()
+        if root is None:  # first use: ask once, then every tool can use it
+            folder = filedialog.askdirectory(title="Choose your library folder")
+            if not folder:
+                return
+            self.pages["stats"].set_folder(folder, scan=False)
+            root = Path(folder)
+        self._open_path(page, root)
+
+    def _wire_folders(self):
+        """Every folder a tool opens is remembered; tools with a drop box get My library and Recent buttons."""
+        for key, page in self.pages.items():
+            if key != "home" and hasattr(page, "set_folder"):
+                orig = page.set_folder
+
+                def wrapped(folder, *a, _orig=orig, **k):
+                    self.note_folder(folder)
+                    return _orig(folder, *a, **k)
+                page.set_folder = wrapped
+            drop = getattr(page, "drop", None)
+            if key not in ("home", "stats", "single", "intake") and isinstance(drop, DropZone):
+                drop.add_shortcuts(lambda p=page: self._open_library(p), self.recent_dirs,
+                                   lambda path, p=page: self._open_path(p, path))
+
+    # ---- keyboard
+    def _shortcut_add(self):
+        drop = getattr(self.pages[self.current], "drop", None)
+        if isinstance(drop, DropZone) and drop.buttons:
+            next(iter(drop.buttons.values())).invoke()
+
+    def _shortcut_run(self):
+        page = self.pages[self.current]
+        if hasattr(page, "primary_action"):
+            page.primary_action()
+
+    def _shortcut_stop(self):
+        page = self.pages[self.current]
+        if hasattr(page, "stop_action"):
+            page.stop_action()
+
+    def open_palette(self):
+        """Ctrl+K: a floating search bar; type a few letters of a page or action and press Enter."""
+        old = getattr(self, "_palette", None)
+        if old is not None and old.winfo_exists():
+            old.destroy()
+            return
+        entries = [("home", "Home", "Every tool on one screen", "Page"),
+                   ("stats", "Library stats", "Numbers about your whole collection", "Page")]
+        entries += [(k, TOOLS[k][2], TOOLS[k][3], "Page") for _, keys in ordered_groups(self.group_order) for k in keys]
+        entries += [("__theme__", "Switch light and dark mode", "Change the look of the whole app", "Action"),
+                    ("__library__", "Choose the library folder", "The folder Library stats scans and every tool offers", "Action")]
+
+        def pick_it(key):
+            if key == "__theme__":
+                self.dark.set(not self.dark.get())
+                self.toggle_theme()
+            elif key == "__library__":
+                self.choose_library()
+            else:
+                self.show(key)
+        self._palette = spotlight(self, entries, pick_it)
 
     def _sidebar_changed(self, width):
         self.sidebar_width = width
@@ -331,6 +427,18 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             stats.scan()
         if stats.q:
             self.pages["home"].show_summary(None, scanning=(0, 0))
+
+    def choose_library(self):
+        """Pick the library folder (the one Library stats scans and every tool's Library folder button opens)."""
+        stats = self.pages["stats"]
+        if stats.q:
+            return
+        folder = filedialog.askdirectory(title="Choose your library folder",
+                                         initialdir=str(stats.root()) if stats.root() else None)
+        if folder:
+            stats.set_folder(folder)
+            if stats.q:
+                self.pages["home"].show_summary(None, scanning=(0, 0))
 
     def _nav_item(self, parent, key, label, big=False):
         b = NavItem(parent, key, label, lambda: self.show(key), big=big, active_color=ACCENT if big else PINK)
@@ -461,6 +569,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
     def close(self):
         data = {k: p.state() for k, p in self.pages.items() if hasattr(p, "state")}
         data["theme"] = self.theme
+        data["recent"] = self.recent
         data["sidebar"] = self.sidebar_width
         data["group_order"] = self.group_order
         data["collapsed"] = sorted(self.collapsed)
