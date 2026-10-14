@@ -1,10 +1,9 @@
 """CBR to CBZ page: repack RAR comics as ZIP, verified, in bulk."""
-import customtkinter as ctk
 
 from archive_tools import DELETE, KEEP, MOVE, convert_to_cbz, dispose_original
 from batch_page import BatchPage
 from comic_core import in_archive, natural_key, unique
-from ui_kit import menu, switch_style
+from ui_kit import Toggle, menu, switch_style
 
 EXISTS = ["Skip", "Keep both", "Overwrite"]
 
@@ -21,7 +20,7 @@ class ConvertPage(BatchPage):
         super().__init__(parent)
         v = self.vars
         self.form.heading("Source")
-        ctk.CTkSwitch(self.form.add("Subfolders"), text="Include subfolders", variable=v["recursive"],
+        Toggle(self.form.add("Subfolders"), text="Include subfolders", variable=v["recursive"],
                       **switch_style()).pack(anchor="w")
         self.form.heading("Output")
         menu(self.form.add("After converting, the .cbr"), v["original"], [MOVE, KEEP, DELETE]).pack(fill="x")

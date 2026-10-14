@@ -8,7 +8,7 @@ from tkinter import filedialog
 import customtkinter as ctk
 
 from comic_core import COMIC_EXT, common_root, picked_files
-from ui_kit import ACCENT, BORDER, FONT, PANEL, TEXT, DropZone, Page, button, divider, title_block
+from ui_kit import textbox, ACCENT, BORDER, FONT, TEXT, WELL, DropZone, Page, button, divider, title_block
 
 MARKS = {"ok": "✓", "skip": "↷", "fail": "✗"}
 
@@ -51,14 +51,15 @@ class BatchPage(Page):
         self.drop.pack(fill="x")
         self.meta = ctk.CTkLabel(self.main, text="", font=(FONT, 13), text_color=TEXT, anchor="w")
         self.meta.pack(fill="x", pady=(16, 8))
-        self.progress = ctk.CTkProgressBar(self.main, height=3, corner_radius=2, fg_color=BORDER,
+        self.progress = ctk.CTkProgressBar(self.main, height=14, corner_radius=0, border_width=3, border_color=BORDER, fg_color=BORDER,
                                            progress_color=ACCENT)
         self.progress.set(0)
         self.progress.pack(fill="x", pady=(0, 10))
-        self.log = ctk.CTkTextbox(self.main, font=("Consolas", 12), fg_color=PANEL, text_color=TEXT,
-                                  border_color=BORDER, border_width=1, corner_radius=8, wrap="none")
+        self.log = textbox(self.main, font=("Consolas", 12), fg_color=WELL, text_color=TEXT,
+                                  border_color=BORDER, border_width=3, corner_radius=0, wrap="none")
         self.log.pack(fill="both", expand=True)
         self.log.configure(state="disabled")
+        self._hint(self.run_label)
 
         self.btn_run = button(self.footer, self.run_label, lambda: self.start(False), primary=True)
         self.btn_run.pack(pady=(0, 8))
@@ -207,6 +208,13 @@ class BatchPage(Page):
         if not self.dry:
             self.rescan()  # counts change after a real run
         self._idle()
+
+    def _hint(self, run):
+        """The empty log is the first thing seen on a tool page, so it says what to do."""
+        self._log("Getting started")
+        self._log("1  Add a folder or comics above.")
+        self._log("2  Check the options on the right.")
+        self._log(f"3  Press {run}.")
 
     def _log(self, line):
         self.log.configure(state="normal")

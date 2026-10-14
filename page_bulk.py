@@ -10,7 +10,7 @@ import customtkinter as ctk
 from comic_core import (COMIC_EXT, CONFLICTS, FORMATS, HEIGHTS, NAMES, ORG_FLAT, ORG_MIRROR, ORG_SERIES, ORGS,
                         WHERE_BESIDE, WHERE_CUSTOM, WHERE_SUB, WHERES, Comic, export_cover,
                         common_root, find_comics, picked_files, plan_dest, sanitize, series_name)
-from ui_kit import (ACCENT, BORDER, FONT, MUTED, PANEL, TEXT, DropZone, Form, Page, button, entry, menu,
+from ui_kit import (Toggle, textbox, ACCENT, BORDER, FONT, MUTED, TEXT, WELL, DropZone, Form, Page, button, entry, menu,
                     switch_style, title_block, divider)
 
 
@@ -58,18 +58,19 @@ class BulkPage(Page):
         self.meta.pack(fill="x", pady=(16, 0))
         self.example = ctk.CTkLabel(self.main, text="", font=(FONT, 12), text_color=MUTED, anchor="w")
         self.example.pack(fill="x", pady=(2, 10))
-        self.progress = ctk.CTkProgressBar(self.main, height=3, corner_radius=2, fg_color=BORDER,
+        self.progress = ctk.CTkProgressBar(self.main, height=14, corner_radius=0, border_width=3, border_color=BORDER, fg_color=BORDER,
                                            progress_color=ACCENT)
         self.progress.set(0)
         self.progress.pack(fill="x", pady=(0, 10))
-        self.log = ctk.CTkTextbox(self.main, font=("Consolas", 12), fg_color=PANEL, text_color=TEXT,
-                                  border_color=BORDER, border_width=1, corner_radius=8, wrap="none")
+        self.log = textbox(self.main, font=("Consolas", 12), fg_color=WELL, text_color=TEXT,
+                                  border_color=BORDER, border_width=3, corner_radius=0, wrap="none")
         self.log.pack(fill="both", expand=True)
         self.log.configure(state="disabled")
+        self._hint()
 
         v = self.vars
         self.form.heading("Source")
-        ctk.CTkSwitch(self.form.add("Subfolders"), text="Include subfolders", variable=v["recursive"],
+        Toggle(self.form.add("Subfolders"), text="Include subfolders", variable=v["recursive"],
                       **switch_style()).pack(anchor="w")
         self.form.heading("Cover image")
         self.add_image_rows()
@@ -239,6 +240,13 @@ class BulkPage(Page):
         self.say(("Stopped · " if stopped else "Done · ") + ", ".join(parts), err=bool(c["failed"]))
         self.btn_start.configure(state="normal", text="Extract covers")
         self.btn_open.configure(state="normal" if self.out_dir and self.out_dir.exists() else "disabled")
+
+    def _hint(self):
+        """The empty log is the first thing seen on this page, so it says what to do."""
+        self._log("Getting started")
+        self._log("1  Add a folder or comics above.")
+        self._log("2  Check the options on the right.")
+        self._log("3  Press Extract covers.")
 
     def _log(self, line):
         self.log.configure(state="normal")

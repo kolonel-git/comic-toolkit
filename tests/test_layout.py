@@ -92,7 +92,7 @@ f = ctk.CTkFrame(root); f.pack()
 tb = uk.toolbar(f, [("a", "A", 40, lambda: 1), ("b", "B", 40, lambda: 1)], [("c", "C", 40, lambda: 1)])
 assert list(tb) == ["a", "b", "c"]
 kids = f.winfo_children()
-assert len(kids) == 4 and kids[2].cget("width") == 1, "one divider between the two groups"
+assert len(kids) == 4 and kids[2].cget("width") == 3, "one divider between the two groups"
 f2 = ctk.CTkFrame(root); f2.pack()
 tb2 = uk.toolbar(f2, [("x", "X", 40, lambda: 1), ("y", "Y", 40, lambda: 1)], side="right"); root.update()
 assert tb2["x"].winfo_x() < tb2["y"].winfo_x(), "right-anchored rows keep the visual order"
@@ -100,7 +100,7 @@ assert tb2["x"].winfo_x() < tb2["y"].winfo_x(), "right-anchored rows keep the vi
 od = pages[7]; root.update()
 xs = {k: b.winfo_rootx() for k, b in od.tools.items()}
 assert xs["top"] < xs["up"] < xs["down"] < xs["bottom"]
-assert xs["up"] - xs["top"] < 70 and xs["remove"] - xs["bottom"] > xs["bottom"] - xs["down"], "dividers separate groups"
+assert xs["up"] - xs["top"] < 80 and xs["remove"] - xs["bottom"] > xs["bottom"] - xs["down"], "dividers separate groups"
 
 with tempfile.TemporaryDirectory() as d:
     d = Path(d)

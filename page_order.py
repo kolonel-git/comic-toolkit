@@ -12,7 +12,7 @@ import reading_order as ro
 from archive_tools import BACKUP, REPLACE
 from comic_core import COMIC_EXT, find_comics, natural_key
 from rename_core import read_comicinfo
-from ui_kit import (ACCENT, BG, BORDER, FONT, MUTED, PANEL, TEXT, DropZone, Form, Page, apply_tree_theme, build_tree,
+from ui_kit import (Toggle, textbox, ACCENT, BG, BORDER, FONT, MUTED, PANEL, TEXT, DropZone, Form, Page, apply_tree_theme, build_tree,
                     button, entry, menu, switch_style, title_block, toolbar)
 
 
@@ -72,7 +72,7 @@ class OrderPage(Page):
             [("top", "Top", 48, lambda: self.to_edge(True)), ("up", "▲", 34, lambda: self.shift(-1)),
              ("down", "▼", 34, lambda: self.shift(1)), ("bottom", "Bottom", 64, lambda: self.to_edge(False))],
             [("remove", "Remove", 72, self.remove), ("clear", "Clear", 60, self.clear)])
-        self.progress = ctk.CTkProgressBar(self.main, height=3, corner_radius=2, fg_color=BORDER,
+        self.progress = ctk.CTkProgressBar(self.main, height=14, corner_radius=0, border_width=3, border_color=BORDER, fg_color=BORDER,
                                            progress_color=ACCENT)
         self.progress.set(0)
         self.progress.pack(fill="x", pady=(0, 8))
@@ -80,6 +80,7 @@ class OrderPage(Page):
             ("sel", "", 38, False), ("num", "#", 52, False), ("file", "File", 220, True),
             ("new", "New name", 200, True), ("current", "Current arc", 120, False), ("status", "Status", 200, False)], selectmode="extended")
         wrap.pack(fill="both", expand=True)
+        wrap.set_empty("Add a folder above, then drag the issues into reading order.")
         self.tree.bind("<Button-1>", self._press)
         self.tree.bind("<B1-Motion>", self._motion)
         self.tree.bind("<ButtonRelease-1>", self._release)
@@ -101,16 +102,16 @@ class OrderPage(Page):
         entry(box, self.group).pack(fill="x")
         ctk.CTkLabel(box, text="Labels every issue, e.g. the event or crossover name.", font=(FONT, 11),
                      text_color=MUTED, anchor="w", justify="left", wraplength=260).pack(fill="x", pady=(4, 0))
-        self.form.heading("Filenames and sorting")
+        self.form.heading("Filenames and sorting", collapsible=True, open=False)
         menu(self.form.add("Also number the filenames"), v["prefix"], ro.PREFIXES).pack(fill="x")
         box = self.form.add("Sorting in YACReader")
-        ctk.CTkSwitch(box, text="Remove issue numbers", variable=v["drop_issue"], **sw).pack(anchor="w")
+        Toggle(box, text="Remove issue numbers", variable=v["drop_issue"], **sw).pack(anchor="w")
         ctk.CTkLabel(box, text="YACReader sorts by issue number before filename. Removing it makes YACReader use "
                      "the filename, so pair it with a filename prefix.", font=(FONT, 11), text_color=MUTED,
                      anchor="w", justify="left", wraplength=260).pack(fill="x", pady=(4, 0))
         self.form.heading("Output")
         box = self.form.add("Originals")
-        ctk.CTkSwitch(box, text="Copy to a new folder instead", variable=v["copy"], **sw).pack(anchor="w")
+        Toggle(box, text="Copy to a new folder instead", variable=v["copy"], **sw).pack(anchor="w")
         self.orig_row = self.form.add("Original file")
         menu(self.orig_row, v["original"], [BACKUP, REPLACE]).pack(fill="x")
 
@@ -396,8 +397,8 @@ class OrderPage(Page):
         win.title("Preview: nothing has been changed")
         win.geometry("820x600")
         win.configure(fg_color=BG)
-        box = ctk.CTkTextbox(win, font=("Consolas", 12), fg_color=PANEL, text_color=TEXT, border_color=BORDER,
-                             border_width=1, corner_radius=8, wrap="none")
+        box = textbox(win, font=("Consolas", 12), fg_color=PANEL, text_color=TEXT, border_color=BORDER,
+                             border_width=3, corner_radius=0, wrap="none")
         box.pack(fill="both", expand=True, padx=16, pady=(16, 8))
         box.insert("1.0", self.preview_text())
         box.configure(state="disabled")

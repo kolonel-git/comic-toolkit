@@ -5,7 +5,7 @@ It prepares a library for a reader such as **YACReader**: it does not read comic
 database. Everything works on the files and folders on disk.
 
 - **Platform:** Windows 10/11 (a few features are Windows-only)
-- **Language / UI:** Python 3, [customtkinter](https://github.com/TomSchimansky/CustomTkinter), Notion-style light and dark themes
+- **Language / UI:** Python 3, [customtkinter](https://github.com/TomSchimansky/CustomTkinter), neo-brutalist light and dark themes
 - **Status:** active development, currently `v0.5.0`
 
 ## Quick start

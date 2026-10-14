@@ -10,7 +10,7 @@ import customtkinter as ctk
 from PIL import Image, ImageTk
 
 import picker_core as pc
-from ui_kit import ACCENT, BG, BORDER, FONT, MUTED, PANEL, SELECT_BG, TEXT, button, pick
+from ui_kit import slider, ACCENT, BG, BORDER, FONT, MUTED, PANEL, SELECT_BG, TEXT, button, pick
 
 THUMB_MAX = 360          # longest side of the cached thumbnail
 SIZE_MIN, SIZE_MAX, SIZE_START = 70, 260, 130
@@ -66,8 +66,8 @@ class PickerWindow(ctk.CTkToplevel):
         self.btn_reorder = button(inner, "Reorder…", self.reorder, width=96)
         self.btn_reorder.pack(side="right", padx=(0, 8))
         self.size = tk.IntVar(value=SIZE_START)
-        ctk.CTkSlider(inner, from_=SIZE_MIN, to=SIZE_MAX, variable=self.size, width=140,
-                      command=lambda _: self._schedule()).pack(side="right", padx=(0, 16))
+        slider(inner, from_=SIZE_MIN, to=SIZE_MAX, variable=self.size, width=140,
+               command=lambda _: self._schedule()).pack(side="right", padx=(0, 16))
         ctk.CTkLabel(inner, text="Size", font=(FONT, 12), text_color=MUTED).pack(side="right", padx=(0, 6))
 
         self.lbl_status = ctk.CTkLabel(self, text="", font=(FONT, 12), text_color=MUTED, anchor="w")

@@ -11,7 +11,7 @@ import customtkinter as ctk
 import intake_core as ic
 from archive_tools import DELETE, KEEP, MOVE
 from rename_core import read_comicinfo
-from ui_kit import (ACCENT, BG, BORDER, FONT, MUTED, TEXT, DropZone, Page, apply_tree_theme, build_tree, button,
+from ui_kit import (Toggle, ACCENT, BG, BORDER, FONT, MUTED, TEXT, DropZone, Page, apply_tree_theme, build_tree, button,
                     divider, entry, menu, switch_style, title_block, toolbar)
 
 COLS = [("sel", "", 38, False), ("file", "Comic", 200, True), ("dest", "Becomes", 260, True),
@@ -65,11 +65,12 @@ class IntakePage(Page):
         toolbar(bar, [("all", "Select all", 84, lambda: self.select_all(True)),
                       ("none", "Select none", 84, lambda: self.select_all(False))],
                 [("clear", "Clear list", 84, self.clear)], side="right")
-        self.progress = ctk.CTkProgressBar(self.main, height=3, corner_radius=2, fg_color=BORDER, progress_color=ACCENT)
+        self.progress = ctk.CTkProgressBar(self.main, height=14, corner_radius=0, border_width=3, border_color=BORDER, fg_color=BORDER, progress_color=ACCENT)
         self.progress.set(0)
         self.progress.pack(fill="x", pady=(0, 8))
         wrap, self.tree = build_tree(self.main, COLS, selectmode="browse")
         wrap.pack(fill="both", expand=True)
+        wrap.set_empty("Press Scan inbox to list the comics that will be added.")
         self.tree.bind("<Button-1>", self._click)
         self.tree.bind("<<TreeviewSelect>>", lambda _: self._show_note())
         self.note = ctk.CTkLabel(self.main, text="", font=(FONT, 12), text_color=MUTED, anchor="w", justify="left",
@@ -79,17 +80,17 @@ class IntakePage(Page):
         v, sw = self.vars, switch_style()
         self.form.heading("Source")
         self.path_row(self.form.add("Inbox folder"), v["inbox"], "Folder where new comics land")
-        ctk.CTkSwitch(self.form.add("Subfolders"), text="Include subfolders", variable=v["recursive"], **sw).pack(anchor="w")
+        Toggle(self.form.add("Subfolders"), text="Include subfolders", variable=v["recursive"], **sw).pack(anchor="w")
         self.form.heading("Output")
         self.path_row(self.form.add("Ready folder"), v["ready"], "Folder for finished comics")
-        ctk.CTkSwitch(self.form.add("Folders"), text="File into series folders", variable=v["folders"], **sw).pack(anchor="w")
+        Toggle(self.form.add("Folders"), text="File into series folders", variable=v["folders"], **sw).pack(anchor="w")
         self.form.heading("Steps")
         ctk.CTkLabel(self.form.add("Convert"), text="Every comic is saved as a verified .cbz.", font=(FONT, 12),
                      text_color=MUTED, anchor="w", justify="left", wraplength=260).pack(fill="x")
-        ctk.CTkSwitch(self.form.add("Name"), text="Rename like the Renamer", variable=v["rename"], **sw).pack(anchor="w")
-        ctk.CTkSwitch(self.form.add("Junk"), text="Remove junk files", variable=v["junk"], **sw).pack(anchor="w")
+        Toggle(self.form.add("Name"), text="Rename like the Renamer", variable=v["rename"], **sw).pack(anchor="w")
+        Toggle(self.form.add("Junk"), text="Remove junk files", variable=v["junk"], **sw).pack(anchor="w")
         entry(self.form.add("Also remove files matching"), v["patterns"], placeholder_text="zzz*, *.txt").pack(fill="x")
-        ctk.CTkSwitch(self.form.add("Page names"), text="Rename pages 001.jpg, 002.jpg…", variable=v["pages"],
+        Toggle(self.form.add("Page names"), text="Rename pages 001.jpg, 002.jpg…", variable=v["pages"],
                       **sw).pack(anchor="w")
         self.form.heading("When it is done")
         menu(self.form.add("The original comic"), v["original"], [DELETE, MOVE, KEEP]).pack(fill="x")

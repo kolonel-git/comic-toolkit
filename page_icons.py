@@ -2,12 +2,11 @@
 from pathlib import Path
 from tkinter import filedialog
 
-import customtkinter as ctk
 
 from batch_page import BatchPage
 from comic_core import Comic
 from folder_icons import has_icon, plan_folders, supported, write_icon
-from ui_kit import button, menu, switch_style
+from ui_kit import Toggle, button, menu, switch_style
 
 WHICH = ["First issue", "Last issue"]
 EXISTING = ["Replace", "Skip"]
@@ -30,8 +29,8 @@ class IconsPage(BatchPage):
         menu(self.form.add("Cover from"), v["which"], WHICH).pack(fill="x")
         self.form.heading("Output")
         box = self.form.add("Write")
-        ctk.CTkSwitch(box, text="Folder icon (folder.ico + desktop.ini)", variable=v["ico"], **sw).pack(anchor="w")
-        ctk.CTkSwitch(box, text="Cover image (folder.jpg)", variable=v["jpg"], **sw).pack(anchor="w", pady=(8, 0))
+        Toggle(box, text="Folder icon (folder.ico + desktop.ini)", variable=v["ico"], **sw).pack(anchor="w")
+        Toggle(box, text="Cover image (folder.jpg)", variable=v["jpg"], **sw).pack(anchor="w", pady=(8, 0))
         menu(self.form.add("If a folder already has one"), v["existing"], EXISTING).pack(fill="x")
         self.btn_custom = button(self.footer, "Custom image for a folder…", self.custom)
         self.btn_custom.pack(pady=(8, 0), before=self.btn_open)

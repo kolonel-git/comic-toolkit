@@ -12,7 +12,7 @@ from PIL import Image
 
 import aceo_core as ac
 import reading_order as ro
-from ui_kit import (ACCENT, BG, BORDER, DANGER, FONT, MUTED, PANEL, TEXT, DropZone, Page, apply_tree_theme, build_tree,
+from ui_kit import (Toggle, ACCENT, BG, BORDER, DANGER, FONT, MUTED, PANEL, TEXT, DropZone, Page, apply_tree_theme, build_tree,
                     button, entry, menu, switch_style, title_block, Splitter, toolbar)
 
 THUMB = 900  # longest side of the in-memory preview copy of a cover
@@ -83,7 +83,7 @@ class AceoPage(Page):
             bar, [("top", "Top", 48, lambda: self.to_edge(True)), ("up", "▲", 34, lambda: self.shift(-1)),
                   ("down", "▼", 34, lambda: self.shift(1)), ("bottom", "Bottom", 64, lambda: self.to_edge(False))],
             [("remove", "Remove", 72, self.remove), ("clear", "Clear", 60, self.clear)])
-        self.progress = ctk.CTkProgressBar(self.main, height=3, corner_radius=2, fg_color=BORDER,
+        self.progress = ctk.CTkProgressBar(self.main, height=14, corner_radius=0, border_width=3, border_color=BORDER, fg_color=BORDER,
                                            progress_color=ACCENT)
         self.progress.set(0)
         self.progress.pack(fill="x", pady=(0, 8))
@@ -99,6 +99,7 @@ class AceoPage(Page):
         wrap, self.tree = build_tree(left, [("num", "#", 40, False), ("name", "Cover", 180, True),
                                             ("where", "Sheet · card", 110, False)], selectmode="extended")
         wrap.pack(fill="both", expand=True)
+        wrap.set_empty("Add comics above. Their covers are placed on the sheet in this order.")
 
         nav = ctk.CTkFrame(right, fg_color=BG)
         nav.pack(fill="x")
@@ -116,7 +117,7 @@ class AceoPage(Page):
         self.lbl_note = ctk.CTkLabel(right, text="", font=(FONT, 11), text_color=MUTED, anchor="w", justify="left",
                                      wraplength=PREVIEW_W - 8)
         self.lbl_note.pack(side="bottom", fill="x", pady=(6, 0))
-        self.pane = ctk.CTkFrame(right, fg_color=("#EDECE9", "#2C2C2B"), corner_radius=8)
+        self.pane = ctk.CTkFrame(right, fg_color=("#FFFFFF", "#1E1E1E"), corner_radius=0)
         self.pane.pack(fill="both", expand=True, pady=(8, 0))
         self.pane.pack_propagate(False)
         self.preview = ctk.CTkLabel(self.pane, text="")
@@ -142,13 +143,13 @@ class AceoPage(Page):
         menu(self.form.add("Behind the cover"), v["background"], list(ac.BACKGROUNDS)).pack(fill="x")
         box = self.form.add("Margin inside each card (points)")
         entry(box, v["inset"]).pack(fill="x")
-        self.form.heading("Cards")
+        self.form.heading("Cards", collapsible=True, open=False)
         box = self.form.add("Copies of each cover")
         entry(box, v["copies"]).pack(fill="x")
         ctk.CTkLabel(box, text="Repeats every cover this many times in a row, to print several of each.",
                      font=(FONT, 11), text_color=MUTED, anchor="w", justify="left", wraplength=260).pack(
             fill="x", pady=(4, 0))
-        ctk.CTkSwitch(self.form.add("Card outlines"), text="Draw the template's outlines", variable=v["outlines"],
+        Toggle(self.form.add("Card outlines"), text="Draw the template's outlines", variable=v["outlines"],
                       **sw).pack(anchor="w")
         menu(self.form.add("Outline colour"), v["outline_color"], list(ac.OUTLINE_COLORS)).pack(fill="x")
         box = self.form.add("Custom colour (#RRGGBB)")
@@ -160,7 +161,7 @@ class AceoPage(Page):
         entry(box, v["outline_width"]).pack(fill="x")
         self.form.heading("Output")
         menu(self.form.add("Print quality"), v["dpi"], list(ac.QUALITIES)).pack(fill="x")
-        ctk.CTkSwitch(self.form.add("When finished"), text="Open the PDF", variable=v["open_after"], **sw).pack(anchor="w")
+        Toggle(self.form.add("When finished"), text="Open the PDF", variable=v["open_after"], **sw).pack(anchor="w")
 
         self.btn_make = button(self.footer, "Create PDF…", self.create, primary=True)
         self.btn_make.pack(pady=(0, 8))

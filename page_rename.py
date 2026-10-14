@@ -17,7 +17,7 @@ from name_format import (ARTICLE_MODES, CASE_MODES, CONFLICT_MODES, DEFAULT_TEMP
 from rename_core import (AUTO_TYPE, COLLECTED_TYPES, SINGLE_TYPES, TYPE_KEYS, TYPES, apply_edits, apply_type,
                          do_rename, find_files, merge, parse_filename, read_comicinfo)
 from rename_core import OTHER_EXT, RENAME_EXT
-from ui_kit import (ACCENT, BG, BORDER, DANGER, FONT, MUTED, PANEL, TEXT, DropZone, Form, Page, apply_tree_theme,
+from ui_kit import (Toggle, SCROLL, textbox, ACCENT_TEXT, ACCENT, BG, BORDER, DANGER, FONT, MUTED, PANEL, TEXT, DropZone, Form, Page, apply_tree_theme,
                     build_tree, button, entry, menu, pick, segmented, switch_style, title_block, Splitter, toolbar, divider)
 
 OK, SAME, NUMBERED, SKIPPED = "Ready", "Unchanged", "Numbered", "Skipped"
@@ -113,7 +113,7 @@ class RenamePage(Page):
         segmented(bar, self.vars["view"], VIEWS, width=150).pack(side="right")
         toolbar(bar, [("all", "Select all", 84, lambda: self.select_all(True)),
                       ("none", "Select none", 84, lambda: self.select_all(False))], side="right")
-        self.progress = ctk.CTkProgressBar(self.main, height=3, corner_radius=2, fg_color=BORDER,
+        self.progress = ctk.CTkProgressBar(self.main, height=14, corner_radius=0, border_width=3, border_color=BORDER, fg_color=BORDER,
                                            progress_color=ACCENT)
         self.progress.set(0)
         self.progress.pack(fill="x", pady=(0, 8))
@@ -154,6 +154,7 @@ class RenamePage(Page):
         wrap, self.nav_tree = build_tree(left, [("sel", "", 30, False), ("name", "File", 140, True),
                                                 ("status", "Status", 84, False)])
         wrap.pack(fill="both", expand=True)
+        wrap.set_empty("Add a folder above to start.")
         self.nav_tree.bind("<<TreeviewSelect>>", self._nav_select)
         self.nav_tree.bind("<Button-1>", self._nav_click)
 
@@ -171,8 +172,8 @@ class RenamePage(Page):
         self.btn_next.pack(side="left")
         self.check_var = ctk.BooleanVar(value=True)
 
-        scroll = ctk.CTkScrollableFrame(right, fg_color=BG, border_color=BORDER, border_width=1, corner_radius=10,
-                                        scrollbar_button_color=BORDER, scrollbar_button_hover_color=MUTED)
+        scroll = ctk.CTkScrollableFrame(right, fg_color=BG, border_color=BORDER, border_width=3, corner_radius=0,
+                                        scrollbar_button_color=SCROLL, scrollbar_button_hover_color=MUTED)
         scroll.pack(fill="both", expand=True)
         self.card_body = scroll
         self.lbl_current = ctk.CTkLabel(scroll, text="", font=(FONT, 12), text_color=MUTED, anchor="w",
@@ -182,9 +183,9 @@ class RenamePage(Page):
         chips.pack(fill="x", padx=14, pady=(0, 6))
         self.lbl_status = ctk.CTkLabel(chips, text="", font=(FONT, 12, "bold"), text_color=MUTED, anchor="w")
         self.lbl_status.pack(side="left")
-        self.lbl_edited = ctk.CTkLabel(chips, text="", font=(FONT, 12), text_color=ACCENT, anchor="w")
+        self.lbl_edited = ctk.CTkLabel(chips, text="", font=(FONT, 12), text_color=ACCENT_TEXT, anchor="w")
         self.lbl_edited.pack(side="left", padx=(10, 0))
-        ctk.CTkSwitch(chips, text="Rename", variable=self.check_var, command=self._card_checked,
+        Toggle(chips, text="Rename", variable=self.check_var, command=self._card_checked,
                       **switch_style()).pack(side="right")
 
         # the result comes first, so it is always in view while the fields below are corrected
@@ -240,6 +241,7 @@ class RenamePage(Page):
             ("new", "New name  (double-click to edit)", 250, True), ("type", "Type", 120, False),
             ("status", "Status", 86, False)])
         wrap.pack(fill="both", expand=True)
+        wrap.set_empty("Add a folder above to see the new names.")
         self.tree.bind("<Button-1>", self._click)
         self.tree.bind("<Double-1>", self._edit)
         self.tree.bind("<Button-3>", self._type_menu)
@@ -268,12 +270,12 @@ class RenamePage(Page):
         # --- Detect
         add("Detect", "Source", True)
         b = add("Detect", "Where to look")
-        ctk.CTkSwitch(b, text="Include subfolders", variable=v["recursive"], **sw).pack(anchor="w")
-        ctk.CTkSwitch(b, text="Include PDF and EPUB", variable=v["include_other"], **sw).pack(anchor="w", pady=(8, 0))
+        Toggle(b, text="Include subfolders", variable=v["recursive"], **sw).pack(anchor="w")
+        Toggle(b, text="Include PDF and EPUB", variable=v["include_other"], **sw).pack(anchor="w", pady=(8, 0))
         add("Detect", "Reading each name", True)
         b = add("Detect", "Sources")
-        ctk.CTkSwitch(b, text="Use ComicInfo.xml when present", variable=v["use_ci"], **sw).pack(anchor="w")
-        ctk.CTkSwitch(b, text="Detect collected editions", variable=v["detect_collected"], **sw).pack(anchor="w", pady=(8, 0))
+        Toggle(b, text="Use ComicInfo.xml when present", variable=v["use_ci"], **sw).pack(anchor="w")
+        Toggle(b, text="Detect collected editions", variable=v["detect_collected"], **sw).pack(anchor="w", pady=(8, 0))
         note(b, "ComicInfo.xml overrides the filename where it has a value. With collected-edition detection off, "
                 "every file is treated as an issue.")
         menu(add("Detect", "A name with only “Vol 3” is"), v["vol_mode"], VOL_MODES).pack(fill="x")
@@ -321,12 +323,12 @@ class RenamePage(Page):
         menu(add("Text", "Extension"), v["ext_case"], EXT_CASES).pack(fill="x")
         b = add("Text", "Maximum length (0 = no limit)")
         entry(b, v["max_len"]).pack(fill="x")
-        ctk.CTkSwitch(add("Text", "Reading-order numbers"), text="Keep the number at the start", variable=v["keep_order"],
+        Toggle(add("Text", "Reading-order numbers"), text="Keep the number at the start", variable=v["keep_order"],
                       **sw).pack(anchor="w")
 
         # --- Folders
         add("Folders", "Series folders", True)
-        ctk.CTkSwitch(add("Folders", "Move files"), text="Move into folders", variable=v["move"], **sw).pack(anchor="w")
+        Toggle(add("Folders", "Move files"), text="Move into folders", variable=v["move"], **sw).pack(anchor="w")
         b = add("Folders", "Folder preset")
         self.fpreset = ctk.StringVar(value=PRESET_HINT)
         menu(b, self.fpreset, [PRESET_HINT, *FOLDER_PRESETS]).pack(fill="x")
@@ -337,7 +339,7 @@ class RenamePage(Page):
         self.lbl_ftpl.pack(fill="x", pady=(6, 0))
         note(b, "Same tokens as names. “/” makes nested folders, e.g. {publisher}/{series}.")
         b = add("Folders", "Collected editions")
-        ctk.CTkSwitch(b, text="Put them in a subfolder", variable=v["collected_sub"], **sw).pack(anchor="w")
+        Toggle(b, text="Put them in a subfolder", variable=v["collected_sub"], **sw).pack(anchor="w")
         entry(b, v["collected_sub_name"]).pack(fill="x", pady=(8, 0))
         add("Folders", "When a name is taken", True)
         menu(add("Folders", "Conflicts"), v["conflict"], CONFLICT_MODES).pack(fill="x")
@@ -414,8 +416,8 @@ class RenamePage(Page):
         win.title("Naming guide")
         win.geometry("880x680")
         win.configure(fg_color=BG)
-        box = ctk.CTkTextbox(win, font=("Consolas", 12), fg_color=PANEL, text_color=TEXT, border_color=BORDER,
-                             border_width=1, corner_radius=8, wrap="none")
+        box = textbox(win, font=("Consolas", 12), fg_color=PANEL, text_color=TEXT, border_color=BORDER,
+                             border_width=3, corner_radius=0, wrap="none")
         box.pack(fill="both", expand=True, padx=16, pady=(16, 8))
         box.insert("1.0", nf.FORMAT_GUIDE)
         box.configure(state="disabled")

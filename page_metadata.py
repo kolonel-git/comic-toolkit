@@ -13,7 +13,7 @@ import customtkinter as ctk
 from archive_tools import BACKUP, REPLACE, apply_metadata
 from comic_core import COMIC_EXT, common_root, in_archive, natural_key, picked_files
 from rename_core import parse_filename, read_comicinfo
-from ui_kit import (ACCENT, BG, BORDER, FONT, MUTED, TEXT, DropZone, Page, apply_tree_theme, build_tree,
+from ui_kit import (Toggle, ACCENT, BG, BORDER, FONT, MUTED, TEXT, DropZone, Page, apply_tree_theme, build_tree,
                     button, entry, menu, pick, switch_style, title_block, toolbar, divider)
 
 FILL, OVERWRITE = "Fill in missing fields only", "Overwrite with filename values"
@@ -94,7 +94,7 @@ class MetadataPage(Page):
         self.meta.pack(side="left")
         toolbar(bar, [("all", "Select all", 84, lambda: self.select_all(True)),
                       ("none", "Select none", 84, lambda: self.select_all(False))], side="right")
-        self.progress = ctk.CTkProgressBar(self.main, height=3, corner_radius=2, fg_color=BORDER,
+        self.progress = ctk.CTkProgressBar(self.main, height=14, corner_radius=0, border_width=3, border_color=BORDER, fg_color=BORDER,
                                            progress_color=ACCENT)
         self.progress.set(0)
         self.progress.pack(fill="x", pady=(0, 8))
@@ -103,6 +103,7 @@ class MetadataPage(Page):
             ("issue", "#", 52, False), ("volume", "Vol", 44, False), ("year", "Year", 56, False),
             ("count", "Of", 44, False), ("status", "Status", 78, False)])
         wrap.pack(fill="both", expand=True)
+        wrap.set_empty("Add a folder above to see what will be written to each comic.")
         self.tree.bind("<Button-1>", self._click)
         self.tree.bind("<Double-1>", self._edit)
         ctk.CTkLabel(self.main, text="Double-click Series, #, Vol, Year or Of to correct a value.", font=(FONT, 12),
@@ -114,15 +115,15 @@ class MetadataPage(Page):
         v = self.vars
         sw = switch_style()
         self.form.heading("Source")
-        ctk.CTkSwitch(self.form.add("Subfolders"), text="Include subfolders", variable=v["recursive"], **sw).pack(anchor="w")
+        Toggle(self.form.add("Subfolders"), text="Include subfolders", variable=v["recursive"], **sw).pack(anchor="w")
         self.form.heading("What to write")
         box = self.form.add("Fields to write")
         for i, f in enumerate(FIELDS):
-            ctk.CTkSwitch(box, text=LABELS[f], variable=v["w_" + f], **sw).pack(anchor="w", pady=(0 if i == 0 else 8, 0))
+            Toggle(box, text=LABELS[f], variable=v["w_" + f], **sw).pack(anchor="w", pady=(0 if i == 0 else 8, 0))
         menu(self.form.add("Existing values"), v["existing"], [FILL, OVERWRITE]).pack(fill="x")
-        ctk.CTkSwitch(self.form.add("Missing series"), text="Use the folder name", variable=v["folder_series"],
+        Toggle(self.form.add("Missing series"), text="Use the folder name", variable=v["folder_series"],
                       **sw).pack(anchor="w")
-        self.form.heading("Checked rows")
+        self.form.heading("Checked rows", collapsible=True, open=False)
         box = self.form.add("Set for checked rows")
         self.set_field, self.set_value = ctk.StringVar(value=next(iter(SET_FIELDS))), ctk.StringVar()
         menu(box, self.set_field, list(SET_FIELDS)).pack(fill="x")

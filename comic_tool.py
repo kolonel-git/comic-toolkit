@@ -43,14 +43,16 @@ from page_rename import RenamePage
 from page_single import SinglePage
 from page_stats import StatsPage
 from stats_core import snapshot_line
-from ui_kit import ACCENT, ACCENT_HOVER, BG, BORDER, FONT, HOVER, MUTED, PANEL, TEXT, Splitter, pick, tool_button
+from ui_kit import (Toggle, ACCENT, BG, BORDER, CYAN, DANGER, WELL, EDGE, FONT, HEAD, HOVER, MUTED, ON_ACCENT, PANEL, PINK,
+                    TEXT, YELLOW, AbstractStrip, IconTile, Logo, NavItem, Shadow, Splitter, pick, refresh_strips, switch_style,
+                    tool_button)
+from ui_kit import button  # noqa: F401 - used by strip_button
 
 SETTINGS = Path(__file__).with_name("settings.json")
 
-# (light, dark) tints for the card icon tiles
-TINT_BLUE, TINT_YELLOW, TINT_PURPLE = ("#E7F3F8", "#1F3138"), ("#FBF3DB", "#3A3322"), ("#EAE4F2", "#2E2740")
-TINT_GREEN, TINT_PINK = ("#E4F1EA", "#1F3228"), ("#F8E8EE", "#3A2430")
-TINT_ORANGE, TINT_GREY = ("#FBEBDD", "#3A2B1F"), ("#EDECE9", "#2C2C2B")
+# (light, dark) tint of the card icon tiles: one soft accent wash for every tool
+TINT = ("#F1D9C9", "#4F3626")
+TINT_BLUE = TINT_YELLOW = TINT_PURPLE = TINT_GREEN = TINT_PINK = TINT_ORANGE = TINT_GREY = TINT
 
 TOOLS = {  # key -> glyph, tint, title, description
     "single": ("▭", TINT_BLUE, "Single issue",
@@ -104,61 +106,45 @@ def home_rows(groups):
             rows.append([g])
     return rows
 GAP = 28  # width of the gap between two groups (a hairline runs down its middle); cards inside a group are 8 apart
-DANGER = ("#E03E3E", "#EB5757")
 
 
-class Card(ctk.CTkFrame):
-    """A tool card: a tinted icon tile and the title on one line, a short description under it, an arrow that
-    lights up on hover."""
+class Card(Shadow):
+    """A tool card: a white icon tile and the title on one line, a short description under it, an arrow, all on the
+    colour of its group. It has a hard shadow; the face slides toward it on hover and sinks into it when pressed."""
 
-    def __init__(self, parent, glyph, tint, title, text, command):
-        super().__init__(parent, fg_color=BG, border_color=BORDER, border_width=1, corner_radius=12,
-                         height=98, cursor="hand2")
-        self.pack_propagate(False)
-        head = ctk.CTkFrame(self, fg_color="transparent")
-        head.pack(fill="x", padx=14, pady=(12, 4))
-        tile = ctk.CTkFrame(head, width=34, height=34, fg_color=tint, corner_radius=9)
-        tile.pack(side="left")
-        tile.pack_propagate(False)
-        ctk.CTkLabel(tile, text=glyph, font=(FONT, 14, "bold"), text_color=TEXT).pack(expand=True)
-        ctk.CTkLabel(head, text=title, font=(FONT, 14, "bold"), text_color=TEXT,
-                     anchor="w").pack(side="left", padx=(10, 0))
-        self.arrow = ctk.CTkLabel(head, text="→", font=(FONT, 14), text_color=MUTED)
-        self.arrow.pack(side="right")
-        self.desc = ctk.CTkLabel(self, text=text, font=(FONT, 12), text_color=MUTED, anchor="nw", justify="left",
-                                 wraplength=170)
-        self.desc.pack(fill="x", padx=14)
-        self.bind("<Configure>", lambda e: self.desc.configure(wraplength=max(90, int(e.width / self._get_widget_scaling()) - 30)))
+    def __init__(self, parent, glyph, color, title, text, command):
+        def build(p):
+            face = ctk.CTkFrame(p, fg_color=color, border_color=BORDER, border_width=EDGE, corner_radius=0,
+                                height=118, cursor="hand2")
+            face.pack_propagate(False)
+            head = ctk.CTkFrame(face, fg_color="transparent")
+            head.pack(fill="x", padx=12, pady=(10, 6))
+            IconTile(head, glyph, color).pack(side="left")
+            ctk.CTkLabel(head, text=title.upper(), font=(HEAD, 12), text_color=ON_ACCENT,
+                         anchor="w").pack(side="left", padx=(10, 0))
+            ctk.CTkLabel(head, text="→", font=(FONT, 16, "bold"), text_color=ON_ACCENT).pack(side="right")
+            self.desc = ctk.CTkLabel(face, text=text, font=(FONT, 12), text_color="#1A1A1A", anchor="nw",
+                                     justify="left", wraplength=170)
+            self.desc.pack(fill="x", padx=12)
+            return face
+
+        super().__init__(parent, build, depth=6, motion=True)
         self._command = command
-        self._bind_all(self)
+        self.inner.bind("<Configure>", lambda e: self.desc.configure(
+            wraplength=max(90, int(e.width / self._get_widget_scaling()) - 30)))
+        self._bind_click(self.inner)
 
-    def _bind_all(self, w):
+    def _bind_click(self, w):
         w.bind("<Button-1>", lambda _: self._command(), add="+")
-        w.bind("<Enter>", self._enter, add="+")
-        w.bind("<Leave>", self._leave, add="+")
         for c in w.winfo_children():
-            self._bind_all(c)
-
-    def _enter(self, _):
-        self.configure(fg_color=HOVER, border_color=ACCENT)
-        self.arrow.configure(text_color=ACCENT)
-
-    def _leave(self, _):
-        under = self.winfo_containing(*self.winfo_pointerxy())
-        while under is not None:  # moving onto a child of this card is not leaving it
-            if under is self:
-                return
-            under = under.master
-        self.configure(fg_color=BG, border_color=BORDER)
-        self.arrow.configure(text_color=MUTED)
+            self._bind_click(c)
 
 
 def strip_button(parent, text, command, primary=False, width=None):
     """The larger buttons of the Home summary line: filled accent for the main action, outlined otherwise."""
-    return ctk.CTkButton(parent, text=text, command=command, width=width or 120, height=34, corner_radius=8,
-                         font=(FONT, 13, "bold" if primary else "normal"),
-                         fg_color=ACCENT if primary else BG, hover_color=ACCENT_HOVER if primary else HOVER,
-                         text_color="#FFFFFF" if primary else TEXT, border_width=0 if primary else 1, border_color=BORDER)
+    b = button(parent, text, command, primary=primary, width=width or 120)
+    b.configure(height=44)
+    return b
 
 
 class HomePage(ctk.CTkFrame):
@@ -170,10 +156,9 @@ class HomePage(ctk.CTkFrame):
         self.open_stats, self.scan = open_stats, scan
         wrap = ctk.CTkFrame(self, fg_color=BG)
         wrap.pack(fill="both", expand=True, padx=(32, 24), pady=(26, 14))
-        ctk.CTkLabel(wrap, text="Comic Toolkit", font=(FONT, 30, "bold"), text_color=TEXT,
-                     anchor="w").pack(fill="x", padx=4)
-        ctk.CTkLabel(wrap, text="Choose a tool to get started.", font=(FONT, 14), text_color=MUTED,
-                     anchor="w").pack(fill="x", padx=4, pady=(2, 6))
+        Shadow(wrap, lambda p: AbstractStrip(p, seed="home", height=84, title="COMIC TOOLKIT",
+                                             subtitle="Choose a tool to get started.", fill=YELLOW),
+               depth=6).pack(fill="x", padx=(4, 10))
         self._build_summary(wrap)
         self.open_tool = open_tool
         self.bands = ctk.CTkFrame(wrap, fg_color=BG)
@@ -188,43 +173,44 @@ class HomePage(ctk.CTkFrame):
         open_tool = self.open_tool
         for w in self.bands.winfo_children():
             w.destroy()
-        for row_groups in home_rows(groups):
-            band = ctk.CTkFrame(self.bands, fg_color=PANEL, corner_radius=14)
-            band.pack(fill="x", pady=(12, 0))
+        colors, gi = (YELLOW, PINK, CYAN), 0  # one saturated colour per group, rotating
+        for ri, row_groups in enumerate(home_rows(groups)):
+            band = ctk.CTkFrame(self.bands, fg_color="transparent")
+            band.pack(fill="x", pady=(8, 0))
             row = ctk.CTkFrame(band, fg_color="transparent")
-            row.pack(fill="x", padx=12, pady=(10, 14))
+            row.pack(fill="x", padx=0, pady=(4, 8))
             col, gaps, cards = 0, 0, 0
             for header, keys in row_groups:
                 if col:  # a gap column with a hairline between this group and the one before
                     row.columnconfigure(col, minsize=GAP, weight=0)
-                    ctk.CTkFrame(row, width=1, height=1, fg_color=BORDER, corner_radius=0).grid(
+                    ctk.CTkFrame(row, width=EDGE, height=1, fg_color=BORDER, corner_radius=0).grid(
                         row=0, column=col, rowspan=2, sticky="ns", pady=2)
                     col, gaps = col + 1, gaps + 1
                 start = col
-                ctk.CTkLabel(row, text=header.upper(), font=(FONT, 11, "bold"), text_color=MUTED, anchor="w").grid(
-                    row=0, column=start, columnspan=len(keys), sticky="ew", padx=4, pady=(0, 7))
+                ctk.CTkLabel(row, text=header.upper(), font=(HEAD, 10), text_color=TEXT, anchor="w").grid(
+                    row=0, column=start, columnspan=len(keys), sticky="ew", padx=4, pady=(0, 6))
+                color = colors[gi % len(colors)]
+                gi += 1
                 for key in keys:
-                    row.columnconfigure(col, weight=1, uniform="cards")
-                    glyph, tint, title, text = TOOLS[key]
-                    Card(row, glyph, tint, title, text, lambda k=key: open_tool(k)).grid(
-                        row=1, column=col, sticky="ew", padx=4)  # equal padding keeps every card the same width
+                    row.columnconfigure(col, weight=1, uniform=f"cards{ri}")  # equal cards within a row, each row fills its width
+                    _glyph, _tint, title, text = TOOLS[key]
+                    Card(row, key, color, title, text, lambda k=key: open_tool(k)).grid(
+                        row=1, column=col, sticky="ew", padx=(4, 8), pady=(0, 2))  
                     col += 1
                     cards += 1
-            while gaps < HOME_GAPS:  # pad short rows so every row splits its width the same way
-                row.columnconfigure(col, minsize=GAP, weight=0)
-                col, gaps = col + 1, gaps + 1
-            for _ in range(HOME_COLS - cards):
-                row.columnconfigure(col, weight=1, uniform="cards")
-                col += 1
 
     # ---- the library summary line (numbers come from the last scan of the Library stats page)
     def _build_summary(self, parent):
-        self.strip = ctk.CTkFrame(parent, fg_color=PANEL, corner_radius=10, border_color=BORDER, border_width=1)
-        self.strip.pack(fill="x", padx=4, pady=(8, 0))
-        self.line = ctk.CTkLabel(self.strip, text="", font=(FONT, 14), text_color=TEXT, anchor="w")
-        self.line.pack(side="left", padx=16, pady=10)
-        self.strip_buttons = ctk.CTkFrame(self.strip, fg_color="transparent")
-        self.strip_buttons.pack(side="right", padx=10)
+        self.strip = Shadow(parent, lambda p: ctk.CTkFrame(p, fg_color=WELL, corner_radius=0, border_color=BORDER,
+                                                           border_width=EDGE, height=96), depth=7)
+        self.strip.pack(fill="x", padx=(4, 10), pady=(14, 0))
+        box = self.strip.inner
+        box.pack_propagate(False)
+        IconTile(box, "stats", PINK).pack(side="left", padx=(16, 0))
+        self.line = ctk.CTkLabel(box, text="", font=(FONT, 18, "bold"), text_color=TEXT, anchor="w")
+        self.line.pack(side="left", padx=18)
+        self.strip_buttons = ctk.CTkFrame(box, fg_color="transparent")
+        self.strip_buttons.pack(side="right", padx=16)
         self.show_summary(None)
 
     def show_summary(self, snap, scanning=None, error=None, has_root=False):
@@ -266,7 +252,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.configure(fg_color=BG)
 
         side = ctk.CTkFrame(self, fg_color=PANEL, width=190, corner_radius=0)
-        side.pack(side="left", fill="y")
+        side.pack(side="left", fill="y")  # the splitter beside it is the rail's thick black border
         side.pack_propagate(False)
         self.sidebar_width = 190
         self.splitter = Splitter(self, side, side="left", lo=150, hi=360, on_change=self._sidebar_changed)
@@ -286,19 +272,18 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.pages["intake"].rename_source = self.pages["rename"].state  # names follow the Renamer's settings
         self.nav = {}
         self.current = None
-        ctk.CTkLabel(side, text="Comic Toolkit", font=(FONT, 15, "bold"), text_color=TEXT,
-                     anchor="w").pack(fill="x", padx=18, pady=(24, 14))
-        self._nav_item(side, "home", "Home")
-        self._nav_item(side, "stats", "Library stats")
+        Logo(side, lambda: self.show("home")).pack(fill="x", padx=(12, 8), pady=(14, 8))
+        self._nav_item(side, "home", "Home", big=True)
+        self._nav_item(side, "stats", "Library stats", big=True)
+        ctk.CTkFrame(side, height=EDGE, fg_color=BORDER, corner_radius=0).pack(fill="x", padx=12, pady=(14, 0))
+        ctk.CTkLabel(side, text="TOOLS", font=(HEAD, 10), text_color=MUTED, anchor="w").pack(fill="x", padx=14, pady=(8, 0))
 
         bottom = ctk.CTkFrame(side, fg_color=PANEL)  # pinned under the scrolling list
         bottom.pack(side="bottom", fill="x")
         self.dark = ctk.BooleanVar(value=ctk.get_appearance_mode() == "Dark")
-        ctk.CTkSwitch(bottom, text="Dark mode", variable=self.dark, command=self.toggle_theme,
-                      font=(FONT, 13), text_color=TEXT, progress_color=ACCENT,
-                      fg_color=("#CFCDC7", "#4A4A4A"), button_color="#FFFFFF",
-                      button_hover_color="#F4F4F4").pack(side="bottom", anchor="w", padx=18, pady=(8, 20))
-        tool_button(bottom, "Reorder sections…", self.reorder_dialog).pack(side="bottom", fill="x", padx=14, pady=(10, 0))
+        Toggle(bottom, text="Dark mode", variable=self.dark, command=self.toggle_theme,
+                      **switch_style()).pack(side="bottom", anchor="w", padx=18, pady=(8, 20))
+        tool_button(bottom, "Reorder sections…", self.reorder_dialog).pack(side="bottom", fill="x", padx=(14, 18), pady=(10, 0))
         self.nav_scroll = ctk.CTkScrollableFrame(side, fg_color=PANEL, corner_radius=0)
         self.nav_scroll.pack(fill="both", expand=True)
         self._build_nav()
@@ -347,11 +332,9 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         if stats.q:
             self.pages["home"].show_summary(None, scanning=(0, 0))
 
-    def _nav_item(self, parent, key, label):
-        b = ctk.CTkButton(parent, text=label, anchor="w", height=34, corner_radius=6, font=(FONT, 13),
-                          fg_color="transparent", hover_color=HOVER, text_color=TEXT,
-                          command=lambda: self.show(key))
-        b.pack(fill="x", padx=10, pady=1)
+    def _nav_item(self, parent, key, label, big=False):
+        b = NavItem(parent, key, label, lambda: self.show(key), big=big, active_color=ACCENT if big else PINK)
+        b.pack(fill="x", padx=(10, 14), pady=(6, 4) if big else 2)
         self.nav[key] = b
 
     def _build_nav(self):
@@ -365,7 +348,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             shut = header in self.collapsed
             arrow = "▸" if shut else "▾"
             head = ctk.CTkButton(self.nav_scroll, text=f"{arrow}  {header.upper()}", anchor="w", height=26,
-                                 corner_radius=6, font=(FONT, 11, "bold"), fg_color="transparent", hover_color=HOVER,
+                                 corner_radius=0, font=(FONT, 11, "bold"), fg_color="transparent", hover_color=HOVER,
                                  text_color=MUTED, command=lambda h=header: self.toggle_group(h))
             head.pack(fill="x", padx=10, pady=(12, 2))
             self.group_heads[header] = head
@@ -434,6 +417,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
     def toggle_theme(self):
         self.theme = "dark" if self.dark.get() else "light"
         ctk.set_appearance_mode(self.theme)
+        refresh_strips()
         for page in self.pages.values():
             if hasattr(page, "apply_theme"):
                 page.apply_theme()
@@ -449,7 +433,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
 
     def _mark_current(self):
         for k, b in self.nav.items():
-            b.configure(fg_color=BORDER if k == self.current else "transparent")
+            b.set_active(k == self.current)  # the open page: a coloured block with a border and a hard shadow
 
     def on_drop(self, event):
         files = self.tk.splitlist(event.data)

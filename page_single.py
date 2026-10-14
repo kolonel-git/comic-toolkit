@@ -34,6 +34,8 @@ class SinglePage(Page):
         self.meta.pack(fill="x", pady=(16, 4))
         self.preview = ctk.CTkFrame(self.main, fg_color=BG)
         self.preview.pack(fill="both", expand=True)
+        ctk.CTkLabel(self.preview, text="Choose a comic to see its cover, first pages and last pages here.\nThen save the cover, convert it to ZIP, or pick any pages.",
+                     font=(FONT, 14, "bold"), text_color=MUTED, justify="center").pack(expand=True)  # the empty state; load() clears it
 
         v = self.vars
         self.form.heading("Cover image")

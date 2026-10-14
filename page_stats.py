@@ -13,7 +13,7 @@ import customtkinter as ctk
 
 import stats_core as sc
 from library_scan import scan_library
-from ui_kit import (ACCENT, BG, BORDER, FONT, MUTED, PANEL, SELECT_BG, TEXT, Page, apply_tree_theme,
+from ui_kit import (Toggle, SCROLL, ACCENT, BG, RAISED, BORDER, FONT, MUTED, PANEL, SELECT_BG, TEXT, Page, apply_tree_theme,
                     build_tree, button, divider, menu, pick, switch_style, title_block, tool_button)
 
 EXPORTS = ["Series", "Publishers", "Years", "Formats", "Coverage", "Largest"]
@@ -130,7 +130,7 @@ class FolderBar(ctk.CTkFrame):
     the page works too."""
 
     def __init__(self, parent, on_change):
-        super().__init__(parent, fg_color=PANEL, corner_radius=8, height=36)
+        super().__init__(parent, fg_color=PANEL, corner_radius=0, height=36)
         self.pack_propagate(False)
         self.prompt = "No library folder chosen"
         ctk.CTkLabel(self, text="Library", font=(FONT, 11, "bold"), text_color=MUTED).pack(side="left", padx=(12, 8))
@@ -147,7 +147,7 @@ class FolderBar(ctk.CTkFrame):
 
 class Tile(ctk.CTkFrame):
     def __init__(self, parent, caption):
-        super().__init__(parent, fg_color=BG, border_color=BORDER, border_width=1, corner_radius=10)
+        super().__init__(parent, fg_color=RAISED, border_color=BORDER, border_width=3, corner_radius=0)
         self.value = ctk.CTkLabel(self, text="–", font=(FONT, 22, "bold"), text_color=TEXT, anchor="w")
         self.value.pack(fill="x", padx=14, pady=(10, 0))
         ctk.CTkLabel(self, text=caption, font=(FONT, 12), text_color=MUTED, anchor="w").pack(fill="x", padx=14, pady=(0, 10))
@@ -175,10 +175,10 @@ class StatsPage(Page):
         self.drop.pack(fill="x", pady=(0, 10))
         self.meta = ctk.CTkLabel(self.main, text="", font=(FONT, 13), text_color=TEXT, anchor="w")
         self.meta.pack(fill="x", pady=(0, 6))
-        self.progress = ctk.CTkProgressBar(self.main, height=3, corner_radius=2, fg_color=BORDER, progress_color=ACCENT)
+        self.progress = ctk.CTkProgressBar(self.main, height=14, corner_radius=0, border_width=3, border_color=BORDER, fg_color=BORDER, progress_color=ACCENT)
         self.progress.set(0)
         self.progress.pack(fill="x", pady=(0, 8))
-        self.dash = ctk.CTkScrollableFrame(self.main, fg_color=BG, scrollbar_button_color=BORDER,
+        self.dash = ctk.CTkScrollableFrame(self.main, fg_color=BG, scrollbar_button_color=SCROLL,
                                            scrollbar_button_hover_color=MUTED)
         self.dash.pack(fill="both", expand=True)
         self._build_dashboard()
@@ -187,16 +187,16 @@ class StatsPage(Page):
         sw = switch_style()
         self.form.heading("Source")
         box = self.form.add("Scan")
-        ctk.CTkSwitch(box, text="Include subfolders", variable=v["recursive"], **sw).pack(anchor="w")
-        ctk.CTkSwitch(box, text="Read page counts (slower)", variable=v["deep"], **sw).pack(anchor="w", pady=(8, 0))
+        Toggle(box, text="Include subfolders", variable=v["recursive"], **sw).pack(anchor="w")
+        Toggle(box, text="Read page counts (slower)", variable=v["deep"], **sw).pack(anchor="w", pady=(8, 0))
         ctk.CTkLabel(box, text="Adds total pages. Without it nothing inside an archive is opened except ComicInfo.xml.",
                      font=(FONT, 11), text_color=MUTED, anchor="w", justify="left", wraplength=260).pack(fill="x", pady=(4, 0))
-        self.form.heading("Display")
+        self.form.heading("Display", collapsible=True, open=False)
         box = self.form.add("Charts")
-        ctk.CTkSwitch(box, text="Split series into volumes", variable=v["split"], **sw).pack(anchor="w")
-        ctk.CTkSwitch(box, text="Group years into decades", variable=v["decades"], **sw).pack(anchor="w", pady=(8, 0))
-        ctk.CTkSwitch(box, text="Show every bar (not just the top 15)", variable=v["show_all"], **sw).pack(anchor="w", pady=(8, 0))
-        self.form.heading("Output")
+        Toggle(box, text="Split series into volumes", variable=v["split"], **sw).pack(anchor="w")
+        Toggle(box, text="Group years into decades", variable=v["decades"], **sw).pack(anchor="w", pady=(8, 0))
+        Toggle(box, text="Show every bar (not just the top 15)", variable=v["show_all"], **sw).pack(anchor="w", pady=(8, 0))
+        self.form.heading("Output", collapsible=True, open=False)
         menu(self.form.add("Section to export"), v["export"], EXPORTS).pack(fill="x")
         box = self.form.add("Export")
         self.btn_csv = button(box, "Export CSV…", self.export_csv)
@@ -240,7 +240,7 @@ class StatsPage(Page):
                                           ("pages", "Pages", 70, False)])
         self.big.configure(height=8)
         wrap.pack(fill="x", pady=(6, 0))
-        self.drill = ctk.CTkFrame(self.dash, fg_color=PANEL, corner_radius=10, border_color=BORDER, border_width=1)
+        self.drill = ctk.CTkFrame(self.dash, fg_color=PANEL, corner_radius=0, border_color=BORDER, border_width=3)
         self.drill_title = ctk.CTkLabel(self.drill, text="", font=(FONT, 14, "bold"), text_color=TEXT, anchor="w")
         bar = ctk.CTkFrame(self.drill, fg_color="transparent")
         bar.pack(fill="x", padx=12, pady=(10, 0))

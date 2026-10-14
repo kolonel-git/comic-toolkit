@@ -16,7 +16,7 @@ import customtkinter as ctk
 import audit_core as ac
 from comic_core import COMIC_EXT, common_root, picked_files
 from library_scan import scan_library
-from ui_kit import (ACCENT, BG, BORDER, FONT, MUTED, SELECT_BG, TEXT, DropZone, Page, apply_tree_theme, build_tree,
+from ui_kit import (PINK, RAISED, ON_ACCENT, Toggle, ACCENT, BG, BORDER, FONT, MUTED, TEXT, DropZone, Page, apply_tree_theme, build_tree,
                     button, divider, entry, menu, pick, switch_style, title_block, tool_button, toolbar)
 
 ALL = "All"
@@ -128,18 +128,19 @@ class AuditPage(Page):
         bar.pack(fill="x", pady=(14, 6))
         self.chips = {}
         for key, label in CHIPS:
-            b = tool_button(bar, label, lambda k=key: self.vars["filter"].set(k), 70)
+            b = tool_button(bar, label, lambda k=key: self.vars["filter"].set(k), max(70, 24 + 9 * len(label)))
             b.pack(side="left", padx=(0, 4))
             self.chips[key] = b
         toolbar(bar, [("all", "Tick all", 74, lambda: self.tick_all(True)),
                       ("none", "Untick all", 80, lambda: self.tick_all(False))], side="right")
         self.meta = ctk.CTkLabel(self.main, text="", font=(FONT, 13), text_color=TEXT, anchor="w")
         self.meta.pack(fill="x", pady=(2, 6))
-        self.progress = ctk.CTkProgressBar(self.main, height=3, corner_radius=2, fg_color=BORDER, progress_color=ACCENT)
+        self.progress = ctk.CTkProgressBar(self.main, height=14, corner_radius=0, border_width=3, border_color=BORDER, fg_color=BORDER, progress_color=ACCENT)
         self.progress.set(0)
         self.progress.pack(fill="x", pady=(0, 8))
         wrap, self.tree = build_tree(self.main, COLUMNS, selectmode="extended")
         wrap.pack(fill="both", expand=True)
+        wrap.set_empty("Press Scan library to check your collection. Problems appear here.")
         self.tree.bind("<Button-1>", self._click)
         self.hint = ctk.CTkLabel(self.main, text="", font=(FONT, 12), text_color=MUTED, anchor="w", justify="left",
                                  wraplength=620)
@@ -148,21 +149,21 @@ class AuditPage(Page):
         v, sw = self.vars, switch_style()
         self.form.heading("Source")
         box = self.form.add("Scan")
-        ctk.CTkSwitch(box, text="Include subfolders", variable=v["recursive"], **sw).pack(anchor="w")
-        ctk.CTkSwitch(box, text="Open real .cbr files (slow)", variable=v["deep_cbr"], **sw).pack(anchor="w", pady=(8, 0))
+        Toggle(box, text="Include subfolders", variable=v["recursive"], **sw).pack(anchor="w")
+        Toggle(box, text="Open real .cbr files (slow)", variable=v["deep_cbr"], **sw).pack(anchor="w", pady=(8, 0))
         self.form.heading("Checks")
         box = self.form.add("Broken files")
-        ctk.CTkSwitch(box, text="Full integrity test (slow)", variable=v["integrity"], **sw).pack(anchor="w")
+        Toggle(box, text="Full integrity test (slow)", variable=v["integrity"], **sw).pack(anchor="w")
         ctk.CTkLabel(box, text="Reads every file completely. Off: only problems the scan notices.", font=(FONT, 11),
                      text_color=MUTED, anchor="w", justify="left", wraplength=260).pack(fill="x", pady=(4, 0))
         box = self.form.add("Duplicates")
-        ctk.CTkSwitch(box, text="Compare cover images", variable=v["similar"], **sw).pack(anchor="w")
+        Toggle(box, text="Compare cover images", variable=v["similar"], **sw).pack(anchor="w")
         menu(box, v["similarity"], list(ac.SIMILARITY)).pack(fill="x", pady=(8, 0))
         box = self.form.add("Missing")
-        ctk.CTkSwitch(box, text="Expect issues from #1", variable=v["from_one"], **sw).pack(anchor="w")
+        Toggle(box, text="Expect issues from #1", variable=v["from_one"], **sw).pack(anchor="w")
         ctk.CTkLabel(box, text="Off: a series is checked from the lowest number you own.", font=(FONT, 11),
                      text_color=MUTED, anchor="w", justify="left", wraplength=260).pack(fill="x", pady=(4, 0))
-        self.form.heading("Warnings")
+        self.form.heading("Warnings", collapsible=True, open=False)
         for key, label in (("min_pages", "Fewer pages than"), ("max_pages", "More pages than"),
                            ("small_mb", "Smaller than (MB)"), ("big_mb", "Larger than (MB)"),
                            ("low_cover", "Cover shorter than (px)")):
@@ -170,7 +171,7 @@ class AuditPage(Page):
 
         self.btn_scan = button(self.footer, "Scan library", self.scan, primary=True)
         self.btn_scan.pack(pady=(0, 8))
-        self.btn_fix = button(self.footer, "Fix checked", self.fix_checked, primary=True)
+        self.btn_fix = button(self.footer, "Fix checked", self.fix_checked, color=PINK)
         self.btn_fix.pack(pady=(0, 8))
         divider(self.footer, vertical=False).pack(fill="x", pady=(2, 8))
         self.btn_ignore, self.btn_open = self._pair(self.footer, ("Ignore", self.ignore_selected),
@@ -488,7 +489,7 @@ class AuditPage(Page):
     def _style_chips(self):
         flt = self.vars["filter"].get()
         for key, b in self.chips.items():
-            b.configure(fg_color=SELECT_BG if key == flt else BG, border_color=ACCENT if key == flt else BORDER)
+            b.configure(fg_color=PINK if key == flt else RAISED, text_color=ON_ACCENT if key == flt else TEXT)
 
     def _refresh(self):
         self._later_id = None

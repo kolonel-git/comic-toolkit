@@ -78,7 +78,7 @@ with tempfile.TemporaryDirectory() as d:
     lw, rw = page.tree.winfo_width(), page.pane.winfo_width()
     print("list width", lw, "preview width", rw, "preview height", page.pane.winfo_height())
     assert lw > 380 and rw > 300 and page.pane.winfo_rootx() > page.tree.winfo_rootx() + lw - 5, "preview sits to the right of the list"
-    assert page.pane.winfo_height() > 400 and page.preview.cget("image") is not None
+    assert page.pane.winfo_height() > 350 and page.preview.cget("image") is not None
     first_col = int(page.tree.column("name", "width")); assert first_col >= 250, first_col
     # ---- full screen viewer
     assert page.btn_full.cget("state") == "normal"

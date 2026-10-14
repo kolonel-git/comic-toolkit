@@ -17,7 +17,7 @@ assert abs(app.sidebar_width - (w + 60 / k)) <= 2 and abs(app.splitter.target.wi
 app.splitter._press(ev(0)); app.splitter._drag(ev(-900)); app.splitter._release(None); assert app.sidebar_width == 150
 app.splitter._press(ev(0)); app.splitter._drag(ev(900)); app.splitter._release(None); assert app.sidebar_width == 360
 
-# Home: every tool on one screen with no scrolling, cards the same width in every row, bigger gaps between groups
+# Home: every tool on one screen with no scrolling, every row filling the page width, bigger gaps between groups
 def cards(w, out):
     for c in w.winfo_children():
         (out.append(c) if isinstance(c, ct.Card) else cards(c, out))
@@ -27,8 +27,13 @@ def check_home(width):
     home = app.pages["home"]
     cs = cards(home, [])
     assert len(cs) == len(ct.TOOLS) == 10, len(cs)
-    ws = {c.winfo_width() for c in cs}
-    assert max(ws) - min(ws) <= 2, ("cards differ in width", ws)
+    rows = {}
+    for c in cs: rows.setdefault(c.winfo_rooty(), []).append(c)
+    for row in rows.values():  # each row fills the page width, so rows differ but cards inside one row match
+        ws = {c.winfo_width() for c in row}
+        assert max(ws) - min(ws) <= 2, ("cards in a row differ in width", ws)
+    rights = [max(c.winfo_rootx() + c.winfo_width() for c in row) for row in rows.values()]
+    assert max(rights) - min(rights) <= 12, ("every row should reach the same right edge", rights)
     assert all(c.winfo_height() > 60 for c in cs)
     bottom = max(c.winfo_rooty() + c.winfo_height() for c in cs)
     assert bottom <= home.winfo_rooty() + home.winfo_height() - 20, ("cards must fit without scrolling", bottom, home.winfo_height())
@@ -81,7 +86,7 @@ assert app.group_heads["Metadata"].cget("text").startswith("▸")
 app.group_heads["Metadata"].invoke(); app.update()
 assert "metadata" in app.nav and not app.collapsed and app.group_heads["Metadata"].cget("text").startswith("▾")
 app.show("metadata"); app.group_heads["Comic Renamer"].invoke(); app.update()   # folding another group keeps the highlight
-assert app.nav["metadata"].cget("fg_color") == ct.BORDER
+assert app.nav["metadata"].cget("fg_color") == ct.PINK
 app.group_heads["Comic Renamer"].invoke()
 
 # reordering moves a group in the sidebar and on Home, and Home still fits

@@ -12,6 +12,108 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-14 22:30 +11:00 · Session 46: Home rows fill their width
+
+**Summary:** Home tool cards stretch to fill each row instead of leaving blank columns.
+
+**Changes (`comic_tool.py`)**: `HomePage.set_groups` no longer pads short rows with empty card columns or extra gaps; each row uses its own equal-width card columns (`uniform` per row), so a row of one group has wider cards than a row of four cards. Gaps between groups are only drawn where two groups meet. `tests/test_layout_app.py`: cards must match in width within a row and every row must reach the same right edge.
+
+**Verification:** `ruff check --select F,E9 .` passes; `tests/test_stats_home.py` passes; `tests/test_layout_app.py` now passes its Home layout checks and still stops at the default-group-order assertion that failed before this work. The full suite and a screenshot were not re-run.
+
+---
+
+## 2026-10-14 22:00 +11:00 · Session 45: Pink replaces green, plainer sidebar, a clearer page-by-page flow
+
+**Summary:** Pink takes green's place as the colour that follows yellow; the sidebar title is redrawn and only Home and Library stats keep icons; every tool page now leads with the settings and the empty state that help most.
+
+**Colour**
+- Green is gone. Yellow is the main colour (main buttons, headings, the first way in). Pink marks state and secondary emphasis: the open tool in the sidebar, ON switches, slider fill, the selected filter chip, *Fix checked*. Home cards rotate yellow, pink, cyan. Hover tint is light pink.
+
+**Sidebar (`ui_kit.py`, `comic_tool.py`)**
+- New `Logo` canvas: yellow block with a hard shadow, an abstract mark (square, circle, triangle) and a two-line *COMIC TOOLKIT* wordmark; clicking it opens Home. Tool entries lost their icons (`NavItem` draws an icon only for the large Home and Library stats entries).
+
+**Usability changes, shared by all pages (`ui_kit.py`, `batch_page.py`)**
+- Main actions are bigger targets (44 px) and a main button that cannot be used yet greys out (`Shadow.dim`, `DISABLED_FILL`) instead of staying bright yellow.
+- The first button in every drop box (Add folder, or Choose comic on Single issue) is yellow, the other is plain.
+- Options panels can fold: `Form.heading(text, collapsible=True, open=False)`. Rarely needed groups start folded: Audit *Warnings*, Metadata *Checked rows*, Reading order *Filenames and sorting*, ACEO *Cards*, Library stats *Display* and *Output*. Folding respects rows that a page hides on purpose (`Form.show`).
+- Empty states say what to do: `build_tree(..., ).set_empty(text)` shows a message over an empty table (ACEO, Audit, Add to library, Metadata, Reading order, Renamer list and cards); tool pages with a log show *Getting started 1 2 3* in the empty log; Single issue explains its empty preview.
+- Library audit: *Scan library* is the only yellow button, *Fix checked* is pink; filter chips are wide enough for their labels and the selected chip is pink.
+
+**Verification:** `ruff check --select F,E9 .` passes; `python tests/run_all.py`: 24 of 25 pass (`test_layout_app.py` fails at the default-group-order assertion, as before this work; its active-tool check now expects `PINK`). Screenshots of Home (light), Library audit (light), Single issue (light) and Reading order (dark) were looked at. Two later captures picked up a Windows task-switcher overlay, so the ACEO and Library stats pages were not checked visually, and the folded sections of ACEO, Metadata and Stats were only checked through the tests.
+
+**Known issues:** the audit options panel is tall enough that its *Warnings* group is reached by scrolling; no page was reordered beyond folding.
+
+---
+
+## 2026-10-14 20:30 +11:00 · Session 44: Light palette, neon green, sidebar icons and hierarchy
+
+**Summary:** The light mode got its own palette instead of cream and white, neon green joined the colours, the Home stats card grew, and the sidebar now has icons and a clear two-level hierarchy.
+
+**Changes (`ui_kit.py`, `comic_tool.py`)**
+- Light palette: lilac canvas (`BG` #D9D2FA), pale lilac panels (`PANEL` #EFEBFF), white only where you write or read (`WELL`: inputs, tables, logs; `RAISED`: secondary buttons). New `GREEN` (#A6FF5C) is the fourth Home card colour (yellow, pink, cyan, green), the ON colour of switches, the fill of sliders, the active colour of tool entries in the sidebar and the hover tint. Dark mode is unchanged apart from the new `WELL`/`RAISED` pair.
+- Home stats card: 96 px tall (was about 60), a stats icon tile, 18 px bold text, 44 px buttons, white with a thick border and a larger shadow.
+- Sidebar: `draw_icon()` (scalable line icons for every page, plus new home and stats icons) and `NavItem` (icon, label, hover colour, active colour, shadow). Home and Library stats are large white blocks that always carry a shadow and turn yellow when open; below a rule and a *Tools* label, the tool entries are smaller, flat and indented under their group heading, and turn green with a border and shadow when open. `IconTile` (Home cards) now uses `draw_icon`.
+- Test: the active-tool colour assertion in `test_layout_app.py` expects `GREEN`.
+
+**Verification:** `ruff check --select F,E9 .` passes; `python tests/run_all.py`: 24 of 25 pass (`test_layout_app.py` fails at the default-group-order assertion, as before this work). Screenshots of Home (light), the Renamer (light) and Library stats (light) were looked at; Home in dark mode and the remaining pages were not re-viewed after this change.
+
+**Known issues:** the stats tiles on the Library stats page cut some labels ("Average siz"); this predates this session and was not touched.
+
+---
+
+## 2026-10-14 19:20 +11:00 · Session 43: Neo-brutalist refinements (switches, sliders, card icons, dark-mode shadows)
+
+**Summary:** Four fixes to the Session 42 look, after the owner found the sliders odd, the Home card icons small and off-centre, and white shadows poor in dark mode.
+
+**Changes (`ui_kit.py`, `comic_tool.py`, pages)**
+- Dark mode: shadows and borders stay black in both modes; the dark canvas is lifted to a dusky slate (`BG` #25252E, `PANEL` #353542) so black edges and hard shadows read. `INK` and `TEXT` are now separate colours (black ink, light text in dark mode); new `SCROLL` colour for scrollbar thumbs; hover, muted and selected-row colours retuned for the slate.
+- Switches: new `Toggle` widget (canvas) replaces every `ctk.CTkSwitch`: a black-edged block with a hard shadow, yellow `ON` with the knob at the right, grey `OFF` with the knob at the left. Same arguments (`text`, `variable`, `command`); styling arguments are ignored. Clicking the track, the text or Space toggles it.
+- Sliders: new `Slider` widget (canvas) replaces `ctk.CTkSlider` (`slider()` kept as the factory): black-edged track, yellow fill, pink square handle with its own shadow. Used by the cover Quality row and the page picker size slider.
+- Home cards: new `IconTile` draws a 48 px white tile with a line icon per tool (plus, grid, folder, Aa, braces, arrows, check, 1·2, card grid, page) centred exactly, filled with the card's colour; `Card` takes the tool key instead of a glyph. Cards are 118 px tall.
+- `Toggle` and `Slider` redraw with `refresh_strips()` when the mode changes.
+
+**Verification:** `ruff check --select F,E9 .` passes; `python tests/run_all.py`: 24 of 25 pass (`test_layout_app.py` fails at the default-group-order assertion, as before this work). Screenshots of the app window and of the new switch, slider and segmented control in light and dark mode were looked at and matched the intent; the light-mode Home, the Renamer and the other tool pages were not re-viewed after these changes.
+
+**Known issues:** the slider track is thin next to the other controls; keyboard control of the slider is not implemented (the switch responds to Space only when focused).
+
+---
+
+## 2026-10-14 18:10 +11:00 · Session 42: Neo-brutalist UI replaces the clay skin
+
+**Summary:** The Session 41 clay look was rejected and replaced by a neo-brutalist one: square corners, thick black borders, saturated yellow / pink / cyan on a cream canvas, hard offset shadows and abstract shape bands. Light and dark modes both kept (dark: black canvas, white ink and shadows). Behaviour is unchanged.
+
+**Decisions (from the owner's answers):** offset-block shadows on all raised items; yellow + hot pink + cyan on cream; dark mode kept with ink and paper swapped; Arial Black headings with Segoe UI body; fully square corners; abstract shapes on a Home banner and on every tool page title strip; full-height sidebar rail with a thick right border and a yellow active block with shadow; Home tiles coloured per group, rotating yellow / pink / cyan; hover slides an item toward its shadow and press sinks it into it; white fill, thick border and hard shadow for tables, logs, inputs and other containers.
+
+**Changes**
+- `ui_kit.py` (rewritten): palette (`BG`, `PANEL`, `INK`, `YELLOW`, `PINK`, `CYAN`, `ACCENT`, `ACCENT_TEXT`, `ON_ACCENT`, ...), `HEAD` = Arial Black, `EDGE` = 3 px border, radii all 0. New `Shadow` wrapper: a frame holding a black offset block and the real widget; it forwards `configure`, `cget`, `bind`, `focus` and every other attribute to the wrapped widget, so `button`, `tool_button`, `menu`, `segmented`, `entry`, `textbox`, `DropZone` and `build_tree` (which now returns the wrapper) are used as before. With `motion=True` the face slides toward its shadow on hover and sinks into it while pressed; `show_shadow(False)` hides the block. New `AbstractStrip` (seeded canvas of circles, triangles, crosses, zigzags and stripes) used by `title_block` and the Home banner, redrawn by `refresh_strips()` when the mode changes. `Splitter` is a 3 px black line that also serves as the border of the sidebar and the options panel. Tables get a yellow header and a cyan selected row.
+- `comic_tool.py`: full-height sidebar rail, yellow `COMIC TOOLKIT` block, nav items are shadow wrappers with the shadow shown only on the open tool, Home banner, summary strip, `Card` is now a `Shadow` with a per-group colour (`Card(parent, glyph, color, title, text, command)`), dark-mode switch uses `switch_style()`.
+- `batch_page.py`, `page_bulk.py`, `page_order.py`, `page_rename.py`: logs and text areas use `textbox()`; `page_rename.py` uses `ACCENT_TEXT` for its accent label. All pages: square corners, 3 px borders, thick square progress bars.
+- Tests: `test_layout_app.py` active-nav colour is `ACCENT`; `test_layout.py` divider width 3 and a wider Up-to-Top gap allowance (80); `test_aceo_ui.py` preview height threshold 350 (the title strip uses about 50 px).
+
+**Verification:** `ruff check --select F,E9 .` passes. `python tests/run_all.py`: 24 of 25 pass; `test_layout_app.py` still fails at the default-group-order assertion (line 89), which also failed before any of the UI work (checked in Session 41 by stashing). Screenshots of the app window were taken in light and dark mode for Home and in light mode for the Renamer and looked as intended; the Bulk folder page and other tool pages were not viewed.
+
+**Known issues:** three-line card descriptions were cut off at the old card height, so cards are 110 px tall; the switch knob is a plain black block (customtkinter has no knob radius option); `Shadow` adds a frame or two per control, so very large pages build slightly slower.
+
+---
+
+## 2026-10-14 16:30 +11:00 · Session 41: Clay UI revamp
+
+**Summary:** The Notion-style look is replaced by a subtle claymorphism skin: earthy sand/terracotta palette, medium rounded corners, raised surfaces, recessed wells, a floating sidebar and inspector. Behaviour and layouts are unchanged apart from a little extra spacing.
+
+**Decisions (from the owner's answers):** subtle clay (large radii, thicker soft edges, tonal fills, no rendered shadow images); muted earthy palette; light and dark both clay; Segoe UI body with a chunky heading face; medium radius; floating sidebar; uniform Home tiles with one accent; press-in on click and lift on hover; inset wells for dense areas; high-contrast text; strong accent on primary actions.
+
+**Changes**
+- `ui_kit.py`: new palette (`BG` canvas, `PANEL`, `RAISED` for buttons and cards, `WELL` for inputs, tables and logs, terracotta `ACCENT`), `HEAD` ("Segoe UI Black") for titles, radii `R_CARD` 16 and `R_CTRL` 12, `press_feedback` (buttons sink into a darker fill while held). Buttons, menus, segmented controls, entries, slider, drop zone and tables restyled; the options inspector is a floating rounded panel.
+- `comic_tool.py`: floating sidebar, active tool is a raised pill with an accent edge, one soft tint for every Home tile, raised cards that lift on hover, home summary strip as a well, `strip_button` now wraps `ui_kit.button`.
+- `batch_page.py`, `page_bulk.py`, `page_order.py`, `page_rename.py`, `page_aceo.py`, `page_stats.py`: larger radii, wells for logs and previews, raised stats tiles, thicker progress bars.
+- `tests/test_layout_app.py`: active-nav colour assertion follows the new `RAISED` fill.
+
+**Verification:** `ruff check --select F,E9 .` passes. `python tests/run_all.py`: 24 of 25 pass. `test_layout_app.py` fails at the default-group-order assertion; it fails identically on the code from before this session (checked by stashing), so it is not caused by the restyle. No visual check was done by me: a screenshot attempt captured the wrong window and was discarded, so please look through the app in light and dark mode.
+
+**Known issues:** the Windows font "Segoe UI Black" is assumed present. Rendered shadows (full clay) were not built; say if you want them.
+
+---
+
 ## 2026-10-14 09:40 +11:00 · Session 40: Sidebar scrolls and folds, sections can be reordered
 
 **Summary:** The sidebar tool list scrolls, each section heading folds and unfolds, and the section order (shared by the sidebar and Home) can be changed.

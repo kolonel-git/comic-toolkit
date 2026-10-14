@@ -5,7 +5,7 @@
 | File | Role |
 |---|---|
 | `comic_tool.py` | App shell: window, sidebar, Home cards, theme toggle, drag-and-drop routing, settings load/save |
-| `ui_kit.py` | Shared look: (light, dark) palette, styled widgets, form rows, drop zone (with Add folder / Choose comics buttons), `Splitter` (draggable divider), `toolbar` (grouped buttons with dividers), page scaffold with a resizable options panel, table helpers (resizable columns, horizontal scrollbar) |
+| `ui_kit.py` | Shared look: neo-brutalist (light, dark) palette (`BG`, `INK`, `YELLOW`/`PINK`/`CYAN`, `ACCENT`), the `Shadow` hard-shadow wrapper, `AbstractStrip` shape bands, `IconTile`, canvas `Toggle` and `Slider`, styled widgets, form rows, drop zone (with Add folder / Choose comics buttons), `Splitter` (draggable divider), `toolbar` (grouped buttons with dividers), page scaffold with a resizable options panel, table helpers (resizable columns, horizontal scrollbar) |
 | `batch_page.py` | Base page for run-per-item tools (progress, log, Preview, Stop) |
 | `page_single.py` · `page_bulk.py` · `page_icons.py` | Cover extractor pages |
 | `picker_core.py` · `picker_window.py` | Pick pages from a comic: grid layout, cover guessing, selection helpers and JPG extraction (no UI) · the thumbnail window (canvas grid, background loader thread, rubber band, reorder and full-view dialogs), opened from the Single issue page |
