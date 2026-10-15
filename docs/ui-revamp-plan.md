@@ -14,7 +14,7 @@ design. The status column below says what is built; [The tools](tools.md) descri
 | Bulk folder | agreed, built (two columns) |
 | Folder icons | agreed (collage deferred) |
 | Metadata (repair editor) | agreed, built (two columns) |
-| CBR to CBZ | agreed |
+| CBR to CBZ | agreed, built (two columns) |
 | Library audit | agreed, built (two columns) |
 | Reading order | agreed |
 | Add to library | agreed |
@@ -28,7 +28,7 @@ design. The status column below says what is built; [The tools](tools.md) descri
 **Current:** left options panel plus main area on most pages; Bulk folder is the first page converted to the shell. Many options sit in one
 panel. Type uses about ten sizes (8 to 28 pt), Segoe UI plus Arial Black headings plus Consolas, and several accent colours.
 
-**Owner's decision (Session 60): two columns.** Every page except Library stats is laid out as **two resizable columns** under the header, with the footer below: what you choose (the folder, the list of comics) on the left, and what you can set and the review of what will happen on the right, which scrolls on its own. The divider between the columns is dragged to the width you like (and remembered), and every table column is resizable too. Library stats keeps the stack of segments. Bulk folder, Metadata and Library audit are built this way; Single issue, Folder icons, CBR to CBZ, Reading order, ACEO sheets, the Renamer and Add to library follow when their turn comes (they already have a main area and a draggable options panel, so for them it is mostly regrouping the options into titled blocks and putting the review and the run under them). The per-tool sections below still describe what each part holds; read "segment" as "block of a column" for every page except Library stats.
+**Owner's decision (Session 60): two columns.** Every page except Library stats is laid out as **two resizable columns** under the header, with the footer below: what you choose (the folder, the list of comics) on the left, and what you can set and the review of what will happen on the right, which scrolls on its own. The divider between the columns is dragged to the width you like (and remembered), and every table column is resizable too. Library stats keeps the stack of segments. Bulk folder, Metadata, Library audit and CBR to CBZ are built this way; Single issue, Folder icons, Reading order, ACEO sheets, the Renamer and Add to library follow when their turn comes (they already have a main area and a draggable options panel, so for them it is mostly regrouping the options into titled blocks and putting the review and the run under them). The per-tool sections below still describe what each part holds; read "segment" as "block of a column" for every page except Library stats.
 
 **Owner's decisions (the original segment design, still true for Library stats)**
 - Every tool is a stack of **collapsible segments**. A finished segment folds to a short summary of what it did or holds.
@@ -235,6 +235,8 @@ and with Add to library, which both convert as a side effect.
      after: "Converted 36 · Failed 2", failures with the reason; originals of failed files are never touched.
 - *Footer:* main action **Convert N files**, then **Stop**, then **Open folder**; secondary: **Retry failed**.
 - *Link:* the Library audit CBR chip offers "Convert in bulk" which opens this page with the files preloaded.
+
+**As built (Session 61):** two columns, following the Session 60 decision. Left: Comics, a filterable table of the `.cbr` files (file, folder, kind: *RAR* or *ZIP inside*, size), the kind found by a background check. Right: Convert (the cards for the original and for an existing `.cbz`, *Advanced options* with the junk and page-name switches) and Review. Differences from the proposal: the headline gives the size to convert and says the new files are about the same size, because pages are stored as they are (no "saves about 200 MB" promise, which could not be true); the page count is not shown in the list, because counting a RAR's pages means extracting it. The tidy-up runs on the `.part` file before it takes its place, so a failure leaves the old `.cbz` and the original untouched. **Delete it** asks once before the run starts.
 
 ## Library audit
 

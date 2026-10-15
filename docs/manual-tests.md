@@ -358,14 +358,38 @@ Use your real library (hundreds of comics if you can) for I1 to I3 and I6.
 
 ## K. Two-column pages
 
-- [ ] **K1. Drag the divider.** On Bulk folder, Metadata and Library audit, drag the thin divider between the columns left and right, then close and reopen the app.
+- [ ] **K1. Drag the divider.** On Bulk folder, Metadata, Library audit and CBR to CBZ, drag the thin divider between the columns left and right, then close and reopen the app.
   *Expect:* the right column gets wider and narrower smoothly, the left column stops at a usable width, text in the right column re-wraps, and the width is the same after reopening.
   Result:
-- [ ] **K2. Small and large windows.** Make the window narrow, then very wide, on each of the three pages.
+- [ ] **K2. Small and large windows.** Make the window narrow, then very wide, on each of the four pages.
   *Expect:* nothing is cut off that you cannot reach (each column scrolls or wraps), the footer stays visible, and the lists use the height of the page.
   Result:
-- [ ] **K3. Look.** Compare the three pages in light and dark mode.
-  *Expect:* the same header, divider, headings and spacing on all three. Tell me what feels cramped or wasted.
+- [ ] **K3. Look.** Compare the four pages in light and dark mode.
+  *Expect:* the same header, divider, headings and spacing on all four. Tell me what feels cramped or wasted.
+  Result:
+
+## L. CBR to CBZ
+
+- [ ] **L1. A real RAR.** Put a few genuine RAR `.cbr` files (not zips renamed) in a folder, add it to CBR to CBZ and watch the *Kind* column.
+  *Expect:* *RAR* for the real ones (or *Unreadable*, with the reason in the Review, if 7-Zip and unrar are not installed); *ZIP inside* for a renamed zip.
+  Result:
+- [ ] **L2. Run it.** Choose **Move to Archive**, press **Dry run**, then **Convert N files**.
+  *Expect:* the dry run shows "Would convert" and changes nothing; the run shows progress with time left, then "Done"; each `.cbz` opens in YACReader with the same pages; each original is in `Archive` as `.cbr.bak`.
+  Result:
+- [ ] **L3. Existing `.cbz`.** Put a `.cbz` beside a `.cbr` of the same name and try Skip, Keep both and Replace.
+  *Expect:* the Review table and its headline follow each choice before you run, and the run does what they said.
+  Result:
+- [ ] **L4. Delete it.** Choose **Delete it** and press **Convert**.
+  *Expect:* a warning explains the originals are deleted for good once verified; **No** leaves everything as it was.
+  Result:
+- [ ] **L5. Tidy-up.** Turn on **Remove junk files** and **Rename pages** under Advanced options and convert a comic that holds `Thumbs.db`.
+  *Expect:* "Advanced options · 2 changed"; the `.cbz` has no junk and its pages are `001.jpg`, `002.jpg`… in the right order.
+  Result:
+- [ ] **L6. From the Library audit.** Scan a library with `.cbr` files, then press **Convert in bulk** on the CBR chip.
+  *Expect:* CBR to CBZ opens on the same folder with a "From Library audit" chip; **Back to Library audit** returns.
+  Result:
+- [ ] **L7. Look.** Drag the divider and compare the page with Bulk folder in light and dark mode, in a small and a large window.
+  *Expect:* the same header, divider, headings and spacing; nothing is cut off that you cannot reach.
   Result:
 
 ## When you're done
