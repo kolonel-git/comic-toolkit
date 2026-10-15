@@ -57,7 +57,7 @@ TINT_BLUE = TINT_YELLOW = TINT_PURPLE = TINT_GREEN = TINT_PINK = TINT_ORANGE = T
 
 TOOLS = {  # key -> glyph, tint, title, description
     "single": ("▭", TINT_BLUE, "Single issue",
-               "Preview pages, save a cover, or convert one issue to ZIP."),
+               "Preview pages, save a cover, or pick pages from one issue."),
     "bulk": ("▦", TINT_YELLOW, "Bulk folder",
              "Extract covers from a whole folder, sorted into series folders."),
     "icons": ("▣", TINT_GREEN, "Folder icons",

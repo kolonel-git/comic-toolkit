@@ -12,6 +12,32 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-16 01:47 +11:00 · Session 62: Single issue on the page shell (roadmap Phase 3, step 6a)
+
+**Summary:** Single issue is rebuilt as two resizable columns, like the other revamped pages. The page picker window is untouched apart from two small hooks, so the strip on the page and the picker share one selection; the picker's own redesign is step 6b. Also brings the docs in line with the tags: `v0.8.0` and `v0.9.0` are placed.
+
+**Decisions**
+- Followed the plan's Single issue section. Pages on the left (the drop box, then the strip), Save on the right, the footer changing with the picks.
+- Kept the previous behaviour where the plan was silent: extracting pages still asks for a folder each time, and the drop box keeps its folder button that opens the folder in Bulk folder. No `Library`/`Recent` buttons here (one comic, not a folder).
+- Added **Clear picks** to the footer so the way back to **Save cover** does not need the picker window.
+- Convert to ZIP is gone, replaced by the pages shortcut **Save all pages as ZIP**; the Home card text no longer says "convert".
+
+**Changes by file**
+- `page_single.py`: rewritten on `SegmentPage`. Comic and Pages blocks on the left (the strip of the cover, pages 2 and 3 and the last two pages, wrapping to the column width, then the **Browse all N pages…** tile), Save on the right (image options, a live line naming the file that will be written and noting when it exists, *Advanced options* for destination, file name and conflicts). Footer: **Save cover** / **Extract N pages**, with **Clear picks**, **Save all pages as ZIP** and **Open folder**.
+- `picker_window.py`: `PickerWindow(parent, comic, order=None, on_change=None)`; `order` is now a property that tells `on_change` whenever the picks change; `set_order` sets them from outside.
+- `comic_tool.py`: the Home card text for Single issue.
+- `tests/test_single_page.py` (new); `tests/test_layout.py` (Single issue is no longer an options-panel page); `tests/test_picker.py` (the button it used is now the footer).
+- Docs: plan (as built), roadmap (6a done, 6b next, tags), tools, architecture, known limitations, manual tests (new section M, H11 reworded), tests README, README, versioning, HANDOFF.
+
+**Technical notes**
+- Every change of the picks in the picker window runs the page's `set_picked`, which redraws the ticks and the footer; a dragged box fires it on each mouse move, which is cheap here (five captions and one footer).
+
+**Verification:** `ruff check --select F,E9 .` clean; `python tests/run_all.py` 33 of 33 passed (the first run had `test_picker.py` failing, because it used the page's old Pick pages button; fixed, then the whole suite re-run). Not checked: how the page looks in light and dark mode, the strip's wrapping on a real narrow window, and dragging the divider by hand (see manual tests M1 to M6).
+
+**Known issues:** see Known limitations (Single issue shows five pages and one comic).
+
+---
+
 ## 2026-10-16 01:15 +11:00 · Session 61: CBR to CBZ on the page shell (roadmap Phase 2, step 5)
 
 **Summary:** CBR to CBZ is rebuilt as two resizable columns, like Bulk folder, Metadata and Library audit. This closes Phase 2 (planned tag `v0.9.0`).

@@ -30,7 +30,7 @@ Backup `.bak` safety fix, metadata extensions, shared library scan, Library audi
 Library stats, Renamer revamp (cards and a template per type), ACEO sheets, Add to library, page picker, shared library folder,
 recent folders, keyboard layer and Ctrl+K search, and the neo-brutalist UI. Details are in [The tools](tools.md) and the
 [Changelog](CHANGELOG.md). From the revamp below: the shared page shell, Bulk folder, Library stats and the Metadata repair editor (two columns) and the Library audit are built.
-**Where we are:** Phase 0 and Phase 1 are finished (tag `v0.8.0` still to be placed); Phase 2 is under way: the Metadata editor, the Library audit and CBR to CBZ are built (tag `v0.9.0` is next to place), and Phase 3 starts with Single issue.
+**Where we are:** Phases 0, 1 and 2 are finished and tagged (`v0.8.0`, `v0.9.0`). Phase 3 is under way: Single issue is on the shell (step 6a); its page picker is next (6b).
 
 ## Build order: the UI revamp
 
@@ -46,17 +46,17 @@ Every page becomes a Header, two resizable columns and a Footer (Library stats k
 - 0d. Local suggestion index (normalised series and publisher names) for Metadata, Renamer and Add to library. **Done** for Metadata (`SuggestIndex` in `metadata_core.py`); the Renamer and Add to library will reuse it.
 - 0e. Link context: open a page preloaded, with a "From X" chip and a Back link. **Done** (`SegmentPage.show_origin`; Library stats to Metadata uses it, the other tools will).
 
-**Phase 1: prove the shell** (`v0.8.0`, finished; the tag is still to be placed)
+**Phase 1: prove the shell** (`v0.8.0`, finished and tagged)
 1. Bulk folder on the new shell (includes 0a and 0b). **Done**, and moved to two columns in Session 60.
 2. Library stats: segments, Needs attention cards, reading-order toggle and section (includes 0c). **Done.**
 
-**Phase 2: the repair loop** (`v0.9.0`)
+**Phase 2: the repair loop** (`v0.9.0`, finished and tagged)
 3. Metadata repair editor (includes 0d and 0e). **Done.** Built as two columns (comics left; fields and the live list of changes right) rather than three stacked segments; see the [plan](ui-revamp-plan.md#metadata-repair-editor).
 4. Library audit: summary strip, Details panel, reading-order exclusion. **Done.**
 5. CBR to CBZ. **Done.** Two columns (the `.cbr` list on the left; what happens to the original and to an existing `.cbz`, then the review and the run on the right), a dry run, a Delete confirmation, and the link from the Library audit's CBR chip with a Back chip.
 
 **Phase 3: standalone tools** (`v0.10.0`)
-6. Single issue.
+6. Single issue, in two branches. **6a, the page on the shell: done** (two columns; a strip of the first 3 and last 2 pages with a Browse all tile; Save cover or Extract N pages in the footer; one selection shared with the picker window). **6b, the page picker: next** (a toolbar with a visible numbering-order control in place of *Reorder…*, a hint about the gestures, a legend for the orange outline).
 7. Folder icons (needs the folder-shape template art first).
 8. Reading order (builds the multi-drag list).
 9. ACEO sheets (reuses the multi-drag list; new preview).

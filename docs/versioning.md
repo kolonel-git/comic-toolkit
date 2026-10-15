@@ -28,7 +28,7 @@ Planned next, one release per phase of the [UI revamp](ui-revamp-plan.md) (a gui
 
 | Tag | Contents |
 |---|---|
-| `v0.8.0` | Phase 1: shared shell kit, Bulk folder and Library stats on the new layout (the work is finished and on `main`; the tag is still to be placed) |
+| `v0.8.0` | Phase 1: shared shell kit, Bulk folder and Library stats on the new layout (tagged) |
 | `v0.9.0` | Phase 2: Metadata repair editor, Library audit, CBR to CBZ |
 | `v0.10.0` | Phase 3: Single issue, Folder icons, Reading order, ACEO sheets |
 | `v0.11.0` | Phase 4: Renamer and Add to library |

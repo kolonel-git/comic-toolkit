@@ -10,7 +10,7 @@ design. The status column below says what is built; [The tools](tools.md) descri
 |---|---|
 | Global shell and segmented pages | agreed |
 | Library scan / stats | agreed, built |
-| Single issue | agreed |
+| Single issue | agreed, page built (two columns); page picker to follow |
 | Bulk folder | agreed, built (two columns) |
 | Folder icons | agreed (collage deferred) |
 | Metadata (repair editor) | agreed, built (two columns) |
@@ -28,7 +28,7 @@ design. The status column below says what is built; [The tools](tools.md) descri
 **Current:** left options panel plus main area on most pages; Bulk folder is the first page converted to the shell. Many options sit in one
 panel. Type uses about ten sizes (8 to 28 pt), Segoe UI plus Arial Black headings plus Consolas, and several accent colours.
 
-**Owner's decision (Session 60): two columns.** Every page except Library stats is laid out as **two resizable columns** under the header, with the footer below: what you choose (the folder, the list of comics) on the left, and what you can set and the review of what will happen on the right, which scrolls on its own. The divider between the columns is dragged to the width you like (and remembered), and every table column is resizable too. Library stats keeps the stack of segments. Bulk folder, Metadata, Library audit and CBR to CBZ are built this way; Single issue, Folder icons, Reading order, ACEO sheets, the Renamer and Add to library follow when their turn comes (they already have a main area and a draggable options panel, so for them it is mostly regrouping the options into titled blocks and putting the review and the run under them). The per-tool sections below still describe what each part holds; read "segment" as "block of a column" for every page except Library stats.
+**Owner's decision (Session 60): two columns.** Every page except Library stats is laid out as **two resizable columns** under the header, with the footer below: what you choose (the folder, the list of comics) on the left, and what you can set and the review of what will happen on the right, which scrolls on its own. The divider between the columns is dragged to the width you like (and remembered), and every table column is resizable too. Library stats keeps the stack of segments. Bulk folder, Metadata, Library audit, CBR to CBZ and Single issue are built this way; Folder icons, Reading order, ACEO sheets, the Renamer and Add to library follow when their turn comes (they already have a main area and a draggable options panel, so for them it is mostly regrouping the options into titled blocks and putting the review and the run under them). The per-tool sections below still describe what each part holds; read "segment" as "block of a column" for every page except Library stats.
 
 **Owner's decisions (the original segment design, still true for Library stats)**
 - Every tool is a stack of **collapsible segments**. A finished segment folds to a short summary of what it did or holds.
@@ -107,6 +107,8 @@ suggested changes; remove features that overlap other tools; footer changes with
   visible **Numbering order** control in place of *Reorder…*. A one-line hint explains the gestures ("Shift-click for a range,
   drag a box to pick several, double-click to enlarge"). The orange outline gets a legend, "Looks like a cover".
 - *Removed:* **Convert to ZIP** (overlaps CBR to CBZ and Add to library).
+
+**As built (Session 62, step 6a):** two columns. Left: Comic (the drop box; its folder button still opens the folder in Bulk folder) and Pages (the strip: cover, pages 2 and 3, and the last two pages, wrapping to the width of the column, then the **Browse all N pages…** tile). Right: Save (format, quality, size, the live line naming the file that will be written, and the result of the last save) with *Advanced options* for where to save, the file name and what to do when the file exists. Clicking a page of the strip opens the picker window straight on that page in its full-size view, where a click or Space picks it; a tick and its number then show under the page. The picks are one list shared by the page and the picker window (`PickerWindow(order=, on_change=)`, `set_order`). The footer reads **Save cover** until pages are picked and **Extract N pages** after, with **Save all pages as ZIP**, **Clear picks** and, after a save, **Open folder** beside it. Extracting still asks for a folder each time, as the picker's own button does. Not done here, and left for step 6b: the picker's toolbar, numbering-order control, hint and legend. The `Library` and `Recent` buttons are not on this page (it takes one comic, not a folder).
 
 ## Bulk folder
 

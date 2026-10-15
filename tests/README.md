@@ -18,6 +18,7 @@ Each script finds the project folder from its own location, so run them from any
 | `test_icons.py` | Windows folder icons |
 | `test_meta.py`, `test_metadata_core.py` | metadata fields, `ComicInfo.xml` writing, the editing logic (`Row`, what is missing, fill from file names, the offer to a series, suggestions) |
 | `test_meta_page.py` | the Metadata page: two columns, the form following the selection (automatic and forced), suggestions, the offer, fill and remove issue number, the live list of changes, saving after Confirm, locked `.cbr`, opening from Library stats |
+| `test_single_page.py` | the Single issue page: two columns, the strip of first and last pages and its browse tile, the footer changing with the picks, saving a cover (the live file line, conflicts, a folder of your own), extracting picked pages, the ZIP shortcut, and one selection shared with the picker window |
 | `test_convert_page.py` | the CBR to CBZ page: two columns, the background check, review counts and statuses, dry run, the three fates of the original, an existing `.cbz`, junk and page-name tidy-up, a failing file, the Delete confirmation, the link from the Library audit, and `convert_one` leaving an existing `.cbz` alone when the tidy-up fails |
 | `test_bulk_page.py` | the Bulk folder page on the shell: segments, review, dry run, running, retry |
 | `test_dropissue.py`, `test_shortcuts.py` | dropping files on pages, the keyboard layer and Ctrl+K |

@@ -44,10 +44,10 @@ sg.pack_forget()
 
 # every options panel is grouped under headings, always starting with the source or main subject and ending with the output
 def headings(pg): return pg.form.headings
-EXPECT = {SinglePage: ["Cover image", "Output"], IconsPage: ["Cover", "Output"],
+EXPECT = {IconsPage: ["Cover", "Output"],
           OrderPage: ["Reading order", "Filenames and sorting", "Output"], AceoPage: ["Template", "Covers", "Cards", "Output"]}
 for pg in pages:
-    if type(pg) in EXPECT:  # (Bulk folder, Metadata, Library audit and CBR to CBZ are segment pages, tested in test_bulk_page.py, test_meta_page.py, test_audit_ui.py and test_convert_page.py)
+    if type(pg) in EXPECT:  # (Bulk folder, Metadata, Library audit, CBR to CBZ and Single issue are segment pages, tested in their own page tests)
         assert headings(pg) == EXPECT[type(pg)], (type(pg).__name__, headings(pg))
 
 # the options panel can be dragged wider and narrower, within limits, and the width is saved

@@ -79,7 +79,7 @@ root = ctk.CTk(); root.geometry("1100x760")
 errors = []
 root.report_callback_exception = lambda *a: errors.append(a)   # Tk otherwise swallows errors in callbacks
 page = ps.SinglePage(root); page.pack(fill="both", expand=True); root.update()
-assert page.btn_pick.cget("state") == "disabled"
+assert page.comic is None and page.bar_btn.cget("state") == "disabled"
 with tempfile.TemporaryDirectory() as d:
     d = Path(d)
     z = d / "TPB.cbz"
@@ -87,7 +87,7 @@ with tempfile.TemporaryDirectory() as d:
         for i in range(60):
             f.writestr(f"{i:03d}.jpg", img((300, 450) if i % 20 == 0 else (240, 360), color=(i * 4, 50, 50)))
     page.load(str(z)); root.update()
-    assert page.btn_pick.cget("state") == "normal"
+    assert page.comic is not None and page.bar_btn.cget("state") == "normal" and page._cells[-1].winfo_exists()
     page.pick_pages(); w = page._picker; root.update()
     t = time.time()
     while len(w._done) < 60 and time.time() - t < 30: root.update(); time.sleep(0.02)
