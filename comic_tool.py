@@ -316,6 +316,8 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         stats.recent_dirs = self.recent_dirs
         stats.open_tool = self._open_from_stats
         self.pages["metadata"].open_tool = self._open_from_metadata
+        self.pages["audit"].orders = self.orders
+        self.pages["audit"].open_tool = self._open_from_audit
         self.pages["metadata"].on_saved = self._stats_refresh
         stats.on_progress = lambda d, t: self.pages["home"].show_summary(None, scanning=(d, t))
         stats.on_scanned = self._scanned
@@ -363,6 +365,18 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         root = self.pages["metadata"].root_dir
         if root is not None:
             self._open_path(self.pages[key], root)
+        self.show(key)
+
+    def _open_from_audit(self, key, view=None):
+        """A link on the Library audit page: open the tool that fixes a kind of problem on the folder being audited
+        (Metadata opens already filtered to `view`, with a chip saying it came from here and a Back button)."""
+        root = self.pages["audit"].root_dir
+        page = self.pages[key]
+        if key != "stats" and root is not None:
+            if hasattr(page, "open_with"):
+                page.open_with(root, view=view, origin="Library audit", back=lambda: self.show("audit"))
+            else:
+                self._open_path(page, root)
         self.show(key)
 
     def _stats_refresh(self):

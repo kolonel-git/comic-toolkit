@@ -131,10 +131,11 @@ def _same_class(members):
     return [g for g in (singles, coll) if len(g) > 1]
 
 
-def find_duplicates(issues, similar=False, threshold=8):
+def find_duplicates(issues, similar=False, threshold=8, orders=None):
     """Groups of probable duplicates, strongest evidence first. A group whose files are all already in an
-    earlier group is dropped. Within a group the best copy (see `keeper_rank`) is listed first. A single issue and
-    a collected edition are never grouped together."""
+    earlier group is dropped. Within a group the best copy (see `keeper_rank`) is listed first, except that a copy
+    inside a reading-order folder (`orders`, see `reading_orders.py`) never outranks one outside: the outside copy is
+    the original. A single issue and a collected edition are never grouped together."""
     groups = []
     by_id = {}
     for i in issues:
@@ -186,9 +187,35 @@ def find_duplicates(issues, similar=False, threshold=8):
         if any(ids <= s for s in seen):
             continue
         seen.append(ids)
-        g.issues.sort(key=keeper_rank)
+        g.issues.sort(key=lambda i: (bool(orders and orders.covers(i.path)),) + keeper_rank(i))
         out.append(g)
     return out
+
+
+def duplicates_for(issues, orders, include=False, similar=False, threshold=8):
+    """(groups, left_out): the duplicate groups, with the comics in marked reading-order folders left out unless
+    `include` is set, and how many comics were left out. Reading-order folders hold deliberate copies, so by default
+    they are not reported as duplicates of the real library."""
+    if include or not orders or not len(orders):
+        return find_duplicates(issues, similar, threshold, orders), 0
+    real, copies = orders.split(issues)
+    return find_duplicates(real, similar, threshold, orders), len(copies)
+
+
+def reading_order_rows(issues, orders):
+    """[(folder, members, elsewhere)] for every marked reading-order folder that holds comics: `elsewhere` counts the
+    members that also exist outside any reading-order folder (same series, volume and issue)."""
+    if not orders or not len(orders):
+        return []
+    real, copies = orders.split(issues)
+    known = {k for k in map(_identity, real) if k}
+    by_folder = {}
+    for i in copies:
+        by_folder.setdefault(orders.which(i.path), []).append(i)
+    out = []
+    for folder, members in by_folder.items():
+        out.append((folder, members, sum(1 for m in members if _identity(m) in known)))
+    return sorted(out, key=lambda t: str(t[0]).lower())
 
 
 # ---------- 3. missing issues ----------
@@ -351,7 +378,8 @@ def size_text(n):
 # ---------- 5. findings: one list for the page ----------
 
 BROKEN, DUPLICATE, MISSING, JUNK, CBR, WARNING = "Broken", "Duplicate", "Missing", "Junk", "CBR", "Warning"
-KINDS = [BROKEN, DUPLICATE, MISSING, JUNK, CBR, WARNING]
+ORDER = "Reading order"   # folders of reading-order copies: shown for information, nothing to fix
+KINDS = [BROKEN, DUPLICATE, MISSING, JUNK, CBR, WARNING, ORDER]
 ARCHIVE, CLEAN, CONVERT = "archive", "clean", "convert"  # what fixing a finding does
 
 
@@ -369,6 +397,7 @@ class Finding:
     keep: bool = False  # the best copy of a duplicate group: shown, never moved
     gaps: list = field(default_factory=list)  # Missing: the gaps shown on this row (for the wishlist)
     keys: list = field(default_factory=list)  # every ignore key this row stands for (Missing: one per number)
+    count: int = 1  # how many comics the row stands for (Reading order: the comics in the folder)
 
 
 def _pkey(prefix, path):
@@ -421,6 +450,13 @@ def build_findings(data, ignored=()):
         k = _pkey("warn", i.path)
         if k not in ignored:
             out.append(Finding(WARNING, i.rel, " · ".join(flags), k, f"Warning: {i.rel}", i.path, keys=[k]))
+    for folder, members, elsewhere in data.get("orders", []):
+        k = _pkey("order", folder)
+        if k not in ignored:
+            detail = f"{len(members)} comic{'s' if len(members) != 1 else ''}"
+            detail += (f" · {elsewhere} also in your library outside it" if elsewhere else " · none of them elsewhere in your library")
+            out.append(Finding(ORDER, str(folder), detail, k, f"Reading order folder: {folder}", Path(folder), keys=[k],
+                               count=len(members)))
     return out
 
 
@@ -437,6 +473,35 @@ def plan_fixes(findings):
             if action in actions:
                 out.append((path, action, [f for fs in actions.values() for f in fs]))
                 break
+    return out
+
+
+def plan_lines(plan):
+    """The summary lines for a fix plan [(path, action, findings)]: what will happen, by kind."""
+    n = {a: sum(1 for _, x, _ in plan if x == a) for a in (CLEAN, CONVERT, ARCHIVE)}
+    plural = lambda k, w: f"{k} {w}{'s' if k != 1 else ''}"  # noqa: E731
+    lines = []
+    if n[CLEAN]:
+        lines.append(f"Remove junk files from {plural(n[CLEAN], 'comic')}")
+    if n[CONVERT]:
+        lines.append(f"Convert {plural(n[CONVERT], 'CBR file')} to CBZ (each .cbr is deleted once its CBZ has been verified)")
+    if n[ARCHIVE]:
+        lines.append(f"Move {plural(n[ARCHIVE], 'file')} to Archive folders (as .bak)")
+    return lines
+
+
+def describe_plan(plan, root=None):
+    """[(file, where it goes, can it be undone)] for every file in a fix plan, for the confirmation's details."""
+    out = []
+    for path, action, _ in plan:
+        path = Path(path)
+        name = str(path.relative_to(root)) if root and Path(root) in path.parents else path.name
+        if action == ARCHIVE:
+            out.append((name, f"moved to {ARCHIVE_DIR}\\{path.name}.bak", True))
+        elif action == CONVERT:
+            out.append((name, f"becomes {path.with_suffix('.cbz').name}; the .cbr is deleted after the check", False))
+        else:
+            out.append((name, "junk files removed, rewritten in place", False))
     return out
 
 
@@ -494,3 +559,66 @@ def purge_archive(paths):
         except OSError:
             pass
     return done, errors
+
+
+# ---------- 7. the details panel ----------
+
+def build_details(res, counts, ignored=0, with_orders=False, checks=None):
+    """What the Details panel shows, as plain data. `res` is a scan result of the audit page, `counts` the number of
+    findings per kind ({kind: n}), `checks` the kinds that are switched on. Returns
+    {"scan": [(label, text)], "found": [{kind, title, text, actions: [(button, action)]}]}; the page decides what
+    each action does ("show:<kind>" selects that list, "tool:<page>[:<view>]" opens another tool)."""
+    checks = set(KINDS if checks is None else checks)
+    issues = res["issues"]
+    n = len(issues)
+    scan = [("Comics scanned", f"{n:,} in {res['seconds']:.1f}s" + (f" ({res['cache_hits']:,} from cache)" if res.get("cache_hits") else "")
+             + (" · stopped early, so this is partial" if res.get("stopped") else ""))]
+    scan.append(("Checks on", ", ".join(k for k in (BROKEN, DUPLICATE, MISSING, JUNK, CBR, WARNING) if k in checks) or "none"))
+    scan.append(("Integrity test", "on: every file was read completely" if res.get("integrity")
+                 else "off: only problems the scan noticed (a bad zip, no images, an unreadable cover)"))
+    raw = sum(1 for i in issues if i.ext == ".cbr" and not i.ci_read)
+    if raw:
+        scan.append(("Real .cbr files", f"{raw:,} not opened (they count as CBR files but are not checked for junk or pages)"))
+    left = res.get("left_out", 0)
+    scan.append(("Reading orders", f"{left:,} comic{'s' if left != 1 else ''} left out of Duplicates" if left else
+                 ("included in Duplicates" if with_orders else "none left out")))
+    scan.append(("Ignored by you", f"{ignored:,} finding{'s' if ignored != 1 else ''}"))
+
+    def many(k, one, more=None):
+        return f"{k:,} {one if k == 1 else (more or one + 's')}"
+
+    found = []
+    if BROKEN in checks:
+        found.append({"kind": BROKEN, "title": many(counts[BROKEN], "broken file"),
+                      "text": "Files that would not open or failed the test. Fixing one moves it to an Archive folder as .bak; it is not deleted.",
+                      "actions": [("Show in list", "show:" + BROKEN)]})
+    if DUPLICATE in checks:
+        found.append({"kind": DUPLICATE, "title": many(counts[DUPLICATE], "group of duplicates", "groups of duplicates"),
+                      "text": "The best copy of each group is kept; tick the others to move them to Archive as .bak. "
+                              "To mark folders of deliberate copies so they are left out, use Library stats.",
+                      "actions": [("Show in list", "show:" + DUPLICATE), ("Mark reading orders", "tool:stats")]})
+    if MISSING in checks:
+        found.append({"kind": MISSING, "title": many(counts[MISSING], "series with gaps", "series with gaps"),
+                      "text": "Numbers missing between the lowest and highest you own. The wishlist copies or saves them.",
+                      "actions": [("Show in list", "show:" + MISSING)]})
+    if JUNK in checks:
+        found.append({"kind": JUNK, "title": many(counts[JUNK], "comic with junk", "comics with junk"),
+                      "text": "Thumbs.db, .nfo, __MACOSX and the like inside the archive. Fixing rewrites the archive without them.",
+                      "actions": [("Show in list", "show:" + JUNK)]})
+    if CBR in checks:
+        found.append({"kind": CBR, "title": many(counts[CBR], "CBR file"),
+                      "text": "RAR comics. Converting makes a verified CBZ every reader opens; the CBR tool does it in bulk.",
+                      "actions": [("Show in list", "show:" + CBR), ("Convert in bulk", "tool:convert")]})
+    if WARNING in checks:
+        found.append({"kind": WARNING, "title": many(counts[WARNING], "warning"),
+                      "text": "Unusual page counts, sizes or cover heights. Nothing to fix automatically.",
+                      "actions": [("Show in list", "show:" + WARNING), ("View stats", "tool:stats")]})
+    no_series = sum(1 for i in issues if not i.info.get("series"))
+    no_issue = sum(1 for i in issues if i.info.get("series") and not i.info.get("collected") and not i.info.get("issue"))
+    if no_series or no_issue:
+        acts = ([("Comics with no series", "tool:metadata:no_series")] if no_series else []) + \
+               ([("Comics with no issue number", "tool:metadata:no_issue")] if no_issue else [])
+        found.append({"kind": "Metadata", "title": f"{no_series:,} with no series · {no_issue:,} with no issue number",
+                      "text": "The audit cannot judge duplicates or gaps for these. Fill them in with the Metadata tool.",
+                      "actions": acts})
+    return {"scan": scan, "found": found}

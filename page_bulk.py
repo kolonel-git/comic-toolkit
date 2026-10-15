@@ -1,5 +1,6 @@
-"""Bulk folder page: covers from every CBZ/CBR in a folder, on the shared page shell. Three segments:
-Comics (what was found), Covers (where they go and how they look) and Review (what will happen, then the run)."""
+"""Bulk folder page: covers from every CBZ/CBR in a folder, on the shared page shell, in two columns with a divider you
+can drag. Left: Comics (what was found). Right, scrolling on its own: Covers (where they go and how they look), then
+Review (what will happen, then the run)."""
 import io
 import os
 import queue
@@ -107,6 +108,9 @@ class BulkPage(SegmentPage):
                 "name": NAMES[0], "conflict": "Overwrite"}
     choices = {"where": WHERES, "organize": ORGS, "format": FORMATS, "height": list(HEIGHTS),
                "name": NAMES, "conflict": CONFLICTS}
+    split = True
+    show_auto = False
+    max_width = 1500
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -134,20 +138,21 @@ class BulkPage(SegmentPage):
         v = self.vars
 
         # ---- Comics
-        self.s1 = self.add_segment("Comics")
+        self.make_panes(right_width=560, lo=400)
+        self.s1 = self.add_block("Comics", side="left", grow=True)
         self.drop = DropZone(self.s1.body, "Drop a folder here, or add a folder or comics", self.browse, self.browse,
                              self.browse_files)
         self.drop.pack(fill="x", padx=(0, 6), pady=(0, 12))
         Toggle(self.s1.body, text="Include comics in subfolders", variable=v["recursive"],
                **switch_style()).pack(anchor="w", pady=(0, 10))
         self.comics = LazyTable(self.s1.body, [
-            ("name", "Comic", 300, True), ("series", "Series", 170, True), ("where", "Folder", 220, True),
-            ("type", "Type", 56, False), ("size", "Size", 84, False)], rows=8,
+            ("name", "Comic", 220, True), ("series", "Series", 130, True), ("where", "Folder", 140, True),
+            ("type", "Type", 50, False), ("size", "Size", 74, False)], rows=8, grow=True,
             empty="No comics yet. Add a folder or pick some comics above.")
-        self.comics.pack(fill="x")
+        self.comics.pack(fill="both", expand=True)
 
         # ---- Covers
-        self.s2 = self.add_segment("Covers")
+        self.s2 = self.add_block("Covers")
         body = self.s2.body
         section(body, "Save covers").pack(fill="x", pady=(0, 10))
         self.recipe = ctk.StringVar(value="folder")
@@ -182,12 +187,12 @@ class BulkPage(SegmentPage):
         self.recipe.trace_add("write", lambda *_: self._recipe_picked())
 
         # ---- Review
-        self.s3 = self.add_segment("Review")
+        self.s3 = self.add_block("Review")
         self.headline = ctk.CTkLabel(self.s3.body, text="", font=(HEAD, 16), text_color=TEXT, anchor="w", justify="left",
-                                     wraplength=900)
+                                     wraplength=480)
         self.headline.pack(fill="x")
         self.subline = ctk.CTkLabel(self.s3.body, text="", font=TYPE_BODY, text_color=MUTED, anchor="w", justify="left",
-                                    wraplength=900)
+                                    wraplength=480)
         self.subline.pack(fill="x", pady=(2, 8))
         self.problems = ctk.CTkFrame(self.s3.body, fg_color="transparent", height=0)  # (an empty frame is 200 px tall otherwise)
         self.problems.pack(fill="x")
@@ -199,8 +204,8 @@ class BulkPage(SegmentPage):
         self.covers_on = ctk.BooleanVar(value=False)
         Toggle(self.tools, text="Show covers", variable=self.covers_on, **switch_style()).pack(side="right")
         self.covers_on.trace_add("write", lambda *_: self._covers_toggled())
-        self.review = LazyTable(self.s3.body, [("src", "Comic", 300, True), ("dest", "Cover file", 300, True),
-                                                ("state", "Status", 120, False)], rows=9,
+        self.review = LazyTable(self.s3.body, [("src", "Comic", 190, True), ("dest", "Cover file", 190, True),
+                                                ("state", "Status", 100, False)], rows=9,
                                 empty="Choose comics to see where each cover will go.")
         self.review.pack(fill="x")
         self.progress = ctk.CTkProgressBar(self.s3.body, height=14, corner_radius=0, border_width=3, border_color=BORDER,
@@ -211,12 +216,13 @@ class BulkPage(SegmentPage):
         self.result_title = ctk.CTkLabel(self.result_box, text="", font=(HEAD, 18), text_color=TEXT, anchor="w")
         self.result_title.pack(fill="x", padx=16, pady=(14, 0))
         self.result_sub = ctk.CTkLabel(self.result_box, text="", font=TYPE_BODY, text_color=MUTED, anchor="w", justify="left",
-                                       wraplength=760)
+                                       wraplength=440)
         self.result_sub.pack(fill="x", padx=16, pady=(2, 14))
         self.log_label = ctk.CTkLabel(self.s3.body, text="Every file", font=(FONT, 12, "bold"), text_color=MUTED, anchor="w")
         self.log = textbox(self.s3.body, font=("Consolas", 12), height=150, wrap="none")
         self.log.configure(state="disabled")
 
+        self.fit_right(self.headline, self.subline, self.result_sub, self.custom_note)
         self.watch("recursive", callback=self.rescan)
         self.watch("where", "organize", callback=self._vars_changed)
         self.watch("subfolder", "custom", "format", "quality", "height", "name", "conflict", callback=self._settings_changed)
@@ -561,7 +567,7 @@ class BulkPage(SegmentPage):
             notes.append(f"⚠  {_plural(c['taken'], 'comic')} would write a name another comic already uses; they get a number.")
         for text in notes:
             ctk.CTkLabel(self.problems, text=text, font=TYPE_BODY, text_color=DANGER, anchor="w", justify="left",
-                         wraplength=900).pack(fill="x", pady=1)
+                         wraplength=max(240, int(self.right_width) - 70)).pack(fill="x", pady=1)
         self.exist_label.configure(text=f"Existing covers: {c['exists']}" if c["exists"] else "")
         if c["exists"]:
             self.details_btn.pack(side="left", padx=(10, 0))

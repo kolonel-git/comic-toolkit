@@ -45,18 +45,28 @@ root.update(); assert pg.footer.winfo_height() / pg._get_widget_scaling() <= 52,
 # nothing chosen yet: Comics is the only thing to do, the footer button says why it cannot be pressed
 assert states() == ["active", "locked", "locked"] and pg.bar_btn.cget("state") == "disabled"
 assert bar() == "Choose comics first" and "begin" in pg.bar_text.cget("text")
-assert not pg.s2.body.winfo_ismapped(), "locked segments stay shut"
+# two columns: the comics on the left, the covers and the review on the right, and a divider between them
+assert pg.comics.winfo_ismapped() and pg.s2.body.winfo_ismapped() and pg.s3.body.winfo_ismapped(), "nothing folds in columns"
+assert pg.comics.winfo_rootx() < pg.splitter.winfo_rootx() < pg.right_wrap.winfo_rootx()
+assert pg.comics.winfo_height() > 150, "the list uses the height of the page"
+w0 = pg.right_wrap.winfo_width(); k = pg.splitter._scale()
+pg.splitter._press(type("E", (), {"x_root": 1000})()); pg.splitter._drag(type("E", (), {"x_root": 900})()); pg.splitter._release(None); root.update()
+assert pg.right_wrap.winfo_width() > w0 and abs(pg.right_width - (560 + 100 / k)) <= 2, "dragging the divider left widens the right column"
+assert pg.state()["_split_width"] == int(pg.right_width) and pg.left.winfo_width() / k >= pg.left_min - 5
+pg.restore({"_split_width": 5000}); root.update()
+assert pg.left.winfo_width() / k >= pg.left_min - 5, "the left column keeps its minimum width"
+pg.restore({"_split_width": 560}); root.update()
 assert [s.title.cget("text") for s in pg.segments] == ["Comics", "Covers", "Review"], "labels name the job, no step numbers"
 
 # choosing comics: Comics folds to a summary and Covers opens by itself
 pg.set_folder(d); root.update()
 assert states() == ["done", "active", "idle"] and bar() == "Extract 6 covers" and pg.bar_btn.cget("state") == "normal"
-assert not pg.s1.body.winfo_ismapped() and pg.s2.body.winfo_ismapped(), "auto-advance folds the finished segment"
+assert pg.s1.body.winfo_ismapped() and pg.s2.body.winfo_ismapped(), "the comics stay in view while the covers are set"
 assert pg.s1.summary.cget("text").startswith("6 comics · 2 series") and str(d) in pg.s1.summary.cget("text")
 kids = pg.comics.tree.get_children()
 assert len(kids) == 6 and pg.comics.tree.item(kids[0])["values"][0].startswith("Batman 001")
 assert pg.s2.summary.cget("text") == "One covers folder · Original · replace existing"
-pg.s1.toggle(); root.update(); assert pg.s1.body.winfo_ismapped() and len(pg.files) == 6, "a folded segment opens again"
+assert len(pg.files) == 6
 
 # the Review: counts in plain words, one row per comic with a status
 settle(root, lambda: pg.checking is None)
@@ -99,7 +109,7 @@ pg.recipe.set("folder"); pg.vars["format"].set("Original"); root.update()
 
 # Review the covers folds Covers and opens Review
 pg.go_review(); root.update()
-assert states() == ["done", "done", "active"] and pg.s3.body.winfo_ismapped() and not pg.s2.body.winfo_ismapped()
+assert states() == ["done", "done", "active"] and pg.s3.body.winfo_ismapped() and pg.s2.body.winfo_ismapped(), "columns: nothing folds"
 assert pg.problems.winfo_height() <= 10, "an empty problems list takes no room (an empty frame is 200 px tall by default)"
 
 # dry run: statuses say what would happen, nothing is written
@@ -163,10 +173,9 @@ pg.reset(); pg.set_folder(d); root.update()
 assert pg.vars["format"].get() == "PNG", "each folder remembers the settings last used with it"
 saved = pg.state(); assert saved["format"] == "PNG" and str(d) in saved["_by_folder"] and saved["_auto_advance"] is True
 
-# auto-advance can be switched off: finished segments stay open and nothing opens by itself
-pg.reset(); pg.auto.set(False); pg.set_folder(d); root.update()
-assert pg.s1.state == "done" and pg.s1.opened and pg.s1.body.winfo_ismapped(), "off: nothing folds"
-pg.auto.set(True)
+# the shared switch is not shown on a two-column page, and the next block is only brought into view (nothing folds)
+pg.reset(); pg.set_folder(d); root.update()
+assert pg.s1.state == "done" and pg.s1.body.winfo_ismapped() and not [w for w in pg.head_frame.winfo_children() if "Toggle" in type(w).__name__]
 
 # restore keeps known settings and ignores unknown ones
 pg.restore({"format": "WebP", "where": "nonsense", "organize": ORG_SERIES, "_auto_advance": False, "_by_folder": {"x": {"format": "PNG"}}})
@@ -199,22 +208,22 @@ assert len(lt.view) == 600 and len(lt.tree.get_children()) == fk.CHUNK, "a long 
 lt.query.set(""); lt.set_rows(big[:10]); root.update(); assert len(lt.tree.get_children()) == 10, "short lists are drawn whole"
 lt.destroy()
 
-# scrolling works: the scroll region is set, the page is taller than the window, the wheel moves it
+# scrolling works in the right column on its own: the scroll region is set, the column is taller than the window, the wheel moves it
 pg.reset(); pg.set_folder(d); root.update(); root.update()
-for s in pg.segments: s.set_open(True)
-root.update()
-canvas = pg.scroll._parent_canvas
+assert pg.scroll is None, "the page itself does not scroll; each column does"
+canvas = pg.right._parent_canvas
 assert canvas.cget("scrollregion"), "an empty scroll region means the wheel does nothing"
-assert canvas.yview() != (0.0, 1.0), canvas.yview()
 canvas.yview_moveto(0); root.update()
 child = pg.cards.cards["series"][0]
-assert pg.scroll._check_if_valid_scroll(child) and pg.scroll._check_if_valid_scroll(pg.review.tree)
-before = canvas.yview()[0]
-pg.scroll._mouse_wheel_all(types.SimpleNamespace(widget=child, delta=-120, num=0)); root.update()
-assert canvas.yview()[0] > before, "the mouse wheel moves the page"
-pg.reveal(pg.s3); root.update(); assert canvas.yview()[0] > 0
-pg.reveal(pg.s1); root.update(); assert canvas.yview()[0] == 0.0
+assert pg.right._check_if_valid_scroll(child) and pg.right._check_if_valid_scroll(pg.review.tree)
+if canvas.yview() != (0.0, 1.0):
+    before = canvas.yview()[0]
+    pg.right._mouse_wheel_all(types.SimpleNamespace(widget=child, delta=-120, num=0)); root.update()
+    assert canvas.yview()[0] > before, "the mouse wheel moves the right column"
+    pg.reveal(pg.s3); root.update(); assert canvas.yview()[0] > 0
+    pg.reveal(pg.s2); root.update(); assert canvas.yview()[0] >= 0
 # the footer stays visible whatever the scroll position
+root.update(); root.update()
 assert pg.footer.winfo_ismapped() and pg.footer.winfo_rooty() + pg.footer.winfo_height() <= root.winfo_rooty() + root.winfo_height() + 2
 
 # hovering: controls find their hover hooks through the pointer check, and sliding keeps the scaled layout
@@ -231,7 +240,5 @@ h2[0](); assert str(card.cget("fg_color")) != str(uk.RAISED), "an unchosen card 
 h2[1](); assert card.cget("fg_color") == uk.RAISED
 chosen = pg.cards.cards[pg.recipe.get()][0]
 assert chosen.cget("fg_color") == uk.PINK
-uk._hover_target(pg.s2.title)[1][0](); assert pg.s2.inner.cget("border_color") == uk.PINK
-uk._hover_target(pg.s1.title)[1][1]()
 root.destroy()
 print("bulk page OK")

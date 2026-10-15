@@ -46,10 +46,9 @@ sg.pack_forget()
 def headings(pg): return pg.form.headings
 EXPECT = {SinglePage: ["Cover image", "Output"], IconsPage: ["Cover", "Output"],
           ConvertPage: ["Source", "Output"],
-          AuditPage: ["Source", "Checks", "Warnings"],
           OrderPage: ["Reading order", "Filenames and sorting", "Output"], AceoPage: ["Template", "Covers", "Cards", "Output"]}
 for pg in pages:
-    if type(pg) in EXPECT:  # (Bulk folder and Metadata are segment pages, tested in test_bulk_page.py and test_meta_page.py)
+    if type(pg) in EXPECT:  # (Bulk folder, Metadata and Library audit are segment pages, tested in test_bulk_page.py, test_meta_page.py and test_audit_ui.py)
         assert headings(pg) == EXPECT[type(pg)], (type(pg).__name__, headings(pg))
 
 # the options panel can be dragged wider and narrower, within limits, and the width is saved

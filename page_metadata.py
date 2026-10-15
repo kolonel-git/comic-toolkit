@@ -18,7 +18,7 @@ from archive_tools import BACKUP, REPLACE, apply_metadata
 from comic_core import COMIC_EXT, common_root, in_archive, is_page, natural_key, picked_files
 from flow_kit import Advanced, LazyTable, SegmentPage
 from rename_core import parse_filename, read_comicinfo
-from ui_kit import (BG, BORDER, DANGER, EDGE, FONT, HEAD, MUTED, PANEL, SCROLL, TEXT, TYPE_BODY, TYPE_HINT, TYPE_SEGMENT, DropZone,
+from ui_kit import (BORDER, DANGER, EDGE, FONT, HEAD, MUTED, PANEL, TEXT, TYPE_BODY, TYPE_HINT, TYPE_SEGMENT, DropZone,
                     Toggle, entry, menu, button, pick, segmented, switch_style, tool_button, tooltip)
 
 AUTO, ONE, MANY = "Automatic", "One at a time", "Several at once"   # automatic follows how many comics are selected
@@ -91,13 +91,7 @@ class MetadataPage(SegmentPage):
         v = self.vars
 
         # ---- left: the comics
-        self.panes = ctk.CTkFrame(self.col, fg_color="transparent")
-        self.panes.pack(fill="both", expand=True)
-        self.panes.grid_columnconfigure(0, weight=5, uniform="pane", minsize=420)
-        self.panes.grid_columnconfigure(1, weight=6, uniform="pane", minsize=480)
-        self.panes.grid_rowconfigure(0, weight=1)
-        left = ctk.CTkFrame(self.panes, fg_color="transparent")
-        left.grid(row=0, column=0, sticky="nsew", padx=(0, 18))
+        left, _right = self.make_panes(right_width=600, lo=460)   # the divider between them can be dragged
         head = ctk.CTkFrame(left, fg_color="transparent")
         head.pack(fill="x", pady=(0, 8))
         ctk.CTkLabel(head, text="Comics", font=TYPE_SEGMENT, text_color=TEXT, anchor="w").pack(side="left")
@@ -135,9 +129,6 @@ class MetadataPage(SegmentPage):
         self.comics.tree.bind("<<TreeviewSelect>>", lambda _: self._selection_changed())
 
         # ---- right: the fields to edit, then every change waiting to be saved
-        self.right = ctk.CTkScrollableFrame(self.panes, fg_color=BG, corner_radius=0, scrollbar_button_color=SCROLL,
-                                            scrollbar_button_hover_color=MUTED)
-        self.right.grid(row=0, column=1, sticky="nsew")
         ctk.CTkLabel(self.right, text="Edit", font=TYPE_SEGMENT, text_color=TEXT, anchor="w").pack(fill="x", pady=(0, 8))
         segmented(self.right, self.mode, [AUTO, ONE, MANY], width=440).pack(anchor="w", pady=(0, 8))
         self.target_label = ctk.CTkLabel(self.right, text="", font=(FONT, 13, "bold"), text_color=TEXT, anchor="w",
@@ -155,6 +146,7 @@ class MetadataPage(SegmentPage):
                                   wraplength=560)
         self._build_one()
         self._build_many()
+        self.fit_right(self.target_label, self.offer_label, self.empty)
 
         self.changes_box = ctk.CTkFrame(self.right, fg_color="transparent")
         self.changes_box.pack(fill="x", pady=(26, 0))
@@ -175,6 +167,7 @@ class MetadataPage(SegmentPage):
         self.save_note = ctk.CTkLabel(self.changes_box, text="", font=TYPE_BODY, text_color=MUTED, anchor="w", justify="left",
                                       wraplength=560)
         self.save_note.pack(fill="x", pady=(16, 10))
+        self.fit_right(self.save_note)
         row = ctk.CTkFrame(self.changes_box, fg_color="transparent")
         row.pack(fill="x", pady=(0, 20))
         self.confirm_btn = button(row, "Confirm and save", self.apply, primary=True, width=260)

@@ -51,6 +51,14 @@ def table(): return [pg.comics.tree.item(i, "values") for i in pg.comics.tree.ge
 # nothing chosen: two columns side by side, the footer says why it cannot save
 assert not pg.segments and pg.scroll is None, "no scrolling column of segments"
 assert pg.comics.winfo_ismapped() and pg.right.winfo_ismapped() and pg.comics.winfo_rootx() < pg.right.winfo_rootx(), "comics left, fields right"
+# the divider between the columns can be dragged, the width is saved, and the left column keeps its minimum
+assert pg.comics.winfo_rootx() < pg.splitter.winfo_rootx() < pg.right_wrap.winfo_rootx()
+w0 = pg.right_wrap.winfo_width(); k = pg.splitter._scale()
+pg.splitter._press(type("E", (), {"x_root": 1000})()); pg.splitter._drag(type("E", (), {"x_root": 900})()); pg.splitter._release(None); root.update()
+assert pg.right_wrap.winfo_width() > w0 and abs(pg.right_width - (600 + 100 / k)) <= 2
+assert pg.state()["_split_width"] == int(pg.right_width) and pg.left.winfo_width() / k >= pg.left_min - 5
+pg.restore({"_split_width": 3000}); root.update(); assert pg.left.winfo_width() / k >= pg.left_min - 5
+pg.restore({"_split_width": 600}); root.update()
 assert pg.changes_box.winfo_ismapped() and pg.review_head.cget("text") == "No changes yet", "the changes list is part of the right column"
 assert pg.empty.winfo_ismapped() and "Choose a folder" in pg.empty.cget("text") and pg.mode.get() == pm.AUTO
 assert foot() == "Review changes" and pg.bar_btn.cget("state") == "disabled"
