@@ -11,9 +11,10 @@ Index of the Comic Toolkit docs. The project overview and quick start live in th
 | [Architecture](architecture.md) | Project layout and what each module is responsible for |
 | [Manual tests](manual-tests.md) | Hands-on checks that need real comics, the real window or YACReader, with an expected result for each |
 | [Known limitations](known-limitations.md) | What is untested, Windows-only, heuristic, or likely to surprise you |
-| [Roadmap](roadmap.md) | Findings from the latest review and the ordered build plan |
+| [Roadmap](roadmap.md) | The build order (the UI revamp, phase by phase), what is built, and future implementations |
+| [UI revamp plan](ui-revamp-plan.md) | The agreed redesign of every page: shared segmented layout, per-tool changes, links between tools, future work |
 | [Reading Order](reading-order.md) | How the reading-order tool works, its options, and how YACReader treats the result |
-| [Versioning](versioning.md) | Tag scheme (`v0.x.y`) and planned releases |
+| [Versioning](versioning.md) | Tag scheme (`v0.x.y`), the tags that exist, and one planned release per roadmap phase |
 | [Changelog](CHANGELOG.md) | Timestamped record of every working session |
 
 ## Keeping the docs current

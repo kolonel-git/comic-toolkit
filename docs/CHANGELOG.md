@@ -12,6 +12,80 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-15 15:55 +11:00 · Session 53: UI revamp plan written, roadmap and versioning rebuilt around it
+
+**Summary:** Went through every tool with the owner and wrote down the agreed redesign, then rebuilt the roadmap, versioning and handoff around it. No app code changed.
+
+**Decisions:** every page becomes Header, collapsible Segments (finished ones fold to a one-line summary, the next opens by itself) and Footer; Advanced options sit in a collapsed block inside their segment; no step numbers; one type scale (Arial Black for the page title only); folder-opening tools get `Library` and `Recent` beside the folder control; reading-order folders are marked by the user (with suggestions) and kept out of stats and duplicate checks; Metadata becomes a manual repair editor with local-library suggestions; Single issue loses *Convert to ZIP*; Bulk folder and Folder icons gain dry-run reviews; Renamer gets type prompts, suggestions and saved rules; undo is future work.
+
+**Changes by file**
+- `docs/ui-revamp-plan.md` (new): one section per tool, future work, and a table of links between tools. Trimmed after review: per-section status lines, duplicated future-work lists and a broken table were removed.
+- `docs/roadmap.md`: rewritten. The UI revamp is the build order (Phases 0 to 5, one branch per feature); finished items 0 to 5 are one summary paragraph; the folder browser, downloads watcher and other unscheduled ideas moved to *Future implementations*.
+- `docs/versioning.md`: added the tags that exist (`v0.5.1`, `v0.6.0`, `v0.7.0`); replaced the planned tags tied to the old roadmap items with one release per phase (`v0.8.0` to `v0.12.0`, then `v1.0.0`).
+- `HANDOFF.md`: tags, session count, test count, open work and start-of-session steps updated; working agreements now say one feature per branch, PR title and summary after the work, and no mention of any assistant or agent in commits, PR text, code or docs.
+- `README.md`: status line now `v0.7.0`, link to the plan.
+- `docs/README.md`: index rows for the plan, roadmap and versioning.
+
+**Decisions taken while rebuilding the roadmap (owner may change):** tools are converted one at a time; the downloads watcher is future work because Add to library covers its job; one tag per phase; Renamer sits in Phase 4.
+
+**Verification:** documentation only; no tests were run.
+
+---
+
+## 2026-10-15 22:00 +11:00 · Session 52: Bulk folder steps 2 and 3 made clearer
+
+**Summary:** Feedback on Session 51: the workflow in the second and third cards was still confusing; the bottom bar was liked and kept.
+
+**What was confusing, and the change**
+- Step 3 repeated every setting from step 2, so it looked like a second form with nothing to do in it. It now lists only what is about to happen: how many covers and in what format, where they go, a warning line if covers already exist ("6 of 6 covers already exist and will be replaced"), and the reassurance that comics are never changed. During a run it shows progress and live counts; the file list and the result appear only once there is something to show.
+- Every step has a one-line hint under its header saying what to do in it (`StepCard.set_hint`), and step 3 says that nothing happens until the yellow button in the bar is pressed. Step labels are shorter: *Start here*, *You are here*, *Next*, *Working*, *Finished*.
+- The pinned bar says which step you are on ("Step 2 of 3 · Check the preview, then extract.", "Step 3 of 3 · 3 of 6, about 10s left · 3 saved"), then the result with *Open the covers folder* as the one next step and *Extract again* beside it.
+- Step 2 is titled *Set up the covers* and its groups are questions: where do the covers go, what do they look like, what are they called. The preview table has a Status column (New, Replaces, Skipped, Numbered) so a conflict is visible on the very row it affects.
+
+**Verification:** `ruff check --select F,E9 .` passes; `python tests/run_all.py`: 27 of 27 pass. Captured in dark mode before and after a run; the final column-width tweak to the preview was not looked at again.
+
+**Known issues:** the page is long at the default window height (the pinned bar hides the bottom of it until you scroll); other tools still use the old layout.
+
+---
+
+## 2026-10-15 20:30 +11:00 · Session 51: Bulk folder shows everything, scrolling and hovering fixed
+
+**Summary:** Feedback on Session 50: the guided page was too simplified, the page would not scroll, and hovering on buttons and cards did not behave. All three fixed.
+
+**Balance of guidance and information (`flow_kit.py`, `page_bulk.py`)**
+- Steps no longer collapse on their own; all three stay open and show their details (click a header to fold one). The guidance stays: numbered badges, a pink *where you are* label, locked steps, the page scrolls to the next step when something is chosen, and the main button is pinned in a bar at the bottom (`StepPage.set_bar`): *Extract N covers*, then *Stop*, then *Open the covers folder*.
+- Step 1 now has a facts panel (comics, series, size on disk, file types, where from) and a table of every comic found. Step 2 puts every setting (cards, format, quality, size, file name, if a cover exists, plus *Advanced*) beside a live preview of the covers you will get, with how many already exist and what happens to them. Step 3 lists every setting that will apply, then progress, the result and every file. Content is up to 1100 px wide. New helpers `section`, `facts`, `mini_table`.
+
+**Scrolling:** binding `<Configure>` on a `CTkScrollableFrame` replaces the binding that keeps its scroll region up to date, so the page never got a scroll region and the wheel did nothing. The page now binds its own frame instead (note in `flow_kit.py`).
+
+**Hovering (`ui_kit.py`):** Enter and Leave events are unreliable on customtkinter widgets, so a single timer (`ensure_hover`, every 40 ms) asks Tk which widget is under the pointer and calls the `_hover_hooks` of the nearest control (shadowed buttons and cards, sidebar entries, drop boxes, choice cards, step headers, *More options* links). The slide toward the shadow also used unscaled padding, so at 125 % scaling a button's shadow changed size after the first hover; it now uses the same scaling as the first layout. While writing the timer, `_hover` clashed with customtkinter's own `CTkButton._hover` flag; the hook is named `_hover_hooks`, and a broken hook can no longer stop the timer.
+
+**Tests:** `tests/test_bulk_page.py` rewritten (steps, found facts, preview, bar, scrolling region and wheel, hover hooks).
+
+**Verification:** `ruff check --select F,E9 .` passes; `python tests/run_all.py`: 27 of 27 pass. Hover was also checked once with the real pointer (warped over a Home card and a sidebar entry and away): both warmed and cooled. The redesigned page was captured in dark mode and looked right; light mode and a real library were not tried.
+
+**Known issues:** at the default window height the pinned bar covers the bottom of the page, so the last step is reached by scrolling; the preview table truncates long names in the middle of a path rather than with an ellipsis; other tools still use the old layout.
+
+---
+
+## 2026-10-15 18:00 +11:00 · Session 50: Guided steps, starting with Bulk folder
+
+**Summary:** The first tool reworked in the new guided layout: a short column of three numbered step cards instead of a main area beside a long options panel. Planned for low cognitive load (the owner has ADHD and expects many users do): one obvious next step, few visible choices, plain-language results.
+
+**Decisions (owner's answers):** guided steps for every tool, Bulk folder first; pain points to design for: too many options at once, not sure what to do next, losing my place, unclear whether it worked. Remaining tools follow one at a time.
+
+**Changes**
+- New `flow_kit.py`: `StepPage`, `StepCard` (badge with number or tick, title, a label saying where you are, a one-line summary and Change button once done, greyed while it waits for an earlier step), `ChoiceCards` (cards with arrow-key and Tab support), `Disclosure`, `path_row`, `labelled`.
+- `page_bulk.py` rewritten on it: step 1 comics (drop box, Library folder and Recent, *Include comics in subfolders* next to where it matters); step 2 four recipe cards for where covers go with a live example path each, the image format up front, *More options* for the rest (all old settings are still there, the two advanced menus keep the cards in sync); step 3 one big button that reads *Extract N covers* (or *Choose comics first*, greyed), progress with time left, then a result card instead of the button. The run logic (`_worker`, options, file naming) is unchanged.
+- `ui_kit.title_block(strip=False)` skips the decorative shape strip on guided pages.
+- Tests: new `tests/test_bulk_page.py`; `test_layout.py` no longer treats Bulk folder as an options-panel page.
+
+**Verification:** `ruff check --select F,E9 .` passes; `python tests/run_all.py`: 27 of 27 pass. The page was captured in dark mode (empty, comics chosen, finished) and the layout looked as intended; the light-mode capture was taken but not looked at, and the page was not tried with a real library.
+
+**Known issues:** at the minimum window height the Extract button sits at the very bottom edge, so a short window scrolls; the page persists no state for the card choice itself (it follows the where and layout settings, which are saved); the other tools still use the old layout, so the app is temporarily in two styles.
+
+---
+
 ## 2026-10-15 14:30 +11:00 · Session 49: Ctrl+K as a floating search bar
 
 **Summary:** The Ctrl+K window is now a Spotlight-style search bar: a large field at the top middle of the app with results listed under it, each a bold title over a smaller description.
