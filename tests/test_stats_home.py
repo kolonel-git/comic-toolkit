@@ -69,11 +69,19 @@ with tempfile.TemporaryDirectory() as d:
     settle(app, lambda: not stats.q)
     assert "5 comics" in home.line.cget("text")
 
-    # the numbers and the folder survive a restart
+    # the numbers, the folder and the marked reading-order folders survive a restart
+    assert stats.orders is app.orders and stats.open_tool and stats.recent_dirs == app.recent_dirs
+    app.orders.add(lib / "Batman")
+    opened = []
+    app._open_path = lambda page, path: opened.append((page, path))
+    stats.open_tool("metadata")  # a link on the stats page opens that tool on the library folder
+    assert app.current == "metadata" and opened == [(app.pages["metadata"], lib)]
     app.close()
     saved = json.loads(ct.SETTINGS.read_text(encoding="utf-8"))
     assert saved["stats_snapshot"]["comics"] == 5 and saved["stats"]["root"] == str(lib)
+    assert saved["reading_orders"]["folders"] == [str(lib / "Batman")]
     app = ct.App(); app.update()
+    assert app.orders.folders == [str(lib / "Batman")] and app.pages["stats"].orders is app.orders
     line = app.pages["home"].line.cget("text")
     assert line.startswith("5 comics · 2 series") and buttons(app.pages["home"]) == ["Open Stats", "↻", "Library folder…"], line
     assert app.pages["stats"].root() == lib

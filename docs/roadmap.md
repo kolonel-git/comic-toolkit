@@ -41,13 +41,13 @@ Every page becomes Header, collapsible Segments and Footer. The full design for 
   `Recent`, and the type scale (extends `flow_kit.py` and `ui_kit.py`). **Done** with Bulk folder (the folder row reuses the
   drop box, which already carries `Library` and `Recent`).
 - 0b. Lazy scrollable table with filters. **Done** (`LazyTable`).
-- 0c. Reading-order folder list (persisted, with the suggestion scan), shared by Stats, Audit and Reading order.
+- 0c. Reading-order folder list (persisted, with the suggestion scan), shared by Stats, Audit and Reading order. **Done** (`reading_orders.py`; Stats uses it now, Audit and Reading order will).
 - 0d. Local suggestion index (normalised series and publisher names) for Metadata, Renamer and Add to library.
 - 0e. Link context: open a page preloaded, with a "From X" chip and a Back link.
 
 **Phase 1: prove the shell** (`v0.8.0`)
 1. Bulk folder on the new shell (includes 0a and 0b). **Done.**
-2. Library stats: segments, Needs attention cards, reading-order toggle and section (includes 0c).
+2. Library stats: segments, Needs attention cards, reading-order toggle and section (includes 0c). **Done.**
 
 **Phase 2: the repair loop** (`v0.9.0`)
 3. Metadata repair editor (includes 0d and 0e).

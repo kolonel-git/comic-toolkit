@@ -12,6 +12,34 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-15 19:10 +11:00 · Session 55: Library stats on the page shell, with reading-order folders (roadmap Phase 1, step 2)
+
+**Summary:** Library stats now uses the shared segment shell, and the list of reading-order folders exists (marked by the user, suggested by a scan, remembered between sessions), following the [UI revamp plan](ui-revamp-plan.md).
+
+**What changed for the user**
+- Three segments: **Library** (folder strip with *Change…* and *Recent ▾*, scan options in a shut Advanced block), **Overview** and **Needs attention**. After a scan Library folds to a summary and Overview opens.
+- Overview groups the bars as *Collection*, *Health* and *Space*; every bar uses the one accent colour; *Chart options* (shut) holds the split, decades and show-every-bar switches. A bar click lists its comics in a drawer at the right edge. Health rows with something missing have a **Fix these** link that opens Metadata on the library.
+- Reading orders: folders can be marked (**Mark a folder…**, or accept a suggestion), unmarked and remembered. They are left out of every number and the Home line unless the visible **Include reading orders in stats** switch is on. A shut *Reading orders* section lists them with counts. After a scan, folders with mostly numbered names or story arcs are suggested on a Needs attention card (**Mark them** / **Not these**).
+- Needs attention cards: reading-order suggestions, comics with no publisher, year or issue number (**Fix metadata**), possible duplicate groups (**Open Library audit**). The Home line gets "N need attention".
+- The footer holds **Scan library** / **Rescan library** / **Stop**, with **Open library folder**, **Export CSV…** (a menu of sections, opening upward) and **Copy summary**.
+
+**Changes by file**
+- `reading_orders.py` (new): `ReadingOrders` and `suggest`. No UI code.
+- `stats_core.py`: `attention()`, and the snapshot carries an attention count (older saved snapshots still read).
+- `page_stats.py`: rebuilt on `SegmentPage`; `BarChart` gets the *Fix these* link; `LazyTable` for the drawer, the largest files and the marked folders.
+- `comic_tool.py`: one `ReadingOrders` shared and saved in settings.json (`reading_orders`); the stats page gets the recent folders and a function that opens another tool on the library.
+- `flow_kit.py`: `set_footer` secondary buttons can ask for themselves as a menu anchor. `ui_kit.py`: `popup_menu(..., above=True)`.
+- Tests: `tests/test_reading_orders.py` (new), `tests/test_stats_ui.py` rewritten, `tests/test_stats.py` and `tests/test_stats_home.py` extended.
+- `docs/tools.md`, `docs/architecture.md`, `docs/known-limitations.md`, `docs/roadmap.md`: updated.
+
+**Technical notes:** customtkinter's `place()` refuses a `height`, so the drawer is placed with tkinter's `place_configure`. A marked parent folder replaces marked folders under it. Suggestions only judge a comic's own folder (at least three comics, at least 60 percent numbered or with a story arc).
+
+**Verification:** `ruff check --select F,E9 .` passes. `python tests/run_all.py`: 27 of 28 passed; `test_aceo_ui.py` failed on a key event again (it needs window focus; it passes alone and that page is untouched). I did not look at the new page on screen, because screen captures kept catching other windows; the layout is covered by assertions only.
+
+**Known issues:** the Fix and Open links open the existing Metadata and Library audit pages on the library folder, without a filter or a "From Library stats" chip (that arrives with the Metadata editor, Phase 2). Library audit and Reading order do not read the marked folders yet. The page needs a visual check by a person at several window sizes, in light and dark mode.
+
+---
+
 ## 2026-10-15 17:30 +11:00 · Session 54: shared page shell and Bulk folder on it (roadmap Phase 0 and Phase 1, step 1)
 
 **Summary:** Built the shell every page will use (header, collapsible segments, footer) and moved Bulk folder onto it, following the [UI revamp plan](ui-revamp-plan.md). The downloads watcher was folded into the Add to library plan (a *Watch this folder* switch) in the roadmap and plan.

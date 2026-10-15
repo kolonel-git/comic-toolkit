@@ -42,6 +42,7 @@ from page_order import OrderPage
 from page_rename import RenamePage
 from page_single import SinglePage
 from page_stats import StatsPage
+from reading_orders import ReadingOrders
 from stats_core import snapshot_line
 from ui_kit import (Toggle, spotlight, tooltip, ACCENT, BG, BORDER, CYAN, DANGER, WELL, EDGE, FONT, HEAD, HOVER, MUTED, ON_ACCENT, PANEL, PINK,
                     TEXT, YELLOW, AbstractStrip, DropZone, IconTile, Logo, NavItem, Shadow, Splitter, pick, refresh_strips, switch_style,
@@ -310,6 +311,10 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         snap = saved.get("stats_snapshot")
         self.snapshot = snap if isinstance(snap, dict) and {"comics", "series", "bytes", "when"} <= set(snap) else None
         stats = self.pages["stats"]
+        self.orders = ReadingOrders.from_dict(saved.get("reading_orders"))  # folders of reading-order copies, shared by tools
+        stats.orders = self.orders
+        stats.recent_dirs = self.recent_dirs
+        stats.open_tool = self._open_from_stats
         stats.on_progress = lambda d, t: self.pages["home"].show_summary(None, scanning=(d, t))
         stats.on_scanned = self._scanned
         stats.on_error = lambda e: self.pages["home"].show_summary(None, error=e)
@@ -338,6 +343,14 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             page.set_folder(path)
         else:
             page.add_paths([Path(path)])
+
+    def _open_from_stats(self, key):
+        """A link on Library stats: open another tool on the library folder."""
+        root = self.library_root()
+        page = self.pages[key]
+        if root is not None:
+            self._open_path(page, root)
+        self.show(key)
 
     def _open_library(self, page):
         root = self.library_root()
@@ -574,6 +587,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         data["group_order"] = self.group_order
         data["collapsed"] = sorted(self.collapsed)
         data["stats_snapshot"] = self.snapshot
+        data["reading_orders"] = self.orders.to_dict()
         try:
             SETTINGS.write_text(json.dumps(data, indent=2), encoding="utf-8")
         except OSError:

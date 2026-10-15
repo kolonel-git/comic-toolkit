@@ -508,15 +508,19 @@ class SegmentPage(ctk.CTkFrame):
 
     def set_footer(self, text, label, command=None, enabled=True, secondary=()):
         """What the footer says and does: a line of status text, the main button, and any number of secondary buttons
-        (label, command) on the left."""
+        on the left: (label, command), or (label, command, True) when the command wants the button itself (to open a
+        menu above it)."""
         self.bar_text.configure(text=text)
         self.bar_btn.configure(text=label, state="normal" if enabled else "disabled")
         if command is not None:
             self.bar_btn.configure(command=command)
         for w in self.side_row.winfo_children():
             w.destroy()
-        for lab, cmd in secondary:
-            tool_button(self.side_row, lab, cmd, max(100, 28 + 8 * len(lab))).pack(side="left", padx=(0, 8))
+        for lab, cmd, *anchored in secondary:
+            btn = tool_button(self.side_row, lab, cmd, max(100, 28 + 8 * len(lab)))
+            if anchored and anchored[0]:
+                btn.configure(command=lambda b=btn, c=cmd: c(b))
+            btn.pack(side="left", padx=(0, 8))
 
     @property
     def btn_run(self):
