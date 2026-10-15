@@ -40,6 +40,10 @@ SWITCH_OFF = ("#BDBDBD", "#9A9AB0")
 SELECT_BG = ("#7BE0FF", "#1B6F8E")      # selected table row
 FONT = "Segoe UI"
 HEAD = "Arial Black"                    # loud display face for titles (ships with Windows)
+TYPE_SEGMENT = (FONT, 15, "bold")       # type scale: page title is HEAD 22; then these
+TYPE_BODY = (FONT, 13)
+TYPE_HINT = (FONT, 11)
+TYPE_MONO = ("Consolas", 12)            # paths and templates only
 R_CARD = R_CTRL = 0                     # square corners everywhere
 EDGE = 3                                # border thickness
 
@@ -1342,17 +1346,21 @@ class Page(ctk.CTkFrame):
 TREE_STYLE = "Comics.Treeview"
 
 
-def build_tree(parent, columns, selectmode="browse", empty=None):
+def build_tree(parent, columns, selectmode="browse", empty=None, style=TREE_STYLE, picture=False):
     """Bordered ttk table with a hard shadow and themed scrollbars. columns: (id, heading, width, stretch). Every
-    column can be resized by dragging the edge of its heading."""
+    column can be resized by dragging the edge of its heading. `style` gives a table its own ttk style (so its row
+    height can differ); `picture` adds a first column, hidden until its width is set, that can hold a small image."""
     st = ttk.Style()
     st.theme_use("clam")
-    st.layout(TREE_STYLE, [("Treeview.treearea", {"sticky": "nswe"})])
+    st.layout(style, [("Treeview.treearea", {"sticky": "nswe"})])
     box = Shadow(parent, lambda p: ctk.CTkFrame(p, fg_color=WELL, border_color=BORDER, border_width=EDGE,
                                                 corner_radius=0), depth=5)
     wrap = box.inner
-    tree = ttk.Treeview(wrap, style=TREE_STYLE, show="headings", selectmode=selectmode,
+    tree = ttk.Treeview(wrap, style=style, show=("tree", "headings") if picture else "headings", selectmode=selectmode,
                         columns=[c[0] for c in columns])
+    if picture:
+        tree.column("#0", width=0, minwidth=0, stretch=False)
+        tree.heading("#0", text="")
     for col, text, w, stretch in columns:
         tree.heading(col, text=text, anchor="w")
         tree.column(col, width=w, minwidth=24, stretch=stretch, anchor="w")  # drag a heading's edge to resize
@@ -1388,10 +1396,11 @@ def build_tree(parent, columns, selectmode="browse", empty=None):
 def apply_tree_theme(tree):
     """ttk widgets don't follow customtkinter's mode, so restyle them by hand."""
     st = ttk.Style()
-    st.configure(TREE_STYLE, background=pick(WELL), fieldbackground=pick(WELL), foreground=pick(TEXT),
-                 rowheight=30, borderwidth=0, font=(FONT, 11))
-    st.configure(TREE_STYLE + ".Heading", background=pick(ACCENT), foreground=ON_ACCENT, relief="flat",
+    style = str(tree.cget("style")) or TREE_STYLE
+    st.configure(style, background=pick(WELL), fieldbackground=pick(WELL), foreground=pick(TEXT),
+                 rowheight=tree.__dict__.get("_rowheight", 30), borderwidth=0, font=(FONT, 11))
+    st.configure(style + ".Heading", background=pick(ACCENT), foreground=ON_ACCENT, relief="flat",
                  font=(FONT, 10, "bold"), padding=(8, 6))
-    st.map(TREE_STYLE, background=[("selected", pick(SELECT_BG))], foreground=[("selected", pick(TEXT))])
+    st.map(style, background=[("selected", pick(SELECT_BG))], foreground=[("selected", pick(TEXT))])
     tree.tag_configure("bad", foreground=pick(DANGER))
     tree.tag_configure("dim", foreground=pick(MUTED))

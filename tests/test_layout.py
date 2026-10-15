@@ -132,7 +132,7 @@ with tempfile.TemporaryDirectory() as d:
     ic.pack_forget()
     # Bulk covers
     bk = pages[1]; bk.pack(fill="both", expand=True); bk.set_files(chosen)
-    assert bk.files == [a1, a2, b1, r1] and bk.folder == d / "Lib" and "4 comics chosen" in bk.meta.cget("text")
+    assert bk.files == [a1, a2, b1, r1] and bk.folder == d / "Lib" and "4 comics" in bk.s1.summary.cget("text") and "comics you picked" in bk.s1.summary.cget("text")
     bk.set_folder(d / "Lib" / "Batman"); assert bk.picked is None and bk.files == [a1, a2]
     bk.pack_forget()
     # Metadata
