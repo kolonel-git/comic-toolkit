@@ -92,7 +92,12 @@ except KeyError:
 assert sc.human_size(48.2e9) == "48.2 GB" and sc.human_size(1.5e6) == "1.5 MB" and sc.human_size(2500) == "2 KB"
 assert [sc.ago(0, n) for n in (10, 120, 7200, 3 * 86400, 86400)] == ["just now", "2 minutes ago", "2 hours ago", "3 days ago", "1 day ago"]
 snap = sc.snapshot(st, "C:/lib", when=1000.0)
-assert snap == {"root": "C:/lib", "comics": 7, "series": 3, "bytes": 120 * MB, "when": 1000.0}
+assert snap == {"root": "C:/lib", "comics": 7, "series": 3, "bytes": 120 * MB, "when": 1000.0, "attention": 0}
 assert sc.snapshot_line(snap, now=1000.0 + 2 * 86400) == "7 comics · 3 series · 120.0 MB · scanned 2 days ago"
 assert sc.snapshot_line({**snap, "comics": 1}, now=1000.0).startswith("1 comic ·")
+# the number of comics that need attention shows before "scanned"; an old saved snapshot without it still reads fine
+snap2 = sc.snapshot(st, "C:/lib", when=1000.0, attention_count=63)
+assert sc.snapshot_line(snap2, now=1000.0) == "7 comics · 3 series · 120.0 MB · 63 need attention · scanned just now"
+old = {k: v for k, v in snap.items() if k != "attention"}
+assert sc.snapshot_line(old, now=1000.0) == "7 comics · 3 series · 120.0 MB · scanned just now"
 print("stats core OK")

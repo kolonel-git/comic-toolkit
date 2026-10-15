@@ -1,5 +1,6 @@
 """Library stats page: scan a library once and see it as a dashboard (totals, bars per series, publisher, year and format,
-metadata coverage, the biggest files). Click a bar to list the comics behind it. Nothing here changes a file."""
+metadata health, the biggest files), then a short list of what needs attention. Click a bar to list the comics behind it
+in a side drawer. Folders marked as reading orders are counted apart. Nothing here changes a file."""
 import csv
 import os
 import queue
@@ -12,21 +13,27 @@ from tkinter import filedialog, font as tkfont
 import customtkinter as ctk
 
 import stats_core as sc
+from flow_kit import Advanced, LazyTable, SegmentPage, section
 from library_scan import scan_library
-from ui_kit import (Toggle, SCROLL, ACCENT, BG, RAISED, BORDER, FONT, MUTED, PANEL, SELECT_BG, TEXT, Page, apply_tree_theme,
-                    build_tree, button, divider, menu, pick, switch_style, title_block, tool_button)
+from reading_orders import ReadingOrders, suggest
+from ui_kit import (ACCENT, ACCENT_TEXT, BG, BORDER, EDGE, FONT, MUTED, PANEL, RAISED, SELECT_BG, TEXT,
+                    TYPE_BODY, TYPE_HINT, TYPE_SEGMENT, Toggle, pick, popup_menu, switch_style, tool_button)
 
 EXPORTS = ["Series", "Publishers", "Years", "Formats", "Coverage", "Largest"]
 ROW = 26  # height of one bar row, in pixels
+FIX_W = 84  # width of the "Fix these" link at the end of a Health row
+FIXABLE = {"Have ComicInfo.xml", "Have a year", "Have a publisher", "Have an issue number"}
 
 
 @dataclass
 class Item:
-    """One bar: its label, how long it is (0 to 1), the text at its end and the comics behind it."""
+    """One bar: its label, how long it is (0 to 1), the text at its end and the comics behind it. `fix` is the text of
+    a link at the end of the row (Health rows that have something to fix)."""
     label: str
     frac: float
     text: str
     issues: list = field(default_factory=list)
+    fix: str = ""
 
 
 def row_items(rows):
@@ -46,13 +53,15 @@ def _run(q, root, o, stop):
 
 
 class BarChart(ctk.CTkFrame):
-    """Horizontal bars on a canvas: label, bar, value. Clicking a bar that has comics behind it calls on_pick(item)."""
+    """Horizontal bars on a canvas: label, bar, value (and a "Fix these" link on rows that have one). Clicking a bar
+    that has comics behind it calls on_pick(chart, item); clicking a link calls on_fix(item). Every bar uses the one
+    accent colour."""
 
-    def __init__(self, parent, on_pick=None):
+    def __init__(self, parent, on_pick=None, on_fix=None):
         super().__init__(parent, fg_color=BG)
         self.canvas = tk.Canvas(self, height=ROW, highlightthickness=0, bd=0, cursor="arrow")
         self.canvas.pack(fill="x")
-        self.items, self.on_pick, self.selected, self.hover = [], on_pick, None, None
+        self.items, self.on_pick, self.on_fix, self.selected, self.hover = [], on_pick, on_fix, None, None
         self._job = None
         self._font = None
         self.canvas.bind("<Configure>", lambda _: self._schedule())
@@ -98,7 +107,12 @@ class BarChart(ctk.CTkFrame):
             c.create_text(6, y + ROW // 2, text=self._fit(it.label, label_w - 6), anchor="w", fill=pick(TEXT),
                           font=(FONT, 10))
             c.create_rectangle(x0, y + 6, x0 + max(3, int((x1 - x0) * it.frac)), y + ROW - 6, fill=pick(ACCENT), outline="")
-            c.create_text(w - 6, y + ROW // 2, text=it.text, anchor="e", fill=pick(MUTED), font=(FONT, 10))
+            right = w - 6
+            if it.fix:
+                c.create_text(right, y + ROW // 2, text=it.fix + " ›", anchor="e", fill=pick(ACCENT_TEXT),
+                              font=(FONT, 10, "bold underline"))
+                right -= FIX_W
+            c.create_text(right, y + ROW // 2, text=it.text, anchor="e", fill=pick(MUTED), font=(FONT, 10))
 
     def _index(self, e):
         i = e.y // ROW
@@ -107,30 +121,36 @@ class BarChart(ctk.CTkFrame):
     def _clickable(self, i):
         return i is not None and self.on_pick is not None and bool(self.items[i].issues)
 
+    def _over_fix(self, e):
+        i = self._index(e)
+        return i is not None and self.on_fix is not None and bool(self.items[i].fix) and e.x >= self.canvas.winfo_width() - FIX_W
+
     def _motion(self, e):
         i = self._index(e)
-        self._set_hover(i if self._clickable(i) else None)
+        self._set_hover(i if self._clickable(i) else None, hand=self._over_fix(e))
 
-    def _set_hover(self, i):
+    def _set_hover(self, i, hand=False):
         if i != self.hover:
             self.hover = i
-            self.canvas.configure(cursor="hand2" if i is not None else "arrow")
             self.draw()
+        self.canvas.configure(cursor="hand2" if (i is not None or hand) else "arrow")
 
     def _click(self, e):
         i = self._index(e)
-        if self._clickable(i):
+        if self._over_fix(e):
+            self.on_fix(self.items[i])
+        elif self._clickable(i):
             self.selected = i
             self.draw()
             self.on_pick(self, self.items[i])
 
 
 class FolderBar(ctk.CTkFrame):
-    """A slim one-line strip for the library folder: its path in small text and a Change button. Dropping a folder on
-    the page works too."""
+    """A slim one-line strip for the library folder: its path in small text, a Recent menu and a Change button.
+    Dropping a folder on the page works too."""
 
-    def __init__(self, parent, on_change):
-        super().__init__(parent, fg_color=PANEL, corner_radius=0, height=36)
+    def __init__(self, parent, on_change, on_recent=None):
+        super().__init__(parent, fg_color=PANEL, corner_radius=0, height=40)
         self.pack_propagate(False)
         self.prompt = "No library folder chosen"
         ctk.CTkLabel(self, text="Library folder", font=(FONT, 11, "bold"), text_color=MUTED).pack(side="left", padx=(12, 8))
@@ -138,6 +158,10 @@ class FolderBar(ctk.CTkFrame):
         self.label.pack(side="left", fill="x", expand=True)
         self.button = tool_button(self, "Change…", on_change, 76)
         self.button.pack(side="right", padx=(0, 5))
+        self.recent = None
+        if on_recent:
+            self.recent = tool_button(self, "Recent ▾", lambda: on_recent(self.recent), 88)
+            self.recent.pack(side="right", padx=(0, 6))
 
     def set(self, text=None):
         if text and len(text) > 100:
@@ -156,71 +180,94 @@ class Tile(ctk.CTkFrame):
         self.value.configure(text=text)
 
 
-class StatsPage(Page):
+def _plural(n, word):
+    return f"{n:,} {word}{'' if n == 1 else 's'}"
+
+
+class StatsPage(SegmentPage):
+    title = "Library stats"
+    subtitle = "See your whole collection at a glance. Nothing is changed."
     defaults = {"root": "", "recursive": True, "deep": False, "split": False, "decades": False, "show_all": False,
-                "export": EXPORTS[0]}
-    choices = {"export": EXPORTS}
+                "with_orders": False}
+    max_width = 1180
 
     def __init__(self, parent):
         super().__init__(parent)
+        self.orders = ReadingOrders()   # the app replaces this with the one it saves in settings.json
+        self.recent_dirs = None         # the app gives a function returning the recent folders
+        self.open_tool = None           # the app gives a function opening another tool on the library folder
         self.issues, self.stats, self.last = [], None, None
+        self.real, self.order_issues, self.attn, self.suggestions = [], [], {}, []
         self.q = None
         self.stop = threading.Event()
         self.on_scanned = self.on_progress = self.on_error = None  # the app listens (Home summary line)
         self.charts, self.sections = {}, {}
         self.drill_from = None
-
-        title_block(self.main, "Library stats", "See your whole collection at a glance. Nothing is changed.")
-        self.drop = FolderBar(self.main, self.browse)
-        self.drop.pack(fill="x", pady=(0, 10))
-        self.meta = ctk.CTkLabel(self.main, text="", font=(FONT, 13), text_color=TEXT, anchor="w")
-        self.meta.pack(fill="x", pady=(0, 6))
-        self.progress = ctk.CTkProgressBar(self.main, height=14, corner_radius=0, border_width=3, border_color=BORDER, fg_color=BORDER, progress_color=ACCENT)
-        self.progress.set(0)
-        self.progress.pack(fill="x", pady=(0, 8))
-        self.dash = ctk.CTkScrollableFrame(self.main, fg_color=BG, scrollbar_button_color=SCROLL,
-                                           scrollbar_button_hover_color=MUTED)
-        self.dash.pack(fill="both", expand=True)
-        self._build_dashboard()
-
+        self.drawer_issues = []
         v = self.vars
         sw = switch_style()
-        self.form.heading("Source")
-        box = self.form.add("Scan")
-        Toggle(box, text="Include subfolders", variable=v["recursive"], **sw).pack(anchor="w")
-        Toggle(box, text="Read page counts (slower)", variable=v["deep"], **sw).pack(anchor="w", pady=(8, 0))
-        ctk.CTkLabel(box, text="Adds total pages. Without it nothing inside an archive is opened except ComicInfo.xml.",
-                     font=(FONT, 11), text_color=MUTED, anchor="w", justify="left", wraplength=260).pack(fill="x", pady=(4, 0))
-        self.form.heading("Display", collapsible=True, open=False)
-        box = self.form.add("Charts")
-        Toggle(box, text="Split series into volumes", variable=v["split"], **sw).pack(anchor="w")
-        Toggle(box, text="Group years into decades", variable=v["decades"], **sw).pack(anchor="w", pady=(8, 0))
-        Toggle(box, text="Show every bar (not just the top 15)", variable=v["show_all"], **sw).pack(anchor="w", pady=(8, 0))
-        self.form.heading("Output", collapsible=True, open=False)
-        menu(self.form.add("Section to export"), v["export"], EXPORTS).pack(fill="x")
-        box = self.form.add("Export")
-        self.btn_csv = button(box, "Export CSV…", self.export_csv)
-        self.btn_csv.pack(fill="x")
-        self.btn_copy = button(box, "Copy summary", self.copy_summary)
-        self.btn_copy.pack(fill="x", pady=(8, 0))
 
-        self.btn_scan = button(self.footer, "Scan library", self.scan, primary=True)
-        self.btn_scan.pack(pady=(0, 8))
-        divider(self.footer, vertical=False).pack(fill="x", pady=(2, 10))
-        self.btn_open = button(self.footer, "Open library folder", self.open_root)
-        self.btn_open.pack()
-        self.btn_stop = button(self.footer, "Stop", self.stop.set)
-        self.watch("split", "decades", callback=self._recompute)
+        # ---- Library
+        self.s1 = self.add_segment("Library")
+        self.drop = FolderBar(self.s1.body, self.browse, self._recent_menu)
+        self.drop.pack(fill="x", pady=(0, 10))
+        self.meta = ctk.CTkLabel(self.s1.body, text="", font=TYPE_BODY, text_color=TEXT, anchor="w")
+        self.meta.pack(fill="x", pady=(0, 6))
+        self.progress = ctk.CTkProgressBar(self.s1.body, height=14, corner_radius=0, border_width=3, border_color=BORDER,
+                                           fg_color=BORDER, progress_color=ACCENT)
+        self.progress.set(0)
+        self.progress.pack(fill="x", pady=(0, 8))
+        self.status = ctk.CTkLabel(self.s1.body, text="", font=TYPE_HINT, text_color=MUTED, anchor="w")
+        self.status.pack(fill="x", pady=(0, 8))
+        self.scan_adv = Advanced(self.s1.body)
+        self.scan_adv.pack(fill="x")
+        Toggle(self.scan_adv.body, text="Include subfolders", variable=v["recursive"], **sw).pack(anchor="w")
+        Toggle(self.scan_adv.body, text="Read page counts (slower)", variable=v["deep"], **sw).pack(anchor="w", pady=(8, 0))
+        ctk.CTkLabel(self.scan_adv.body, text="Adds total pages. Without it nothing inside an archive is opened except ComicInfo.xml.",
+                     font=TYPE_HINT, text_color=MUTED, anchor="w", justify="left", wraplength=560).pack(fill="x", pady=(4, 0))
+        self.scan_adv.track(v, {"recursive": True, "deep": False})
+
+        # ---- Overview
+        self.s2 = self.add_segment("Overview")
+        head = ctk.CTkFrame(self.s2.body, fg_color="transparent")
+        head.pack(fill="x", pady=(0, 10))
+        Toggle(head, text="Include reading orders in stats", variable=v["with_orders"], **sw).pack(side="left")
+        self.left_out = ctk.CTkLabel(head, text="", font=TYPE_HINT, text_color=MUTED, anchor="w")
+        self.left_out.pack(side="left", padx=(12, 0))
+        self._build_dashboard()
+
+        # ---- Needs attention
+        self.s3 = self.add_segment("Needs attention")
+        self.cards_box = ctk.CTkFrame(self.s3.body, fg_color="transparent")
+        self.cards_box.pack(fill="x")
+        self.card_texts = []
+
+        # ---- the drawer a clicked bar opens at the right edge of the page
+        self.drawer = ctk.CTkFrame(self, fg_color=PANEL, border_color=BORDER, border_width=EDGE, corner_radius=0, width=470)
+        bar = ctk.CTkFrame(self.drawer, fg_color="transparent")
+        bar.pack(fill="x", padx=14, pady=(14, 0))
+        self.drawer_title = ctk.CTkLabel(bar, text="", font=TYPE_SEGMENT, text_color=TEXT, anchor="w", wraplength=240,
+                                         justify="left")
+        self.drawer_title.pack(side="left", fill="x", expand=True)
+        tool_button(bar, "Close", self._close_drill, 64).pack(side="right")
+        tool_button(bar, "Open folder", self._open_drilled, 100).pack(side="right", padx=(0, 6))
+        self.drawer_table = LazyTable(self.drawer, [("file", "File", 220, True), ("series", "Series", 110, True),
+                                                    ("year", "Year", 50, False), ("size", "Size", 70, False),
+                                                    ("pages", "Pages", 52, False)], rows=17)
+        self.drawer_table.pack(fill="both", expand=True, padx=14, pady=14)
+
+        self.watch("split", "decades", callback=self._regroup)
         self.watch("show_all", callback=self.render)
+        self.watch("with_orders", callback=self._regroup)
         self.watch("root", callback=self._root_changed)
         self._root_changed()
-        self._idle()
         self.render()
 
     # ------------------------------------------------------------------ dashboard
     def _build_dashboard(self):
-        tiles = ctk.CTkFrame(self.dash, fg_color=BG)
-        tiles.pack(fill="x", pady=(0, 4))
+        body = self.s2.body
+        tiles = ctk.CTkFrame(body, fg_color=BG)
+        tiles.pack(fill="x", pady=(0, 10))
         self.tiles = {}
         for i, (key, caption) in enumerate((("comics", "Comics"), ("series", "Series"), ("publishers", "Publishers"),
                                             ("bytes", "On disk"), ("average", "Average size"), ("pages", "Pages"))):
@@ -228,54 +275,72 @@ class StatsPage(Page):
             t = Tile(tiles, caption)
             t.grid(row=0, column=i, sticky="ew", padx=(0 if i == 0 else 4, 0 if i == 5 else 4))
             self.tiles[key] = t
+        sw = switch_style()
+        self.chart_adv = Advanced(body, "Chart options")
+        self.chart_adv.pack(fill="x", pady=(0, 8))
+        Toggle(self.chart_adv.body, text="Split series into volumes", variable=self.vars["split"], **sw).pack(anchor="w")
+        Toggle(self.chart_adv.body, text="Group years into decades", variable=self.vars["decades"], **sw).pack(anchor="w", pady=(8, 0))
+        Toggle(self.chart_adv.body, text="Show every bar (not just the top 15)", variable=self.vars["show_all"], **sw).pack(anchor="w", pady=(8, 0))
+        self.chart_adv.track(self.vars, {"split": False, "decades": False, "show_all": False})
+
+        section(body, "Collection").pack(fill="x", pady=(14, 0))
         for name, title in (("Series", "Comics per series"), ("Publishers", "Comics per publisher"),
-                            ("Years", "Comics per year"), ("Formats", "File formats"),
-                            ("Coverage", "How complete the metadata is")):
-            box = self._section(title, name)
-            chart = BarChart(box, self._pick if name != "Coverage" else None)
+                            ("Years", "Comics per year"), ("Formats", "File formats")):
+            chart = BarChart(self._chart_box(body, title, name), self._pick)
             chart.pack(fill="x", pady=(6, 0))
             self.charts[name] = chart
-        box = self._section("Largest files", "Largest")
-        wrap, self.big = build_tree(box, [("file", "File", 460, True), ("size", "Size", 90, False),
-                                          ("pages", "Pages", 70, False)])
-        self.big.configure(height=8)
-        wrap.pack(fill="x", pady=(6, 0))
-        self.drill = ctk.CTkFrame(self.dash, fg_color=PANEL, corner_radius=0, border_color=BORDER, border_width=3)
-        self.drill_title = ctk.CTkLabel(self.drill, text="", font=(FONT, 14, "bold"), text_color=TEXT, anchor="w")
-        bar = ctk.CTkFrame(self.drill, fg_color="transparent")
-        bar.pack(fill="x", padx=12, pady=(10, 0))
-        self.drill_title.pack(in_=bar, side="left")
-        tool_button(bar, "Close", self._close_drill, 60).pack(side="right")
-        tool_button(bar, "Open folder", self._open_drilled, 96).pack(side="right", padx=(0, 6))
-        wrap, self.table = build_tree(self.drill, [("file", "File", 360, True), ("series", "Series", 150, True),
-                                                   ("year", "Year", 56, False), ("size", "Size", 80, False),
-                                                   ("pages", "Pages", 56, False)])
-        self.table.configure(height=9)
-        wrap.pack(fill="x", padx=12, pady=10)
-        self.drill_issues = {}
+        section(body, "Health").pack(fill="x", pady=(24, 0))
+        chart = BarChart(self._chart_box(body, "How complete the metadata is", "Coverage"), None, self._fix)
+        chart.pack(fill="x", pady=(6, 0))
+        self.charts["Coverage"] = chart
+        section(body, "Space").pack(fill="x", pady=(24, 0))
+        box = self._chart_box(body, "Largest files", "Largest")
+        self.big = LazyTable(box, [("file", "File", 460, True), ("size", "Size", 90, False), ("pages", "Pages", 70, False)],
+                             rows=8, filterable=False)
+        self.big.pack(fill="x", pady=(6, 0))
 
-    def _section(self, title, name):
-        box = ctk.CTkFrame(self.dash, fg_color=BG)
-        box.pack(fill="x", pady=(22, 0))
+        self.order_box = Advanced(body, "Reading orders")
+        self.order_box.pack(fill="x", pady=(24, 0))
+        ctk.CTkLabel(self.order_box.body, text="Folders of reading-order copies. They are left out of the numbers above unless you "
+                     "switch them in.", font=TYPE_HINT, text_color=MUTED, anchor="w", justify="left",
+                     wraplength=680).pack(fill="x", pady=(0, 8))
+        self.order_table = LazyTable(self.order_box.body, [("folder", "Folder", 420, True), ("comics", "Comics", 80, False),
+                                                           ("size", "Size", 90, False)], rows=5, filterable=False)
+        self.order_table.pack(fill="x")
+        row = ctk.CTkFrame(self.order_box.body, fg_color="transparent")
+        row.pack(fill="x", pady=(10, 0))
+        tool_button(row, "Mark a folder…", self.mark_folder, 130).pack(side="left", padx=(0, 8))
+        tool_button(row, "Unmark selected", self.unmark_selected, 140).pack(side="left")
+        self.order_rows = []
+
+    def _chart_box(self, parent, title, name):
+        box = ctk.CTkFrame(parent, fg_color=BG)
+        box.pack(fill="x", pady=(16, 0))
         head = ctk.CTkFrame(box, fg_color=BG)
         head.pack(fill="x")
-        ctk.CTkLabel(head, text=title, font=(FONT, 15, "bold"), text_color=TEXT, anchor="w").pack(side="left")
-        cap = ctk.CTkLabel(head, text="", font=(FONT, 12), text_color=MUTED, anchor="e")
+        ctk.CTkLabel(head, text=title, font=(FONT, 13, "bold"), text_color=TEXT, anchor="w").pack(side="left")
+        cap = ctk.CTkLabel(head, text="", font=TYPE_HINT, text_color=MUTED, anchor="e")
         cap.pack(side="right")
         self.sections[name] = (box, cap)
         return box
 
     def apply_theme(self):
+        super().apply_theme()
         for chart in self.charts.values():
             chart.draw()
-        for tree in (self.big, self.table):
-            apply_tree_theme(tree)
+        for table in (self.big, self.drawer_table, self.order_table):
+            table.apply_theme()
 
     # ------------------------------------------------------------------ folder and scan
     def browse(self):
         d = filedialog.askdirectory(title="Library folder")
         if d:
             self.set_folder(d)
+
+    def _recent_menu(self, anchor):
+        folders = self.recent_dirs() if self.recent_dirs else []
+        items = [(f"{Path(p).name}    {str(Path(p).parent)[-40:]}", lambda p=p: self.set_folder(p)) for p in folders]
+        popup_menu(anchor, items or [("No recent folders yet", None)])
 
     def set_folder(self, folder, scan=True):
         """Make this the library root (saved with the settings) and scan it."""
@@ -292,19 +357,7 @@ class StatsPage(Page):
     def _root_changed(self):
         r = self.vars["root"].get().strip()
         self.drop.set(r or None)
-        self._idle()
-
-    def _idle(self):
-        busy = bool(self.q)
-        self.btn_scan.configure(state="normal" if self.root() and not busy else "disabled",
-                                text="Rescan library" if self.stats else "Scan library")
-        self.btn_open.configure(state="normal" if self.root() else "disabled")
-        have = self.stats is not None and not busy
-        self.btn_csv.configure(state="normal" if have else "disabled")
-        self.btn_copy.configure(state="normal" if have else "disabled")
-        self.btn_stop.pack_forget()
-        if busy:
-            self.btn_stop.pack(pady=(8, 0))
+        self._sync()
 
     def scan(self):
         root = self.root()
@@ -318,9 +371,13 @@ class StatsPage(Page):
         self.progress.set(0)
         self.say("")
         self.meta.configure(text="Scanning…")
-        self._idle()
+        self._sync()
         threading.Thread(target=_run, args=(self.q, root, self.state(), self.stop), daemon=True).start()
         self._poll()
+
+    def stop_action(self):
+        if self.q:
+            self.stop.set()
 
     def _poll(self):
         try:
@@ -328,14 +385,16 @@ class StatsPage(Page):
                 msg = self.q.get_nowait()
                 if msg[0] == "prog":
                     self.progress.set(msg[1] / max(1, msg[2]))
-                    self.meta.configure(text=f"Scanning {msg[1]:,} of {msg[2]:,}…")
+                    text = f"Scanning {msg[1]:,} of {msg[2]:,}…"
+                    self.meta.configure(text=text)
+                    self.bar_text.configure(text=text)
                     if self.on_progress:
                         self.on_progress(msg[1], msg[2])
                 elif msg[0] == "error":
                     self.q = None
                     self.progress.set(0)
                     self.meta.configure(text="")
-                    self._idle()
+                    self._sync()
                     self.say(f"Scan failed: {msg[1]}", err=True)
                     if self.on_error:
                         self.on_error(msg[1])
@@ -351,26 +410,70 @@ class StatsPage(Page):
         self.q = None
         self.issues = res.issues
         self.progress.set(0 if res.stopped else 1)
-        o = self.state()
-        self.stats = sc.compute_stats(self.issues, o["split"], o["decades"])
+        self._compute()
         self.render()
         note = f"{len(res.issues):,} comics in {res.seconds:.1f}s" + (f" ({res.cache_hits:,} from cache)" if res.cache_hits else "")
         self.say(("Stopped, partial result · " if res.stopped else "Done · ") + note)
-        self._idle()
         if not res.stopped:
-            self.last = sc.snapshot(self.stats, self.root())
+            self.last = self._snapshot()
+            self.advance(self.s1)
+        self._sync()
         if self.on_scanned:
             self.on_scanned(None if res.stopped else self.last)
 
-    # ------------------------------------------------------------------ drawing the numbers
-    def _recompute(self):
+    # ------------------------------------------------------------------ the numbers
+    def _compute(self):
+        """Sort the scanned comics into real ones and reading-order copies, and work out the stats and what needs a look."""
+        o = self.state()
+        self.real, self.order_issues = self.orders.split(self.issues)
+        shown = self.issues if o["with_orders"] else self.real
+        self.stats = sc.compute_stats(shown, o["split"], o["decades"])
+        self.attn = sc.attention(self.real)
+        root = self.root()
+        self.suggestions = suggest(self.issues, self.orders, root) if root else []
+
+    def _snapshot(self):
+        return sc.snapshot(self.stats, self.root(), attention_count=self.attn.get("any_missing", 0))
+
+    def _regroup(self):
+        """A grouping or reading-order switch changed: redo the numbers from the scan already in hand."""
         if self.q or self.stats is None:  # nothing scanned yet (or a scan is running): nothing to regroup
             self.render()
             return
-        o = self.state()
-        self.stats = sc.compute_stats(self.issues, o["split"], o["decades"])
+        self._compute()
         self.render()
+        self._publish()
 
+    def _publish(self):
+        """Tell the app (Home's line) the numbers changed without a new scan."""
+        if self.stats is not None and self.last is not None:
+            self.last = self._snapshot()
+            if self.on_scanned:
+                self.on_scanned(self.last)
+
+    def mark_folder(self):
+        start = self.root()
+        d = filedialog.askdirectory(title="Folder to mark as a reading order", initialdir=str(start) if start else None)
+        if d:
+            self._mark([d])
+
+    def _mark(self, folders):
+        for f in folders:
+            self.orders.add(f)
+        self._regroup()
+
+    def unmark_selected(self):
+        for i in self.order_table.selected():
+            if 0 <= i < len(self.order_rows):
+                self.orders.remove(self.order_rows[i])
+        self._regroup()
+
+    def _dismiss(self, folders):
+        for f in folders:
+            self.orders.dismiss(f)
+        self._regroup()
+
+    # ------------------------------------------------------------------ drawing the numbers
     def render(self):
         st = self.stats
         self._close_drill()
@@ -382,8 +485,13 @@ class StatsPage(Page):
             for name, chart in self.charts.items():
                 chart.set_items([])
                 self.sections[name][1].configure(text="")
-            self.big.delete(*self.big.get_children())
-            self._idle()
+            self.big.set_rows([])
+            self.order_table.set_rows([])
+            self.left_out.configure(text="")
+            self.order_box.title = "Reading orders"
+            self.order_box._paint()
+            self._cards()
+            self._sync()
             return
         all_bars = self.vars["show_all"].get()
         self.tiles["comics"].set(f"{st.comics:,}")
@@ -402,18 +510,123 @@ class StatsPage(Page):
             self.charts[name].set_items(row_items(shown))
             n = len([r for r in rows if r.label != sc.UNKNOWN])
             self.sections[name][1].configure(
-                text=f"{n:,} in all" + ("" if all_bars or len(shown) == len(rows) else " · top 15 shown (Display: show every bar)"))
-        cov = [Item(label, (n / of) if of else 0, f"{n:,} of {of:,}" + (f"  ·  {100 * n // of}%" if of else ""))
+                text=f"{n:,} in all" + ("" if all_bars or len(shown) == len(rows) else " · top 15 shown (Chart options: show every bar)"))
+        cov = [Item(label, (n / of) if of else 0, f"{n:,} of {of:,}" + (f"  ·  {100 * n // of}%" if of else ""),
+                    fix="Fix these" if label in FIXABLE and n < of else "")
                for label, n, of in sc.coverage_lines(st)]
         self.charts["Coverage"].set_items(cov)
         unread = st.coverage["unread"]
         self.sections["Coverage"][1].configure(
             text=f"{unread:,} real .cbr file{'s' if unread != 1 else ''} not opened" if unread else "")
-        self.big.delete(*self.big.get_children())
-        for i in st.largest:
-            self.big.insert("", "end", values=(i.rel, sc.human_size(i.size), i.pages if i.pages is not None else ""))
+        self.big.set_rows([(i.rel, sc.human_size(i.size), i.pages if i.pages is not None else "") for i in st.largest])
+        # reading orders: what was left out (or included), and the folders themselves
+        left = len(self.order_issues)
+        folders = self.orders.folders
+        if left:
+            self.left_out.configure(text=(f"{_plural(left, 'reading-order comic')} included" if self.vars["with_orders"].get()
+                                          else f"{_plural(left, 'reading-order comic')} left out"))
+        else:
+            self.left_out.configure(text="")
+        self.order_box.title = f"Reading orders  ·  {_plural(left, 'comic')} in {_plural(len(folders), 'folder')}"
+        self.order_box._paint()
+        self.order_rows = folders
+        counts = {f: [0, 0] for f in folders}
+        for i in self.order_issues:
+            f = self.orders.which(i.path)
+            if f in counts:
+                counts[f][0] += 1
+                counts[f][1] += i.size
+        self.order_table.set_rows([(f, f"{counts[f][0]:,}", sc.human_size(counts[f][1])) for f in folders])
         self.meta.configure(text=f"{st.comics:,} comics · {sc.human_size(st.bytes)} in {self.root() or self.vars['root'].get()}")
-        self._idle()
+        self._cards()
+        self._sync()
+
+    # ------------------------------------------------------------------ what needs attention
+    def _card(self, text, buttons):
+        f = ctk.CTkFrame(self.cards_box, fg_color=RAISED, border_color=BORDER, border_width=EDGE, corner_radius=0)
+        f.pack(fill="x", pady=(0, 8))
+        for label, cmd in reversed(buttons):
+            tool_button(f, label, cmd, max(90, 28 + 8 * len(label))).pack(side="right", padx=(0, 10), pady=10)
+        ctk.CTkLabel(f, text=text, font=TYPE_BODY, text_color=TEXT, anchor="w", justify="left", wraplength=640).pack(
+            side="left", fill="x", expand=True, padx=14, pady=12)
+        self.card_texts.append(text)
+
+    def _cards(self):
+        for w in self.cards_box.winfo_children():
+            w.destroy()
+        self.card_texts = []
+        if self.stats is None:
+            ctk.CTkLabel(self.cards_box, text="Scan your library to see what could be tidier.", font=TYPE_BODY,
+                         text_color=MUTED, anchor="w").pack(fill="x")
+            return
+        a, n = self.attn, 0
+        if self.suggestions:
+            names = ", ".join(f"{f.name} ({c})" for f, c, _why in self.suggestions[:3]) + ("…" if len(self.suggestions) > 3 else "")
+            folders = [f for f, _c, _w in self.suggestions]
+            self._card(f"{_plural(len(folders), 'folder')} look{'s' if len(folders) == 1 else ''} like reading orders: {names}. "
+                       "Mark them to keep their copies out of your numbers and duplicate checks.",
+                       [("Mark them", lambda: self._mark(folders)), ("Not these", lambda: self._dismiss(folders))])
+            n += 1
+        for key, text in (("no_publisher", "{} have no publisher"), ("no_year", "{} have no year"),
+                          ("no_issue", "{} have no issue number")):
+            if a.get(key):
+                self._card(text.format(_plural(a[key], "comic")) + ".", [("Fix metadata", lambda: self._open("metadata"))])
+                n += 1
+        if a.get("duplicate_groups"):
+            self._card(f"{_plural(a['duplicate_groups'], 'group')} of possible duplicates (same series, volume and issue).",
+                       [("Open Library audit", lambda: self._open("audit"))])
+            n += 1
+        if not n:
+            ctk.CTkLabel(self.cards_box, text="Nothing needs attention.", font=TYPE_BODY, text_color=MUTED,
+                         anchor="w").pack(fill="x")
+        self.attention_cards = n
+
+    def _open(self, key):
+        if self.open_tool:
+            self.open_tool(key)
+        else:
+            self.say("That tool is not available here.", err=True)
+
+    def _fix(self, _item):
+        self._open("metadata")
+
+    # ------------------------------------------------------------------ segments and footer
+    def _sync(self):
+        busy, scanned = bool(self.q), self.stats is not None
+        s1, s2, s3 = self.s1, self.s2, self.s3
+        root = self.root()
+        if not scanned:
+            s1.set_state("active")
+            s2.set_state("locked")
+            s3.set_state("locked")
+            s1.set_summary(str(root) if root else "")
+            s2.set_summary("")
+            s3.set_summary("")
+        else:
+            st = self.stats
+            s1.set_state("done")
+            s1.set_summary(f"{st.comics:,} comics · {self.root() or self.vars['root'].get()}")
+            s2.set_state("idle")
+            s2.set_summary(f"{st.series:,} series · {_plural(st.publishers, 'publisher')} · {sc.human_size(st.bytes)}")
+            todo = getattr(self, "attention_cards", 0)
+            s3.set_state("active" if todo else "done")
+            s3.set_summary(f"{todo} to look at" if todo else "Nothing to fix")
+        if busy:
+            self.set_footer(self.meta.cget("text") or "Scanning…", "Stop", self.stop.set)
+            return
+        secondary = []
+        if root:
+            secondary.append(("Open library folder", self.open_root))
+        if scanned:
+            secondary += [("Export CSV…", self._export_menu, True), ("Copy summary", self.copy_summary)]
+        self.set_footer(self.status.cget("text") or ("Press Scan library to begin." if root else "Choose your library folder."),
+                        "Rescan library" if scanned else "Scan library", lambda: self.scan(), enabled=bool(root),
+                        secondary=secondary)
+
+    def say(self, msg, err=False):
+        super().say(msg, err)
+        if hasattr(self, "s3") and not self.q:
+            self._sync()  # the footer repeats the latest message
 
     # ------------------------------------------------------------------ drilling into a bar
     def _pick(self, chart, item):
@@ -422,28 +635,30 @@ class StatsPage(Page):
                 other.selected = None
                 other.draw()
         self.drill_from = chart
-        self.table.delete(*self.table.get_children())
-        self.drill_issues = {}
-        for i in sorted(item.issues, key=lambda i: i.rel.lower()):
+        self.drawer_issues = sorted(item.issues, key=lambda i: i.rel.lower())
+        rows = []
+        for i in self.drawer_issues:
             f = i.info
-            iid = self.table.insert("", "end", values=(i.rel, f.get("series") or "", f.get("year") or "",
-                                                        sc.human_size(i.size), i.pages if i.pages is not None else ""))
-            self.drill_issues[iid] = i
-        self.drill_title.configure(text=f"{item.label} · {len(item.issues):,} comic{'s' if len(item.issues) != 1 else ''}")
-        for name, (box, _) in self.sections.items():
-            if self.charts.get(name) is chart:
-                self.drill.pack(after=box, fill="x", pady=(10, 0))
+            rows.append((i.rel, f.get("series") or "", f.get("year") or "", sc.human_size(i.size),
+                         i.pages if i.pages is not None else ""))
+        self.drawer_table.set_rows(rows)
+        self.drawer_title.configure(text=f"{item.label} · {_plural(len(item.issues), 'comic')}")
+        self.update_idletasks()
+        # (customtkinter's own place() refuses a height, so go through tkinter's; the drawer covers the page down to the footer)
+        tk.Frame.place_configure(self.drawer, relx=1.0, y=0, anchor="ne", relheight=1.0, height=-self.footer.winfo_height(),
+                                 width=470)
+        self.drawer.lift()
 
     def _close_drill(self):
-        self.drill.pack_forget()
+        self.drawer.place_forget()
         if self.drill_from is not None:
             self.drill_from.selected = None
             self.drill_from.draw()
             self.drill_from = None
 
     def _open_drilled(self):
-        sel = self.table.selection()
-        issue = self.drill_issues.get(sel[0]) if sel else next(iter(self.drill_issues.values()), None)
+        sel = self.drawer_table.selected()
+        issue = self.drawer_issues[sel[0]] if sel and sel[0] < len(self.drawer_issues) else (self.drawer_issues[0] if self.drawer_issues else None)
         if issue and issue.path.parent.exists():
             os.startfile(issue.path.parent)  # Windows
 
@@ -452,10 +667,12 @@ class StatsPage(Page):
             os.startfile(self.root())  # Windows
 
     # ------------------------------------------------------------------ output
-    def export_csv(self):
+    def _export_menu(self, anchor):
+        popup_menu(anchor, [(f"{name}…", lambda n=name: self.export_csv(n)) for name in EXPORTS], above=True)
+
+    def export_csv(self, name):
         if not self.stats:
             return
-        name = self.vars["export"].get()
         path = filedialog.asksaveasfilename(title=f"Export {name}", defaultextension=".csv",
                                             initialfile=f"stats-{name.lower()}.csv", filetypes=[("CSV", "*.csv")])
         if not path:
@@ -476,4 +693,3 @@ class StatsPage(Page):
         self.clipboard_clear()
         self.clipboard_append(sc.summary_text(self.stats, self.root()))
         self.say("Summary copied. Paste it anywhere.")
-

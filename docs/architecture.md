@@ -24,13 +24,14 @@
 | `reading_order.py` | Reading-order logic: ordering key, ComicInfo field mapping (story arc / alternate series), per-issue plan, block moves and send-to-top/bottom for multi-selection, preview text, in-place or copy write with optional filename prefix |
 | `aceo_core.py` | ACEO sheets: reads the card slots from a template PDF, loads covers from comics or images, fits them into the slots, renders each page and draws the template's card outlines on top in the chosen colour and thickness (`pypdf` and Pillow) |
 | `stats_core.py` | Library statistics: `compute_stats` over `Issue` records (totals, groups per series, publisher, year and format, metadata coverage, largest and smallest files), top-N with an *Other* row, summary text, CSV tables, the Home snapshot. No UI code |
-| `page_stats.py` | Library stats page: scan worker, tiles, `BarChart` (canvas bars with hover and click), drill-down table, CSV export and summary copy |
+| `page_stats.py` | Library stats page on the segment shell: scan worker, tiles, `BarChart` (canvas bars with hover, click and a *Fix these* link), the side drawer, reading-order section, Needs attention cards, CSV export and summary copy |
+| `reading_orders.py` | The marked reading-order folders (`ReadingOrders`: add, remove, `covers`, `which`, `split`, saved in settings.json) and the guess at which folders look like one (`suggest`). No UI code |
 | `audit_core.py` | Audit logic: integrity checks, type-aware duplicate grouping with a best-copy keeper, missing gaps per type, warning limits, junk and CBR findings, `build_findings`, `plan_fixes` / `apply_fix` (the only code that changes files), Archive folder listing and purge |
 | `library_scan.py` | Shared library scan: one `Issue` record per comic (name fields, `ComicInfo.xml` fields, and in deep mode page count, cover size and cover hash) with a disposable cache in `%APPDATA%\ComicToolkit\cache.json`. Also a command-line report. See below |
 | `tests/` | Test scripts and `run_all.py` (`python tests/run_all.py`); see `tests/README.md` |
 | `folder_icons.py` | `folder.ico` / `desktop.ini` / `folder.jpg` generation (Windows) |
 
-Logic modules (`*_core.py`, `archive_tools.py`, `folder_icons.py`, `library_scan.py`, `audit_core.py`, `stats_core.py`, `reading_order.py`, `name_format.py`, `aceo_core.py`) contain no UI code so they can be tested or reused
+Logic modules (`*_core.py`, `archive_tools.py`, `folder_icons.py`, `library_scan.py`, `audit_core.py`, `stats_core.py`, `reading_orders.py`, `reading_order.py`, `name_format.py`, `aceo_core.py`) contain no UI code so they can be tested or reused
 from a command line.
 
 ## The library scan

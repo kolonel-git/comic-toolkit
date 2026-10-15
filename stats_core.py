@@ -218,12 +218,35 @@ def section_table(st, name, show_all=True):
     raise KeyError(name)
 
 
-def snapshot(st, root, when=None):
+def attention(issues):
+    """What could be tidier, for the Needs attention cards: counts of comics without a publisher, a year or an issue
+    number (single issues only), how many lack at least one of them, and how many groups of probable duplicates (same
+    series, volume and issue) there are.
+    `issues` should already leave out reading-order copies."""
+    n = {"no_publisher": 0, "no_year": 0, "no_issue": 0, "any_missing": 0, "duplicate_groups": 0}
+    seen = {}
+    for i in issues:
+        f = i.info
+        bad = [not f.get("publisher"), not str(f.get("year") or "").isdigit(), not f.get("collected") and not f.get("issue")]
+        n["no_publisher"] += bad[0]
+        n["no_year"] += bad[1]
+        n["no_issue"] += bad[2]
+        n["any_missing"] += any(bad)
+        if f.get("series") and f.get("issue") and not f.get("collected"):
+            key = (series_key(f["series"]), f.get("volume") or "", str(f["issue"]).lstrip("0") or "0")
+            seen[key] = seen.get(key, 0) + 1
+    n["duplicate_groups"] = sum(1 for c in seen.values() if c > 1)
+    return n
+
+
+def snapshot(st, root, when=None, attention_count=0):
     """The few numbers the Home line shows; small enough to keep in settings.json."""
     return {"root": str(root), "comics": st.comics, "series": st.series, "bytes": st.bytes,
-            "when": time.time() if when is None else when}
+            "when": time.time() if when is None else when, "attention": int(attention_count)}
 
 
 def snapshot_line(snap, now=None):
+    need = snap.get("attention")
     return (f"{snap['comics']:,} comic{'s' if snap['comics'] != 1 else ''} · {snap['series']:,} series · "
-            f"{human_size(snap['bytes'])} · scanned {ago(snap['when'], now)}")
+            f"{human_size(snap['bytes'])}" + (f" · {need:,} need attention" if isinstance(need, int) and need > 0 else "")
+            + f" · scanned {ago(snap['when'], now)}")
