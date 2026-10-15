@@ -20,7 +20,7 @@ from ui_kit import (ACCENT, ACCENT_TEXT, BG, BORDER, EDGE, FONT, MUTED, PANEL, R
                     TYPE_BODY, TYPE_HINT, TYPE_SEGMENT, Toggle, pick, popup_menu, switch_style, tool_button)
 
 EXPORTS = ["Series", "Publishers", "Years", "Formats", "Coverage", "Largest"]
-ROW = 26  # height of one bar row, in pixels
+ROW = 32  # height of one bar row, in pixels
 FIX_W = 84  # width of the "Fix these" link at the end of a Health row
 FIXABLE = {"Have ComicInfo.xml", "Have a year", "Have a publisher", "Have an issue number"}
 
@@ -57,8 +57,9 @@ class BarChart(ctk.CTkFrame):
     that has comics behind it calls on_pick(chart, item); clicking a link calls on_fix(item). Every bar uses the one
     accent colour."""
 
-    def __init__(self, parent, on_pick=None, on_fix=None):
-        super().__init__(parent, fg_color=BG)
+    def __init__(self, parent, on_pick=None, on_fix=None, bg=BG):
+        super().__init__(parent, fg_color=bg)
+        self._chart_bg = bg
         self.canvas = tk.Canvas(self, height=ROW, highlightthickness=0, bd=0, cursor="arrow")
         self.canvas.pack(fill="x")
         self.items, self.on_pick, self.on_fix, self.selected, self.hover = [], on_pick, on_fix, None, None
@@ -91,12 +92,12 @@ class BarChart(ctk.CTkFrame):
         self._job = None
         c = self.canvas
         c.delete("all")
-        c.configure(bg=pick(BG), height=max(ROW, len(self.items) * ROW))
+        c.configure(bg=pick(self._chart_bg), height=max(ROW, len(self.items) * ROW))
         w = max(c.winfo_width(), 320)
         label_w, value_w = min(240, int(w * 0.30)), min(190, int(w * 0.28))
-        x0, x1 = label_w + 14, w - value_w - 8
+        x0, x1 = label_w + 22, w - value_w - 12
         if not self.items:
-            c.create_text(6, ROW // 2, text="Nothing to show.", anchor="w", fill=pick(MUTED), font=(FONT, 10))
+            c.create_text(10, ROW // 2, text="Nothing to show.", anchor="w", fill=pick(MUTED), font=(FONT, 10))
             return
         for i, it in enumerate(self.items):
             y = i * ROW
@@ -104,10 +105,10 @@ class BarChart(ctk.CTkFrame):
                 c.create_rectangle(0, y, w, y + ROW, fill=pick(SELECT_BG), outline="")
             elif i == self.hover:
                 c.create_rectangle(0, y, w, y + ROW, fill=pick(PANEL), outline="")
-            c.create_text(6, y + ROW // 2, text=self._fit(it.label, label_w - 6), anchor="w", fill=pick(TEXT),
+            c.create_text(10, y + ROW // 2, text=self._fit(it.label, label_w - 10), anchor="w", fill=pick(TEXT),
                           font=(FONT, 10))
-            c.create_rectangle(x0, y + 6, x0 + max(3, int((x1 - x0) * it.frac)), y + ROW - 6, fill=pick(ACCENT), outline="")
-            right = w - 6
+            c.create_rectangle(x0, y + 8, x0 + max(3, int((x1 - x0) * it.frac)), y + ROW - 8, fill=pick(ACCENT), outline="")
+            right = w - 10
             if it.fix:
                 c.create_text(right, y + ROW // 2, text=it.fix + " ›", anchor="e", fill=pick(ACCENT_TEXT),
                               font=(FONT, 10, "bold underline"))
@@ -172,9 +173,9 @@ class FolderBar(ctk.CTkFrame):
 class Tile(ctk.CTkFrame):
     def __init__(self, parent, caption):
         super().__init__(parent, fg_color=RAISED, border_color=BORDER, border_width=3, corner_radius=0)
-        self.value = ctk.CTkLabel(self, text="–", font=(FONT, 22, "bold"), text_color=TEXT, anchor="w")
-        self.value.pack(fill="x", padx=14, pady=(10, 0))
-        ctk.CTkLabel(self, text=caption, font=(FONT, 12), text_color=MUTED, anchor="w").pack(fill="x", padx=14, pady=(0, 10))
+        self.value = ctk.CTkLabel(self, text="–", font=(FONT, 24, "bold"), text_color=TEXT, anchor="w")
+        self.value.pack(fill="x", padx=18, pady=(16, 2))
+        ctk.CTkLabel(self, text=caption, font=(FONT, 12), text_color=MUTED, anchor="w").pack(fill="x", padx=18, pady=(0, 16))
 
     def set(self, text):
         self.value.configure(text=text)
@@ -267,13 +268,13 @@ class StatsPage(SegmentPage):
     def _build_dashboard(self):
         body = self.s2.body
         tiles = ctk.CTkFrame(body, fg_color=BG)
-        tiles.pack(fill="x", pady=(0, 10))
+        tiles.pack(fill="x", pady=(4, 14))
         self.tiles = {}
         for i, (key, caption) in enumerate((("comics", "Comics"), ("series", "Series"), ("publishers", "Publishers"),
                                             ("bytes", "On disk"), ("average", "Average size"), ("pages", "Pages"))):
             tiles.columnconfigure(i, weight=1, uniform="tiles")
             t = Tile(tiles, caption)
-            t.grid(row=0, column=i, sticky="ew", padx=(0 if i == 0 else 4, 0 if i == 5 else 4))
+            t.grid(row=0, column=i, sticky="ew", padx=(0 if i == 0 else 6, 0 if i == 5 else 6))
             self.tiles[key] = t
         sw = switch_style()
         self.chart_adv = Advanced(body, "Chart options")
@@ -283,24 +284,24 @@ class StatsPage(SegmentPage):
         Toggle(self.chart_adv.body, text="Show every bar (not just the top 15)", variable=self.vars["show_all"], **sw).pack(anchor="w", pady=(8, 0))
         self.chart_adv.track(self.vars, {"split": False, "decades": False, "show_all": False})
 
-        section(body, "Collection").pack(fill="x", pady=(14, 0))
+        section(body, "Collection").pack(fill="x", pady=(18, 0))
         for name, title in (("Series", "Comics per series"), ("Publishers", "Comics per publisher"),
                             ("Years", "Comics per year"), ("Formats", "File formats")):
-            chart = BarChart(self._chart_box(body, title, name), self._pick)
-            chart.pack(fill="x", pady=(6, 0))
+            chart = BarChart(self._chart_box(body, title, name), self._pick, bg=RAISED)
+            chart.pack(fill="x")
             self.charts[name] = chart
-        section(body, "Health").pack(fill="x", pady=(24, 0))
-        chart = BarChart(self._chart_box(body, "How complete the metadata is", "Coverage"), None, self._fix)
-        chart.pack(fill="x", pady=(6, 0))
+        section(body, "Health").pack(fill="x", pady=(30, 0))
+        chart = BarChart(self._chart_box(body, "How complete the metadata is", "Coverage"), None, self._fix, bg=RAISED)
+        chart.pack(fill="x")
         self.charts["Coverage"] = chart
-        section(body, "Space").pack(fill="x", pady=(24, 0))
+        section(body, "Space").pack(fill="x", pady=(30, 0))
         box = self._chart_box(body, "Largest files", "Largest")
         self.big = LazyTable(box, [("file", "File", 460, True), ("size", "Size", 90, False), ("pages", "Pages", 70, False)],
                              rows=8, filterable=False)
-        self.big.pack(fill="x", pady=(6, 0))
+        self.big.pack(fill="x")
 
         self.order_box = Advanced(body, "Reading orders")
-        self.order_box.pack(fill="x", pady=(24, 0))
+        self.order_box.pack(fill="x", pady=(30, 0), padx=(0, 6))
         ctk.CTkLabel(self.order_box.body, text="Folders of reading-order copies. They are left out of the numbers above unless you "
                      "switch them in.", font=TYPE_HINT, text_color=MUTED, anchor="w", justify="left",
                      wraplength=680).pack(fill="x", pady=(0, 8))
@@ -314,13 +315,16 @@ class StatsPage(SegmentPage):
         self.order_rows = []
 
     def _chart_box(self, parent, title, name):
-        box = ctk.CTkFrame(parent, fg_color=BG)
-        box.pack(fill="x", pady=(16, 0))
-        head = ctk.CTkFrame(box, fg_color=BG)
-        head.pack(fill="x")
-        ctk.CTkLabel(head, text=title, font=(FONT, 13, "bold"), text_color=TEXT, anchor="w").pack(side="left")
+        """A bordered card with room round its contents: a title, a small caption at the right, then the chart."""
+        card = ctk.CTkFrame(parent, fg_color=RAISED, border_color=BORDER, border_width=EDGE, corner_radius=0)
+        card.pack(fill="x", pady=(14, 0), padx=(0, 6))
+        head = ctk.CTkFrame(card, fg_color="transparent")
+        head.pack(fill="x", padx=20, pady=(16, 0))
+        ctk.CTkLabel(head, text=title, font=(FONT, 14, "bold"), text_color=TEXT, anchor="w").pack(side="left")
         cap = ctk.CTkLabel(head, text="", font=TYPE_HINT, text_color=MUTED, anchor="e")
         cap.pack(side="right")
+        box = ctk.CTkFrame(card, fg_color="transparent")
+        box.pack(fill="x", padx=20, pady=(8, 18))
         self.sections[name] = (box, cap)
         return box
 
@@ -542,14 +546,35 @@ class StatsPage(SegmentPage):
         self._sync()
 
     # ------------------------------------------------------------------ what needs attention
-    def _card(self, text, buttons):
+    def _card(self, title, body, buttons, examples=""):
+        """One thing that needs attention: a bold title, a plain description of what it means and what the button does,
+        optionally a few example file names, and the buttons to deal with it."""
         f = ctk.CTkFrame(self.cards_box, fg_color=RAISED, border_color=BORDER, border_width=EDGE, corner_radius=0)
-        f.pack(fill="x", pady=(0, 8))
-        for label, cmd in reversed(buttons):
-            tool_button(f, label, cmd, max(90, 28 + 8 * len(label))).pack(side="right", padx=(0, 10), pady=10)
-        ctk.CTkLabel(f, text=text, font=TYPE_BODY, text_color=TEXT, anchor="w", justify="left", wraplength=640).pack(
-            side="left", fill="x", expand=True, padx=14, pady=12)
-        self.card_texts.append(text)
+        f.pack(fill="x", pady=(0, 12), padx=(0, 6))
+        side = ctk.CTkFrame(f, fg_color="transparent")
+        side.pack(side="right", padx=(0, 16), pady=16, anchor="n")
+        for label, cmd in buttons:
+            tool_button(side, label, cmd, max(110, 28 + 8 * len(label))).pack(pady=(0, 8))
+        words = ctk.CTkFrame(f, fg_color="transparent")
+        words.pack(side="left", fill="x", expand=True, padx=20, pady=16)
+        ctk.CTkLabel(words, text=title, font=(FONT, 14, "bold"), text_color=TEXT, anchor="w", justify="left",
+                     wraplength=620).pack(fill="x")
+        ctk.CTkLabel(words, text=body, font=TYPE_BODY, text_color=MUTED, anchor="w", justify="left",
+                     wraplength=620).pack(fill="x", pady=(6, 0))
+        if examples:
+            ctk.CTkLabel(words, text=examples, font=TYPE_HINT, text_color=MUTED, anchor="w", justify="left",
+                         wraplength=620).pack(fill="x", pady=(8, 0))
+        self.card_texts.append(f"{title} {body} {examples}".strip())
+
+    def _examples(self, missing):
+        """'For example: A.cbz, B.cbz, C.cbz' from the real comics `missing(info)` is true for ('' when none)."""
+        names = []
+        for i in self.real:
+            if missing(i.info):
+                names.append(i.path.name)
+                if len(names) == 3:
+                    break
+        return ("For example: " + ", ".join(names)) if names else ""
 
     def _cards(self):
         for w in self.cards_box.winfo_children():
@@ -561,19 +586,42 @@ class StatsPage(SegmentPage):
             return
         a, n = self.attn, 0
         if self.suggestions:
-            names = ", ".join(f"{f.name} ({c})" for f, c, _why in self.suggestions[:3]) + ("…" if len(self.suggestions) > 3 else "")
             folders = [f for f, _c, _w in self.suggestions]
-            self._card(f"{_plural(len(folders), 'folder')} look{'s' if len(folders) == 1 else ''} like reading orders: {names}. "
-                       "Mark them to keep their copies out of your numbers and duplicate checks.",
-                       [("Mark them", lambda: self._mark(folders)), ("Not these", lambda: self._dismiss(folders))])
+            names = ", ".join(f"{f.name} ({c})" for f, c, _why in self.suggestions[:3]) + ("…" if len(self.suggestions) > 3 else "")
+            self._card(f"{_plural(len(folders), 'folder')} look{'s' if len(folders) == 1 else ''} like a reading order",
+                       "Most comics in these folders have numbered names (01 - Name) or a story arc, which usually means copies "
+                       "made to be read in order. If you mark them, they are counted apart, so your totals and your duplicate "
+                       "checks are not doubled by them. Nothing is changed in the folders.",
+                       [("Mark them", lambda: self._mark(folders)), ("Not these", lambda: self._dismiss(folders))],
+                       f"Folders: {names}")
             n += 1
-        for key, text in (("no_publisher", "{} have no publisher"), ("no_year", "{} have no year"),
-                          ("no_issue", "{} have no issue number")):
+        missing = (
+            ("no_publisher", "{} have no publisher",
+             "The publisher is stored inside each comic (ComicInfo.xml). Without it the Publishers chart files these comics under "
+             "Unknown and a reader such as YACReader cannot sort or filter them by publisher. Fix metadata opens the Metadata "
+             "tool, where you can set a publisher for many comics at once.",
+             lambda f: not f.get("publisher")),
+            ("no_year", "{} have no year",
+             "The year comes from ComicInfo.xml or from a year in the file name, such as (2016). Without it these comics sit "
+             "under Unknown in the year chart and cannot be put in date order. Fix metadata opens the Metadata tool, where you "
+             "can add the year, or read it from the file name.",
+             lambda f: not str(f.get("year") or "").isdigit()),
+            ("no_issue", "{} have no issue number",
+             "A single issue needs a number, from ComicInfo.xml or the file name (Batman 012). Without one a reader sorts these "
+             "comics by file name instead of issue order, and the Library audit cannot tell which issues of a series are missing. "
+             "Fix metadata opens the Metadata tool to add them.",
+             lambda f: not f.get("collected") and not f.get("issue")))
+        for key, title, body, test in missing:
             if a.get(key):
-                self._card(text.format(_plural(a[key], "comic")) + ".", [("Fix metadata", lambda: self._open("metadata"))])
+                self._card(title.format(_plural(a[key], "comic")) + ".", body, [("Fix metadata", lambda: self._open("metadata"))],
+                           self._examples(test))
                 n += 1
         if a.get("duplicate_groups"):
-            self._card(f"{_plural(a['duplicate_groups'], 'group')} of possible duplicates (same series, volume and issue).",
+            self._card(f"{_plural(a['duplicate_groups'], 'group')} of possible duplicates.",
+                       "These comics share a series, a volume and an issue number, so they may be the same issue saved twice, in "
+                       "another format or in another folder. This is a quick guess from the names. Open Library audit compares "
+                       "file sizes and covers too, shows which copy is best, and can move the extras to Archive. Copies inside "
+                       "marked reading-order folders are not counted.",
                        [("Open Library audit", lambda: self._open("audit"))])
             n += 1
         if not n:

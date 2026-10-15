@@ -21,6 +21,8 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 - Overview groups the bars as *Collection*, *Health* and *Space*; every bar uses the one accent colour; *Chart options* (shut) holds the split, decades and show-every-bar switches. A bar click lists its comics in a drawer at the right edge. Health rows with something missing have a **Fix these** link that opens Metadata on the library.
 - Reading orders: folders can be marked (**Mark a folder…**, or accept a suggestion), unmarked and remembered. They are left out of every number and the Home line unless the visible **Include reading orders in stats** switch is on. A shut *Reading orders* section lists them with counts. After a scan, folders with mostly numbered names or story arcs are suggested on a Needs attention card (**Mark them** / **Not these**).
 - Needs attention cards: reading-order suggestions, comics with no publisher, year or issue number (**Fix metadata**), possible duplicate groups (**Open Library audit**). The Home line gets "N need attention".
+- Spacing: the tiles are roomier, and each chart sits in its own bordered card with padding, taller rows and more space between the groups.
+- Each Needs attention card has a title with the count, a plain description of what it means and what the button does, and example file names for missing metadata.
 - The footer holds **Scan library** / **Rescan library** / **Stop**, with **Open library folder**, **Export CSV…** (a menu of sections, opening upward) and **Copy summary**.
 
 **Changes by file**

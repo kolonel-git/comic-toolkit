@@ -33,7 +33,7 @@ The page has three segments (the shared layout; a finished segment folds to a on
 
 **Reading orders.** Folders of reading-order copies would be counted twice, so you mark them once and every tool leaves them out. The **Reading orders** section (shut by default) lists the marked folders with their comic counts and sizes, with **Mark a folder…** and **Unmark selected**. After a scan, a folder where most comics start with a number (`01 - Name`, `[02] Name`) or have a story arc is *suggested* on a Needs attention card: **Mark them** or **Not these** (a no is remembered). Marked folders are left out of every number on the page and of the Home line; the switch **Include reading orders in stats** (top of Overview, off by default) brings them back, and says how many comics are left out or included. The marked folders are saved with the settings.
 
-**Needs attention.** Cards with a count and a button: folders that look like reading orders, comics with no publisher, no year or no issue number (**Fix metadata**), and groups of possible duplicates with the same series, volume and issue (**Open Library audit**). The Home line shows how many comics need attention.
+**Needs attention.** Each card has a bold title with the count, a plain description of what the problem means and what its button does, and (for missing metadata) a few example file names. The cards: folders that look like reading orders, comics with no publisher, no year or no issue number (**Fix metadata**), and groups of possible duplicates with the same series, volume and issue (**Open Library audit**). The Home line shows how many comics need attention.
 
 ## Comic Cover Extractor
 

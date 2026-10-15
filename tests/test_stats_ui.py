@@ -125,7 +125,10 @@ with tempfile.TemporaryDirectory() as d:
     texts = page.card_texts
     assert any("have no publisher" in x for x in texts) and any("have no issue number" not in x or True for x in texts), texts
     assert states()[2] == "active" and "to look at" in page.s3.summary.cget("text")
-    assert not any("reading orders" in x for x in texts), "nothing here looks like a reading order"
+    pubcard = next(x for x in texts if "have no publisher" in x)
+    assert "Unknown" in pubcard and "Fix metadata opens the Metadata tool" in pubcard and "For example: " in pubcard and ".cbz" in pubcard, pubcard
+    assert all(len(x) > 120 for x in texts), "every card says what the problem means, not just a count"
+    assert not any("looks like a reading order" in x for x in texts), "nothing here looks like a reading order"
 
     # export and copy: the footer's Export button offers every section
     out = d / "series.csv"
@@ -172,7 +175,7 @@ with tempfile.TemporaryDirectory() as e:
     page.orders = ReadingOrders(); got.clear()
     page.set_folder(lib2); wait()
     assert page.stats.comics == 7 and page.suggestions[0][0] == lib2 / "Orders" / "Event" and page.suggestions[0][1] == 4
-    assert any("1 folder looks like reading orders: Event (4)" in x for x in page.card_texts), page.card_texts
+    assert any("1 folder looks like a reading order" in x and "Folders: Event (4)" in x for x in page.card_texts), page.card_texts
     assert page.order_box.title.startswith("Reading orders") and not page.order_box.opened, "the Reading orders section starts shut"
     # "Mark them" keeps the copies out of the numbers
     page._mark([f for f, _c, _w in page.suggestions]); root.update()
@@ -180,7 +183,7 @@ with tempfile.TemporaryDirectory() as e:
     assert page.left_out.cget("text") == "4 reading-order comics left out" and got[-1]["comics"] == 3, "Home follows without a rescan"
     assert "4 comics in 1 folder" in page.order_box.title
     assert rows(page.order_table) == [(str(lib2 / "Orders" / "Event"), "4", rows(page.order_table)[0][2])]
-    assert not any("reading orders" in x for x in page.card_texts)
+    assert not any("like a reading order" in x for x in page.card_texts)
     # the visible switch includes them again
     page.vars["with_orders"].set(True); root.update()
     assert page.stats.comics == 7 and page.left_out.cget("text") == "4 reading-order comics included" and got[-1]["comics"] == 7
