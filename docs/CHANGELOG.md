@@ -12,6 +12,31 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-15 17:30 +11:00 · Session 54: shared page shell and Bulk folder on it (roadmap Phase 0 and Phase 1, step 1)
+
+**Summary:** Built the shell every page will use (header, collapsible segments, footer) and moved Bulk folder onto it, following the [UI revamp plan](ui-revamp-plan.md). The downloads watcher was folded into the Add to library plan (a *Watch this folder* switch) in the roadmap and plan.
+
+**What changed for the user**
+- Bulk folder is now three segments: **Comics**, **Covers**, **Review**. No step numbers. A finished segment folds to a one-line summary and the next opens by itself (a switch at the top right turns that off; it is shared by every page).
+- Covers: the four "where" cards, three "if a cover exists" cards (Skip, Replace, Keep both) and a shut **Advanced options** block that says how many of its settings you changed.
+- Review: a plain-words headline, destination, estimated size and a low-disk-space warning, unreadable comics and name clashes named before the run, a filterable table with a status per comic, **Details** for existing covers, a **Show covers** switch (small cover pictures), **Dry run**, and **Retry failed** after a run with failures.
+- Long comic lists load as you scroll. The footer holds the one main action plus a few secondary buttons. Settings are remembered per folder.
+
+**Changes by file**
+- `flow_kit.py`: rewritten around `SegmentPage`, `Segment`, `Advanced`, `LazyTable` (replaces `StepPage`, `StepCard`, `Disclosure`, `mini_table`); `ChoiceCards`, `facts`, `section` kept.
+- `page_bulk.py`: rebuilt on the shell; a background check finds unreadable comics and samples cover sizes before the run.
+- `ui_kit.py`: type tokens (`TYPE_SEGMENT`, `TYPE_BODY`, `TYPE_HINT`, `TYPE_MONO`); `build_tree` takes a `style` and a `picture` column; `apply_tree_theme` follows the table's own style.
+- `tests/test_bulk_page.py` rewritten for the new page; `tests/test_layout.py` follows the new summary text.
+- `docs/tools.md`, `docs/architecture.md`, `docs/roadmap.md`, `docs/ui-revamp-plan.md`: updated.
+
+**Technical notes:** an empty `CTkFrame` is 200 px tall unless given `height=0` (it left a gap in Review). `Comic` objects are not opened for the pre-run check: zip files are inspected directly, and real RAR files are only checked for an installed extractor, so an unreadable RAR shows up at run time.
+
+**Verification:** `ruff check --select F,E9 .` passes. `python tests/run_all.py`: 27 of 27 passed on the first full run. A later full run had `test_aceo_ui.py` fail on a key event (focus dependent, another window was in front); it passed on three separate reruns and that page is untouched. Screen captures of the page were looked at in light and dark mode for the Comics, Covers and Review segments; the dark Review capture came out black (a known capture problem) and the light one picked up another application, so the Review layout is covered by the test instead.
+
+**Known issues:** other tools still use the old layout; the shared "open the next section" switch is saved with each page's settings, so it can differ until every page uses the shell; `Library folder` and `Recent` sit under the drop box's buttons rather than beside a folder field; `docs/manual-tests.md` has no checks yet for the new Bulk folder layout (real RAR files, a very large library, thumbnails on a slow disk).
+
+---
+
 ## 2026-10-15 15:55 +11:00 · Session 53: UI revamp plan written, roadmap and versioning rebuilt around it
 
 **Summary:** Went through every tool with the owner and wrote down the agreed redesign, then rebuilt the roadmap, versioning and handoff around it. No app code changed.
@@ -26,7 +51,7 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 - `README.md`: status line now `v0.7.0`, link to the plan.
 - `docs/README.md`: index rows for the plan, roadmap and versioning.
 
-**Decisions taken while rebuilding the roadmap (owner may change):** tools are converted one at a time; the downloads watcher is future work because Add to library covers its job; one tag per phase; Renamer sits in Phase 4.
+**Decisions taken while rebuilding the roadmap (owner may change):** tools are converted one at a time; the downloads watcher is folded into Add to library as a *Watch this folder* switch; one tag per phase; Renamer sits in Phase 4.
 
 **Verification:** documentation only; no tests were run.
 

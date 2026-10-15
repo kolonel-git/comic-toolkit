@@ -24,7 +24,7 @@ design. Nothing here is built yet; [The tools](tools.md) describes the app as it
 
 ## Global shell and segmented pages
 
-**Current:** left options panel plus main area on most pages; only Bulk folder has foldable steps. Many options sit in one
+**Current:** left options panel plus main area on most pages; Bulk folder is the first page converted to the shell. Many options sit in one
 panel. Type uses about ten sizes (8 to 28 pt), Segoe UI plus Arial Black headings plus Consolas, and several accent colours.
 
 **Owner's decisions**
@@ -300,6 +300,9 @@ Becomes / Steps / Status (Ready, Duplicate, Exists, No series, Failed); flagged 
 - *Header:* "Add to library" and one line: "Bring new comics in, checked, cleaned, named and filed."
 - *Segments:*
   1. **Inbox**: drop box or inbox folder with `Library` and `Recent` beside it. Summary: "14 new comics in D:\Inbox".
+     **Watch this folder** (a switch, off by default) replaces the old idea of a separate downloads watcher: while the app is
+     open it checks the inbox every few seconds, waits for each file's size to stop changing, and adds new comics to the list
+     for review. It never runs the chain by itself; the user still presses **Add N comics**. The watched folder is remembered.
   2. **Destination**: Ready folder, *File into series folders* (uses the Renamer's folder template). A read-only line states
      the naming rules, with a **Naming settings** link to the Renamer. Summary: "D:\Library · series folders · Renamer naming".
   3. **Clean-up**: plain toggles for convert CBR, remove junk, rename pages `001.jpg…`. *Advanced options*: extra junk

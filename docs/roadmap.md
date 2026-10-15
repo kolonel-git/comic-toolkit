@@ -38,14 +38,15 @@ Every page becomes Header, collapsible Segments and Footer. The full design for 
 
 **Phase 0: shared parts** (small and invisible on their own; built with Bulk folder)
 - 0a. Shell kit: Header, Segment (summary and auto-advance), Advanced options block, Footer, folder row with `Library` and
-  `Recent`, and the type scale (extends `flow_kit.py` and `ui_kit.py`).
-- 0b. Lazy scrollable table with filters.
+  `Recent`, and the type scale (extends `flow_kit.py` and `ui_kit.py`). **Done** with Bulk folder (the folder row reuses the
+  drop box, which already carries `Library` and `Recent`).
+- 0b. Lazy scrollable table with filters. **Done** (`LazyTable`).
 - 0c. Reading-order folder list (persisted, with the suggestion scan), shared by Stats, Audit and Reading order.
 - 0d. Local suggestion index (normalised series and publisher names) for Metadata, Renamer and Add to library.
 - 0e. Link context: open a page preloaded, with a "From X" chip and a Back link.
 
 **Phase 1: prove the shell** (`v0.8.0`)
-1. Bulk folder on the new shell (includes 0a and 0b).
+1. Bulk folder on the new shell (includes 0a and 0b). **Done.**
 2. Library stats: segments, Needs attention cards, reading-order toggle and section (includes 0c).
 
 **Phase 2: the repair loop** (`v0.9.0`)
@@ -61,7 +62,8 @@ Every page becomes Header, collapsible Segments and Footer. The full design for 
 
 **Phase 4: the heavy ones** (`v0.11.0`)
 10. Renamer: type prompts, suggestions, saved rules.
-11. Add to library: five segments, *Set series…*, uses the Renamer's rules.
+11. Add to library: five segments, *Set series…*, uses the Renamer's rules, and a **Watch this folder** switch that picks up new
+    files in the inbox while the app is open (this replaces the former separate downloads watcher).
 
 **Phase 5: finish** (`v0.12.0`, then `v1.0.0`)
 12. Links pass for anything not yet wired, documentation clean-up, and the manual-test debt.
@@ -76,8 +78,6 @@ Not scheduled. Listed so they are not lost.
 - **Undo** for the Renamer (last rename) and Metadata (last save). Needs a log or backup of old names and `ComicInfo.xml`.
 - **Folder tree browser.** A lazily loaded tree with a cover and counts for the selected folder, acting as a launcher into the
   other tools. A navigation hub, not a reader.
-- **Downloads watcher.** Poll a downloads folder while the app is open and queue new files for Add to library. Largely covered by
-  Add to library's Inbox; revisit after Phase 4.
 - **Add to library:** place comics into the existing library by matching series; write fuller `ComicInfo.xml` data on the way in;
   accept PDF, EPUB and 7z.
 - **Folder icons:** collage icon for parent folders such as `DC` (from four series covers); a user-supplied folder template.
