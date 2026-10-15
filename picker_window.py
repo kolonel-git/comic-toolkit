@@ -19,8 +19,12 @@ COVER = "#E5A100"        # outline colour of pages that look like covers
 
 
 class PickerWindow(ctk.CTkToplevel):
-    def __init__(self, parent, comic):
+    """`order` starts the picks (a list of page indexes) and `on_change(order)` is told whenever the picks change, so the
+    page that opened this window can share one selection with it; `set_order` is the way back."""
+
+    def __init__(self, parent, comic, order=None, on_change=None):
         super().__init__(parent)
+        self.on_change = on_change
         self.comic = comic
         self.n = len(comic.pages)
         self.title(f"Pick pages - {comic.path.name}")
@@ -28,7 +32,7 @@ class PickerWindow(ctk.CTkToplevel):
         self.minsize(640, 420)
         self.configure(fg_color=BG)
 
-        self.order = []                    # picked page indexes, in the order they will be numbered
+        self._order = list(order or [])    # picked page indexes, in the order they will be numbered
         self.anchor = None                 # last clicked page, for shift-click ranges
         self.thumbs = [None] * self.n      # PIL thumbnails as they load
         self.sizes = [None] * self.n       # original (w, h) of each page
@@ -50,6 +54,21 @@ class PickerWindow(ctk.CTkToplevel):
         self.protocol("WM_DELETE_WINDOW", self.close)
         self.after(60, self._poll)
         self.after(100, self.focus_force)
+
+    @property
+    def order(self):
+        return self._order
+
+    @order.setter
+    def order(self, value):
+        self._order = value
+        if self.on_change:
+            self.on_change(list(value))
+
+    def set_order(self, order):
+        """The page changed the picks (without telling it back)."""
+        self._order = list(order)
+        self._changed()
 
     # ------------------------------------------------------------------ layout
     def _build(self):

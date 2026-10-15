@@ -294,7 +294,7 @@ Use 10 to 20 real comics (plus one loose cover image), the bundled `ACEO - Full 
 - [ ] **H10. Single issue buttons.** Open Single issue.
   *Expect:* the folder button (Open folder in Bulk…) is to the right of Choose comic….
   Result:
-- [ ] **H11. Pick pages.** Load a TPB or compendium (hundreds of pages) in Single issue and press **Pick pages…**.
+- [ ] **H11. Pick pages.** Load a TPB or compendium (hundreds of pages) in Single issue and press the **Browse all N pages…** tile.
   *Expect:* the window opens straight away and thumbnails fill in (the ones on screen first) without freezing; the size slider resizes the grid; click, shift-click and a dragged box pick pages; double-click shows a page full screen (click picks, wheel turns pages or scrolls when zoomed, Ctrl+wheel zooms, drag moves, arrows move, Space picks, Esc closes); likely covers have an orange outline; **Reorder…** changes the numbering; **Extract as JPG…** asks for a folder and saves `<name> 1.jpg`, `2.jpg`… in the order shown; **Open folder** opens it. Tell me how many real covers the orange outline misses or wrongly marks.
   Result:
 
@@ -390,6 +390,27 @@ Use your real library (hundreds of comics if you can) for I1 to I3 and I6.
   Result:
 - [ ] **L7. Look.** Drag the divider and compare the page with Bulk folder in light and dark mode, in a small and a large window.
   *Expect:* the same header, divider, headings and spacing; nothing is cut off that you cannot reach.
+  Result:
+
+## M. Single issue
+
+- [ ] **M1. The strip.** Load a normal comic, a short one (4 or 5 pages) and a TPB in Single issue. Make the window narrow, then wide, and drag the divider.
+  *Expect:* the cover, pages 2 and 3 and the last two pages (every page of a short comic), then the Browse tile; the strip wraps to the width of the left column; nothing is cut off.
+  Result:
+- [ ] **M2. Save cover.** Press **Save cover**, then again, with *If the file exists* on Keep both, Skip and Overwrite; try a PNG format and the other file name; then choose *A folder I choose* under Advanced options.
+  *Expect:* the line under Save names the file before you press the button and says when it already exists; the file appears there; **Open folder** shows it.
+  Result:
+- [ ] **M3. Pick from the strip.** Click a page of the strip, then press Space or click the page to pick it, step to other pages with the arrow keys, and close the view with Esc.
+  *Expect:* a tick and its number show under each picked page; the footer reads **Extract N pages**; **Clear picks** brings back **Save cover**.
+  Result:
+- [ ] **M4. One selection.** Press the Browse tile, pick and unpick pages in the window (click, shift-click, a dragged box, Select all), and watch the page behind it.
+  *Expect:* the ticks and the footer follow every change, and **Clear picks** on the page empties the window's selection too.
+  Result:
+- [ ] **M5. Extract and ZIP.** Pick a few pages out of order and press **Extract N pages**; then press **Save all pages as ZIP**.
+  *Expect:* the JPG files are numbered in the order you picked and open correctly; the ZIP holds every page and opens in a reader.
+  Result:
+- [ ] **M6. Look.** Compare the page with Bulk folder and CBR to CBZ in light and dark mode.
+  *Expect:* the same header, divider, headings and spacing. Tell me what feels cramped or wasted.
   Result:
 
 ## When you're done

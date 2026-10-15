@@ -6,7 +6,7 @@ database. Everything works on the files and folders on disk.
 
 - **Platform:** Windows 10/11 (a few features are Windows-only)
 - **Language / UI:** Python 3, [customtkinter](https://github.com/TomSchimansky/CustomTkinter), neo-brutalist light and dark themes
-- **Status:** active development, latest tag `v0.7.0`. Every page is being rebuilt on a shared layout (a header, two resizable columns and a footer); Bulk folder, Library stats, Metadata and Library audit are done, the rest follow (see the [UI revamp plan](docs/ui-revamp-plan.md) and the [roadmap](docs/roadmap.md))
+- **Status:** active development, latest tag `v0.9.0`. Every page is being rebuilt on a shared layout (a header, two resizable columns and a footer); Bulk folder, Library stats, Metadata, Library audit, CBR to CBZ and Single issue are done, the rest follow (see the [UI revamp plan](docs/ui-revamp-plan.md) and the [roadmap](docs/roadmap.md))
 
 ## Quick start
 
