@@ -45,14 +45,13 @@ sg.pack_forget()
 # every options panel is grouped under headings, always starting with the source or main subject and ending with the output
 def headings(pg): return pg.form.headings
 EXPECT = {SinglePage: ["Cover image", "Output"], IconsPage: ["Cover", "Output"],
-          ConvertPage: ["Source", "Output"],
           OrderPage: ["Reading order", "Filenames and sorting", "Output"], AceoPage: ["Template", "Covers", "Cards", "Output"]}
 for pg in pages:
-    if type(pg) in EXPECT:  # (Bulk folder, Metadata and Library audit are segment pages, tested in test_bulk_page.py, test_meta_page.py and test_audit_ui.py)
+    if type(pg) in EXPECT:  # (Bulk folder, Metadata, Library audit and CBR to CBZ are segment pages, tested in test_bulk_page.py, test_meta_page.py, test_audit_ui.py and test_convert_page.py)
         assert headings(pg) == EXPECT[type(pg)], (type(pg).__name__, headings(pg))
 
 # the options panel can be dragged wider and narrower, within limits, and the width is saved
-pg = pages[5]; pg.pack(fill="both", expand=True); root.update()
+pg = pages[2]; pg.pack(fill="both", expand=True); root.update()
 w0 = pg.side.winfo_width()
 pg.splitter._press(ev(1000)); pg.splitter._drag(ev(900)); pg.splitter._release(None); root.update()
 k = pg.splitter._scale()  # display scaling: mouse movement is in pixels, widths in scaled units
@@ -120,8 +119,8 @@ with tempfile.TemporaryDirectory() as d:
 
     # Convert: only its own file type, labelled relative to the shared parent
     cv = pages[5]; cv.pack(fill="both", expand=True); cv.set_files(chosen)
-    assert cv.items == [r1] and cv.folder == r1.parent and "1 file chosen" in cv.drop.label.cget("text"), cv.items
-    cv.set_folder(d / "Lib"); assert cv.picked is None and len(cv.items) == 1
+    assert cv.files == [r1] and cv.folder == r1.parent and "1 .cbr file chosen" in cv.drop.label.cget("text"), cv.files
+    cv.set_folder(d / "Lib"); assert cv.picked is None and len(cv.files) == 1
     cv.pack_forget()
     # Folder icons: one folder per parent, using the first or last chosen comic
     ic = pages[2]; ic.pack(fill="both", expand=True); ic.set_files(chosen)

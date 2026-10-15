@@ -73,6 +73,28 @@ def convert_to_cbz(src, dest):
         comic.close()
 
 
+def convert_one(src, dest, remove_junk=False, rename_pages=False):
+    """`convert_to_cbz` plus the optional tidy-up, all done on the '.part' file: pages are verified, junk files can be
+    dropped and pages renamed 001.jpg, 002.jpg…, the result is verified again, and only then does it take the place of
+    `dest`. A failure at any step leaves `dest` and `src` as they were. Returns the page count."""
+    comic = Comic(src)
+    part = dest.with_name(dest.name + ".part")
+    try:
+        comic.to_zip(part)
+        verify_zip(part, len(comic.pages))
+        pages = len(comic.pages)
+        if remove_junk or rename_pages:
+            plan = plan_cleanup(part, remove_junk, "", SEQUENTIAL if rename_pages else KEEP_NAMES)
+            if plan["changed"]:
+                apply_cleanup(part, plan, backup=False)
+            pages = plan["pages"]
+        part.replace(dest)
+        return pages
+    finally:
+        part.unlink(missing_ok=True)
+        comic.close()
+
+
 KEEP, MOVE, DELETE = "Keep it", "Move to Archive folder", "Delete it"
 
 
