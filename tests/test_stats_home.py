@@ -72,10 +72,17 @@ with tempfile.TemporaryDirectory() as d:
     # the numbers, the folder and the marked reading-order folders survive a restart
     assert stats.orders is app.orders and stats.open_tool and stats.recent_dirs == app.recent_dirs
     app.orders.add(lib / "Batman")
+    chips = []
+    meta = app.pages["metadata"]
+    meta.open_with = lambda folder, view=None, origin=None, back=None: chips.append((folder, view, origin, back))
+    stats.open_tool("metadata", "no_year")  # a link on the stats page opens Metadata on the library, filtered, with a way back
+    assert app.current == "metadata" and chips[0][:3] == (lib, "no_year", "Library stats")
+    chips[0][3](); assert app.current == "stats", "the Back button returns to Library stats"
     opened = []
     app._open_path = lambda page, path: opened.append((page, path))
-    stats.open_tool("metadata")  # a link on the stats page opens that tool on the library folder
-    assert app.current == "metadata" and opened == [(app.pages["metadata"], lib)]
+    stats.open_tool("audit")  # tools without filters just open on the library
+    assert app.current == "audit" and opened == [(app.pages["audit"], lib)]
+    assert meta.open_tool == app._open_from_metadata and meta.on_saved == app._stats_refresh
     app.close()
     saved = json.loads(ct.SETTINGS.read_text(encoding="utf-8"))
     assert saved["stats_snapshot"]["comics"] == 5 and saved["stats"]["root"] == str(lib)

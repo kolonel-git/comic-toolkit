@@ -181,6 +181,11 @@ table with inline editing; *Set for checked rows* for fixed values (Series Group
 **Owner's suggestions:** change to a manual editing tool for data repair; entered from Library scan's metadata completeness
 chart; edit each comic individually with suggestions from other comics for each field; bulk edit by selecting many comics.
 
+**Layout change (Session 57, owner request):** built as two columns instead of three stacked segments. Left: the Comics table
+(tall, filterable). Right (scrolls on its own): the Fix form, which follows the selection at once (Automatic, with a switch
+to force *One at a time* or *Several at once*), and under it the Review table of pending changes, always current, with the
+save controls. The footer button scrolls to that list. The segment descriptions below still say what each part holds.
+
 **Proposed design** (Comics > Fix > Review spine)
 - *Header:* "Metadata" and one line: "Fill in and correct the details stored inside your comics."
 - *Segments:*

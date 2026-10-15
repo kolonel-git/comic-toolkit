@@ -22,7 +22,8 @@ from ui_kit import (ACCENT, ACCENT_TEXT, BG, BORDER, EDGE, FONT, MUTED, PANEL, R
 EXPORTS = ["Series", "Publishers", "Years", "Formats", "Coverage", "Largest"]
 ROW = 32  # height of one bar row, in pixels
 FIX_W = 84  # width of the "Fix these" link at the end of a Health row
-FIXABLE = {"Have ComicInfo.xml", "Have a year", "Have a publisher", "Have an issue number"}
+FIXABLE = {"Have ComicInfo.xml": "no_comicinfo", "Have a year": "no_year", "Have a publisher": "no_publisher",
+           "Have an issue number": "no_issue"}  # Health row -> the Metadata view that lists what is missing
 
 
 @dataclass
@@ -613,8 +614,8 @@ class StatsPage(SegmentPage):
              lambda f: not f.get("collected") and not f.get("issue")))
         for key, title, body, test in missing:
             if a.get(key):
-                self._card(title.format(_plural(a[key], "comic")) + ".", body, [("Fix metadata", lambda: self._open("metadata"))],
-                           self._examples(test))
+                self._card(title.format(_plural(a[key], "comic")) + ".", body,
+                           [("Fix metadata", lambda k=key: self._open("metadata", k))], self._examples(test))
                 n += 1
         if a.get("duplicate_groups"):
             self._card(f"{_plural(a['duplicate_groups'], 'group')} of possible duplicates.",
@@ -629,14 +630,15 @@ class StatsPage(SegmentPage):
                          anchor="w").pack(fill="x")
         self.attention_cards = n
 
-    def _open(self, key):
+    def _open(self, key, view=None):
         if self.open_tool:
-            self.open_tool(key)
+            self.open_tool(key, view)
         else:
             self.say("That tool is not available here.", err=True)
 
-    def _fix(self, _item):
-        self._open("metadata")
+    def _fix(self, item):
+        """A Health row's link: open Metadata on the comics that lack that field."""
+        self._open("metadata", FIXABLE.get(item.label, "attention"))
 
     # ------------------------------------------------------------------ segments and footer
     def _sync(self):

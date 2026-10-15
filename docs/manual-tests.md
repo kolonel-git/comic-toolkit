@@ -327,6 +327,24 @@ Use your real library (hundreds of comics if you can) for I1 to I3 and I6.
   *Expect:* the publisher bar grows from *Unknown*, and "Have a publisher" and "Have ComicInfo.xml" go up. (Real RAR files stay out of the ComicInfo.xml figure.)
   Result:
 
+## J. Metadata repair editor
+
+- [ ] **J1. Open from Library stats.** Scan a library, then on a Health row with something missing press **Fix these** (and a Needs attention card's **Fix metadata**).
+  *Expect:* the Metadata page opens on the library, already showing only the comics that lack that field, with a chip "From Library stats · No publisher" and **Back to Library stats** / **Show all comics** buttons.
+  Result:
+- [ ] **J2. One comic.** Click one comic. Type a publisher, then press a suggestion button on another field.
+  *Expect:* the right column shows the cover and the comic's place in the list straight away (no card to choose first); the field you changed says "edited"; the table row says Edited; scrolling down the right column shows the change in the list under the fields, and the footer count updates; a publisher offers to apply to the rest of the series. Also check the two columns look right at your window size: nothing clipped, the list tall enough, the fields readable.
+  Result:
+- [ ] **J3. Many comics.** Select several (Ctrl-click or Shift-click), fill in a genre and a volume, press **Set for N comics**, then **Fill blanks from file names**.
+  *Expect:* only the fields you filled change; empty fields keep each comic's own value; with *Automatic* the form switched by itself (one comic gives the one-comic form, several give the many form). Try *One at a time* and *Several at once* with one and with several comics selected: the chosen way wins.
+  Result:
+- [ ] **J4. Save.** Press the footer's **Review N changes**, look at the list, then press **Confirm and save N changes** under it.
+  *Expect:* the footer button writes nothing and only scrolls the right column down to the changes; Confirm writes only the edited comics, keeps the originals in an `Archive` folder, and Library stats (if scanned) refreshes. Open one comic in a zip tool and read `ComicInfo.xml`.
+  Result:
+- [ ] **J5. A real .cbr and a big folder.** Open a folder with a real RAR `.cbr`, then one with a few thousand comics.
+  *Expect:* the `.cbr` is listed, greyed and cannot be edited, and **Convert them…** opens CBR to CBZ on that folder; the big folder shows progress while reading and then scrolls smoothly.
+  Result:
+
 ## When you're done
 
 Send me the failed items with what you saw (a screenshot or the exact message helps). Passing results can be summarised in one line.

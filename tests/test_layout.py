@@ -46,10 +46,10 @@ sg.pack_forget()
 def headings(pg): return pg.form.headings
 EXPECT = {SinglePage: ["Cover image", "Output"], IconsPage: ["Cover", "Output"],
           ConvertPage: ["Source", "Output"],
-          MetadataPage: ["Source", "What to write", "Checked rows", "Output"], AuditPage: ["Source", "Checks", "Warnings"],
+          AuditPage: ["Source", "Checks", "Warnings"],
           OrderPage: ["Reading order", "Filenames and sorting", "Output"], AceoPage: ["Template", "Covers", "Cards", "Output"]}
 for pg in pages:
-    if type(pg) in EXPECT:  # (Bulk folder is a guided page of steps, tested in test_bulk_page.py)
+    if type(pg) in EXPECT:  # (Bulk folder and Metadata are segment pages, tested in test_bulk_page.py and test_meta_page.py)
         assert headings(pg) == EXPECT[type(pg)], (type(pg).__name__, headings(pg))
 
 # the options panel can be dragged wider and narrower, within limits, and the width is saved
@@ -80,7 +80,7 @@ assert len(pages[3].nav_tree["columns"]) == 3
 
 # a header edge drag is real: simulate it on the metadata table
 pg = pages[4]; pg.pack(fill="both", expand=True); root.update()
-t = pg.tree
+t = pg.comics.tree
 before = int(t.column("year", "width"))
 t.column("year", width=before + 60); root.update()
 assert int(t.column("year", "width")) == before + 60
@@ -138,7 +138,7 @@ with tempfile.TemporaryDirectory() as d:
     # Metadata
     md = pages[4]; md.pack(fill="both", expand=True); md.set_files(chosen)
     settle(md, lambda: not md.busy and len(md.rows) >= 1)
-    assert [r.path for r in md.rows] == [a1, a2, b1] and md.skipped_cbr == 1, ([r.path.name for r in md.rows], md.skipped_cbr)
+    assert [r.path for r in md.rows] == [a1, a2, b1, r1] and [r.locked for r in md.rows] == [False, False, False, True], [r.path.name for r in md.rows]
     md.pack_forget()
     # Renamer
     rn = pages[3]; rn.pack(fill="both", expand=True); rn.set_files(chosen)

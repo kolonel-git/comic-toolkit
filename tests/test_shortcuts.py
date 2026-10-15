@@ -70,9 +70,9 @@ assert app.current == "home"
 pressed = []
 page = app.pages["metadata"]
 app.show("metadata"); app.update()
-page.btn_apply.configure(command=lambda: pressed.append("run"))
-page.btn_apply.configure(state="disabled"); page.primary_action(); assert pressed == []
-page.btn_apply.configure(state="normal"); assert page.primary_action() and pressed == ["run"]
+page.bar_btn.configure(command=lambda: pressed.append("run"))
+page.bar_btn.configure(state="disabled"); page.primary_action(); assert pressed == []
+page.bar_btn.configure(state="normal"); assert page.primary_action() and pressed == ["run"]
 
 # buttons can be reached with Tab and pressed with Enter or Space; the ring shows while focused
 b = uk.button(page.footer, "Test", lambda: pressed.append("enter"))
