@@ -3,6 +3,7 @@ import random
 import sys
 import time
 import tkinter as tk
+import traceback
 from pathlib import Path
 import weakref
 from tkinter import filedialog, ttk
@@ -449,6 +450,65 @@ def flash_taskbar(window):
         pass
 
 
+# ---------- hovering ----------
+# Enter and Leave events are unreliable on customtkinter widgets (several canvases and labels sit on top of each
+# other, and a control that slides under the pointer fires them in pairs). Instead one timer asks Tk which widget is
+# under the pointer and tells the nearest control that registered a `_hover` pair (warm, cool) about it.
+_HOVER = {"root": None, "now": None}
+
+
+def _hover_target(widget):
+    while widget is not None:
+        hooks = widget.__dict__.get("_hover_hooks")
+        if hooks:
+            return widget, hooks
+        widget = getattr(widget, "master", None)
+    return None, None
+
+
+def _hover_tick(root):
+    try:
+        x, y = root.winfo_pointerxy()
+        try:
+            under = root.winfo_containing(x, y)
+        except (tk.TclError, KeyError):  # a pop-up list's window is not one we know
+            under = None
+        target, hooks = _hover_target(under)
+        prev = _HOVER["now"]
+        if target is not prev:
+            try:
+                if prev is not None:
+                    prev.__dict__["_hover_hooks"][1]()
+            except (tk.TclError, KeyError):
+                pass  # the control that lost the pointer is gone
+            except Exception:  # noqa: BLE001 - one broken hook must not stop every other hover for good
+                traceback.print_exc()
+            _HOVER["now"] = target
+            try:
+                if hooks:
+                    hooks[0]()
+            except tk.TclError:
+                pass
+            except Exception:  # noqa: BLE001
+                traceback.print_exc()
+        root.after(40, lambda: _hover_tick(root))
+    except tk.TclError:  # the window is gone: the next control to register starts a new timer
+        _HOVER["root"] = _HOVER["now"] = None
+
+
+def ensure_hover(widget):
+    """Start the hover timer for this widget's window if it is not running."""
+    root = widget.winfo_toplevel()
+    if _HOVER["root"] is None or _HOVER["root"] is not root:
+        try:
+            if _HOVER["root"] is not None and _HOVER["root"].winfo_exists():
+                return  # one window at a time is enough: pop-ups share the main window's pointer
+        except tk.TclError:
+            pass
+        _HOVER["root"] = root
+        root.after(60, lambda: _hover_tick(root))
+
+
 # ---------- the hard shadow ----------
 
 class Shadow(ctk.CTkFrame):
@@ -473,6 +533,8 @@ class Shadow(ctk.CTkFrame):
         self.grid_columnconfigure(0, weight=1)
         if motion:
             self._bind_motion(self)
+            self.__dict__["_hover_hooks"] = (self._warm, self._cool)
+            ensure_hover(self)
 
     # -- keyboard
     def make_focusable(self, on_activate=None, ring="border"):
@@ -518,7 +580,9 @@ class Shadow(ctk.CTkFrame):
 
     def _shift(self, n):
         self._off = n
-        self.slot.grid_configure(padx=(n, self.depth - n), pady=(n, self.depth - n))
+        k = self._get_widget_scaling()  # the first layout went through customtkinter's scaling, so this must too
+        pad = (int(n * k), int((self.depth - n) * k))  # int() like customtkinter, so rest and cool match exactly
+        self.slot.grid_configure(padx=pad, pady=pad)
 
     def _disabled(self):
         try:
@@ -527,8 +591,7 @@ class Shadow(ctk.CTkFrame):
             return False
 
     def _bind_motion(self, w):
-        w.bind("<Enter>", self._enter, add="+")
-        w.bind("<Leave>", self._leave, add="+")
+        """Press and release come from the widgets themselves; hovering is found by ensure_hover()'s pointer check."""
         w.bind("<ButtonPress-1>", self._press, add="+")
         w.bind("<ButtonRelease-1>", self._release, add="+")
         for c in w.winfo_children():
@@ -540,21 +603,16 @@ class Shadow(ctk.CTkFrame):
         except tk.TclError:
             return False
 
-    def _enter(self, _=None):
+    def _warm(self):
+        """The pointer is over this control: the face slides half way toward its shadow."""
         if self._alive() and not self._disabled():
             self._hot = True
             self._shift(max(1, self.depth // 2))
 
-    def _leave(self, _=None):
-        if not self._alive():
-            return
-        under = self.winfo_containing(*self.winfo_pointerxy())
-        while under is not None:  # moving onto a child of the wrapper is not leaving it
-            if under is self:
-                return
-            under = under.master
-        self._hot = False
-        self._shift(0)
+    def _cool(self):
+        if self._alive():
+            self._hot = False
+            self._shift(0)
 
     def _press(self, _=None):
         if self._alive() and not self._disabled():
@@ -789,8 +847,8 @@ class DropZone(Shadow):
             self.label.pack(expand=True)
         for w in (box, self.label):
             w.bind("<Button-1>", lambda _: on_click())
-            w.bind("<Enter>", lambda _: box.configure(fg_color=HOVER))
-            w.bind("<Leave>", lambda _: box.configure(fg_color=WELL))
+        self.__dict__["_hover_hooks"] = (lambda: box.configure(fg_color=HOVER), lambda: box.configure(fg_color=WELL))
+        ensure_hover(self)
 
     def set(self, text=None):
         self.label.configure(text=text or self.prompt, text_color=TEXT if text else MUTED)
@@ -1017,8 +1075,8 @@ class NavItem(Shadow):
         self.active = self.hot = False
         for w in [self.inner, *self.inner.winfo_children()]:  # icon and label
             w.bind("<Button-1>", lambda _: self.command(), add="+")
-            w.bind("<Enter>", self._enter, add="+")
-            w.bind("<Leave>", self._leave, add="+")
+        self.__dict__["_hover_hooks"] = (self._enter, self._leave)
+        ensure_hover(self)
         self.inner.configure(cursor="hand2")
         self.focused = False
         tk.Frame.configure(self.inner, takefocus=1)
@@ -1038,11 +1096,6 @@ class NavItem(Shadow):
         self.redraw()
 
     def _leave(self, _=None):
-        under = self.winfo_containing(*self.winfo_pointerxy())
-        while under is not None:  # moving onto the icon or the label is not leaving the entry
-            if under is self:
-                return
-            under = under.master
         self.hot = False
         self.redraw()
 
@@ -1174,8 +1227,9 @@ def refresh_strips():
             pass
 
 
-def title_block(parent, title, subtitle):
-    AbstractStrip(parent, seed=title, height=36).pack(fill="x", pady=(0, 14), padx=(0, 5))
+def title_block(parent, title, subtitle, strip=True):
+    if strip:
+        AbstractStrip(parent, seed=title, height=36).pack(fill="x", pady=(0, 14), padx=(0, 5))
     ctk.CTkLabel(parent, text=title.upper(), font=(HEAD, 22), text_color=TEXT, anchor="w").pack(fill="x")
     ctk.CTkLabel(parent, text=subtitle, font=(FONT, 13), text_color=MUTED,
                  anchor="w").pack(fill="x", pady=(2, 16))

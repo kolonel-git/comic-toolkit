@@ -6,7 +6,7 @@ database. Everything works on the files and folders on disk.
 
 - **Platform:** Windows 10/11 (a few features are Windows-only)
 - **Language / UI:** Python 3, [customtkinter](https://github.com/TomSchimansky/CustomTkinter), neo-brutalist light and dark themes
-- **Status:** active development, currently `v0.5.0`
+- **Status:** active development, currently `v0.7.0`; a redesign of every page is planned (see the [UI revamp plan](docs/ui-revamp-plan.md))
 
 ## Quick start
 
@@ -49,5 +49,5 @@ Everything else lives in [`docs/`](docs/README.md):
 
 - [Getting started](docs/getting-started.md) · [The tools](docs/tools.md) · [Naming styles and templates](docs/renamer-templates.md)
 - [Safety model](docs/safety.md) · [Known limitations](docs/known-limitations.md) · [Architecture](docs/architecture.md) · [Manual tests](docs/manual-tests.md)
-- [Roadmap](docs/roadmap.md) · [Reading Order](docs/reading-order.md) · [Versioning](docs/versioning.md)
+- [Roadmap](docs/roadmap.md) · [UI revamp plan](docs/ui-revamp-plan.md) · [Reading Order](docs/reading-order.md) · [Versioning](docs/versioning.md)
 - [Changelog](docs/CHANGELOG.md) · [Tests](tests/README.md)

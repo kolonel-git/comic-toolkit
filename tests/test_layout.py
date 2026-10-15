@@ -44,16 +44,16 @@ sg.pack_forget()
 
 # every options panel is grouped under headings, always starting with the source or main subject and ending with the output
 def headings(pg): return pg.form.headings
-EXPECT = {SinglePage: ["Cover image", "Output"], BulkPage: ["Source", "Cover image", "Output"], IconsPage: ["Cover", "Output"],
+EXPECT = {SinglePage: ["Cover image", "Output"], IconsPage: ["Cover", "Output"],
           ConvertPage: ["Source", "Output"],
           MetadataPage: ["Source", "What to write", "Checked rows", "Output"], AuditPage: ["Source", "Checks", "Warnings"],
           OrderPage: ["Reading order", "Filenames and sorting", "Output"], AceoPage: ["Template", "Covers", "Cards", "Output"]}
 for pg in pages:
-    if type(pg) in EXPECT:
+    if type(pg) in EXPECT:  # (Bulk folder is a guided page of steps, tested in test_bulk_page.py)
         assert headings(pg) == EXPECT[type(pg)], (type(pg).__name__, headings(pg))
 
 # the options panel can be dragged wider and narrower, within limits, and the width is saved
-pg = pages[1]; pg.pack(fill="both", expand=True); root.update()
+pg = pages[5]; pg.pack(fill="both", expand=True); root.update()
 w0 = pg.side.winfo_width()
 pg.splitter._press(ev(1000)); pg.splitter._drag(ev(900)); pg.splitter._release(None); root.update()
 k = pg.splitter._scale()  # display scaling: mouse movement is in pixels, widths in scaled units
