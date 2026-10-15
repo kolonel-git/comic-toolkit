@@ -12,6 +12,26 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-16 01:15 +11:00 · Session 61: CBR to CBZ on the page shell (roadmap Phase 2, step 5)
+
+**Summary:** CBR to CBZ is rebuilt as two resizable columns, like Bulk folder, Metadata and Library audit. This closes Phase 2 (planned tag `v0.9.0`).
+
+**Decisions**
+- Followed the Session 60 two-column decision and the plan's CBR to CBZ section. Two things in the plan were changed because they could not be true: no "saves about 200 MB" estimate (pages are stored as they are, so the new file is about the same size), and no page count in the list (counting a RAR's pages means extracting it).
+- The tidy-up options (remove junk, rename pages) run on the `.part` file before it takes its place, so a failure never touches an existing `.cbz` or the original.
+
+**Changes by file**
+- `page_convert.py`: rewritten on `SegmentPage`. Left: Comics (drop box, *Include subfolders*, filterable table of file, folder, kind and size; a background check marks each file *RAR*, *ZIP inside* or unreadable). Right: Convert (cards for the original and for an existing `.cbz`, *Advanced options*) and Review (headline, size and free-space warning, the "converted only if verified" note, status table, progress with time left, result box, file list). Footer: **Convert N files** / **Stop** / **Open the folder**, with **Dry run**, **Convert again**, **Do another folder** and **Retry N failed**. **Delete it** asks once before running. `open_with` and `add_paths` let the Library audit and window drops open it.
+- `archive_tools.py`: new `convert_one(src, dest, remove_junk, rename_pages)`.
+- `tests/test_convert_page.py` (new); `tests/test_layout.py` no longer treats the page as an options-panel page (the panel-divider check now uses Folder icons).
+- Docs: plan, roadmap, tools, architecture, known limitations, manual tests (new section L, K widened to four pages), tests README, README.
+
+**Verification:** `ruff check --select F,E9 .` clean; `python tests/run_all.py` 32 of 32 passed. Not checked: a genuine RAR `.cbr` (the tests use zip-backed files, and 7-Zip behaviour was not exercised), the look of the page in light and dark mode, and dragging the divider by hand (see manual tests L1 to L7).
+
+**Known issues:** see Known limitations (CBR to CBZ cannot count a RAR's pages up front).
+
+---
+
 ## 2026-10-16 00:40 +11:00 · Session 60: Two resizable columns for Bulk folder, Metadata and Library audit
 
 **Summary:** The three pages built on the segment layout (Bulk folder, Metadata, Library audit) are now two columns with a divider you can drag, instead of stacked sections. Library stats keeps its segments, as asked. The decision applies to every page still to be rebuilt.
