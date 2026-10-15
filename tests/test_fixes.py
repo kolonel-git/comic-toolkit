@@ -39,6 +39,6 @@ with tempfile.TemporaryDirectory() as d:
     pa.scan_library = boom
     page.scan(); wait()
     print("status:", page.status.cget("text"))
-    assert page.q is None and "disk exploded" in page.status.cget("text") and page.btn_scan.cget("state") == "normal"
+    assert page.q is None and "disk exploded" in page.status.cget("text") and page.bar_btn.cget("text") == "Scan library" and page.bar_btn.cget("state") == "normal"
     root.destroy()
 print("FIXES OK")

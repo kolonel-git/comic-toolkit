@@ -3,7 +3,7 @@
 [< Docs index](README.md)
 
 Scope: stay stateless (no database of record), YACReader-friendly, no built-in reader, no online metadata lookups, Windows desktop.
-Last revised 2026-10-15 (Session 53) around the [UI revamp plan](ui-revamp-plan.md), which now drives the build order.
+Last revised 2026-10-15 (Session 58) around the [UI revamp plan](ui-revamp-plan.md), which now drives the build order.
 
 ## How work is done
 
@@ -29,11 +29,12 @@ Last revised 2026-10-15 (Session 53) around the [UI revamp plan](ui-revamp-plan.
 Backup `.bak` safety fix, metadata extensions, shared library scan, Library audit (with Clean-up merged in), Reading order,
 Library stats, Renamer revamp (cards and a template per type), ACEO sheets, Add to library, page picker, shared library folder,
 recent folders, keyboard layer and Ctrl+K search, and the neo-brutalist UI. Details are in [The tools](tools.md) and the
-[Changelog](CHANGELOG.md). Bulk folder already has the first step-card layout; the plan replaces it.
+[Changelog](CHANGELOG.md). From the revamp below: the shared page shell, Bulk folder, Library stats and the Metadata repair editor (two columns) and the Library audit are built.
+**Where we are:** Phase 0 and Phase 1 are finished (tag `v0.8.0` still to be placed); Phase 2 is under way: the Metadata editor and the Library audit are built, and step 5 (CBR to CBZ) is next.
 
 ## Build order: the UI revamp
 
-Every page becomes Header, collapsible Segments and Footer. The full design for each tool is in the
+Every page becomes a Header, two resizable columns and a Footer (Library stats keeps collapsible segments; see the Session 60 decision in the plan). The full design for each tool is in the
 [UI revamp plan](ui-revamp-plan.md). Each numbered line is one branch.
 
 **Phase 0: shared parts** (small and invisible on their own; built with Bulk folder)
@@ -45,14 +46,14 @@ Every page becomes Header, collapsible Segments and Footer. The full design for 
 - 0d. Local suggestion index (normalised series and publisher names) for Metadata, Renamer and Add to library. **Done** for Metadata (`SuggestIndex` in `metadata_core.py`); the Renamer and Add to library will reuse it.
 - 0e. Link context: open a page preloaded, with a "From X" chip and a Back link. **Done** (`SegmentPage.show_origin`; Library stats to Metadata uses it, the other tools will).
 
-**Phase 1: prove the shell** (`v0.8.0`)
-1. Bulk folder on the new shell (includes 0a and 0b). **Done.**
+**Phase 1: prove the shell** (`v0.8.0`, finished; the tag is still to be placed)
+1. Bulk folder on the new shell (includes 0a and 0b). **Done**, and moved to two columns in Session 60.
 2. Library stats: segments, Needs attention cards, reading-order toggle and section (includes 0c). **Done.**
 
 **Phase 2: the repair loop** (`v0.9.0`)
-3. Metadata repair editor (includes 0d and 0e). **Done.**
-4. Library audit: summary strip, reading-order exclusion.
-5. CBR to CBZ.
+3. Metadata repair editor (includes 0d and 0e). **Done.** Built as two columns (comics left; fields and the live list of changes right) rather than three stacked segments; see the [plan](ui-revamp-plan.md#metadata-repair-editor).
+4. Library audit: summary strip, Details panel, reading-order exclusion. **Done.**
+5. CBR to CBZ. **Next.**
 
 **Phase 3: standalone tools** (`v0.10.0`)
 6. Single issue.

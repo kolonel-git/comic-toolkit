@@ -12,6 +12,89 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-16 00:40 +11:00 · Session 60: Two resizable columns for Bulk folder, Metadata and Library audit
+
+**Summary:** The three pages built on the segment layout (Bulk folder, Metadata, Library audit) are now two columns with a divider you can drag, instead of stacked sections. Library stats keeps its segments, as asked. The decision applies to every page still to be rebuilt.
+
+**Decisions (owner)**
+- Two columns wherever it works better than sections: what you choose on the left, what you can set and the review on the right; the right column scrolls on its own; the divider is draggable and its position is remembered. Table columns stay resizable too.
+- Library audit: the Checks are a right column that is always in view (they no longer fold); Library, on the left, still folds to a summary after the first scan of a folder.
+- I read "all the other ones" as the pages still to be rebuilt (Single issue, Folder icons, CBR to CBZ, Reading order, ACEO sheets, the Renamer, Add to library): they are not converted now, but the plan and the roadmap say they will be built as two columns. They already have a main area and a draggable options panel.
+
+**Changes by file**
+- `flow_kit.py`: `SegmentPage.make_panes` (the two columns, the right one scrolling on its own, a `Splitter` between them whose limit follows the window so the left column keeps `left_min`), `add_block` and the new `Block` (a titled block with the small interface of `Segment`, so pages move over with few changes), `fit_right` (labels that re-wrap as the right column is dragged), `_split_width` saved and restored with the page's state; `reveal` and `advance` scroll the right column on these pages. `LazyTable(grow=True)` is used for the left tables.
+- `page_bulk.py`: Comics on the left (a tall table); Covers and Review in the right column; labels follow the column width.
+- `page_metadata.py`: the grid is replaced by the draggable panes.
+- `page_audit.py`: Library and Findings on the left (the strip and the chips wrap onto more rows when the column is narrow), Checks on the right.
+- Tests: `test_bulk_page.py`, `test_meta_page.py` and `test_audit_ui.py` check the columns, dragging the divider, the saved width, the minimum left width and the right column's scrolling.
+- Docs: the plan (the two-column decision), roadmap, tools, architecture, known limitations, README, manual tests (new section K), tests README.
+
+**Technical notes**
+- The Splitter was already used for the options panel of the older pages; here it sits between two panes, `side="right"`.
+- The divider's upper limit is recomputed whenever the page is resized, and the right column's wanted width is kept separately from the clamped width, so making the window larger again gives the width back.
+
+**Verification:** `ruff check --select F,E9 .` clean; `python tests/run_all.py` 31 of 31 passed. I looked at a screenshot of the Library audit in two columns and fixed what it showed; the screenshots I tried for Bulk folder and Metadata captured another window on the desktop, so those two were not looked at (only asserted by geometry in their tests). Dark mode, narrow windows and dragging the divider by hand are unchecked (see manual tests K1 to K3).
+
+**Known issues:** see Known limitations (two-column pages).
+
+---
+
+## 2026-10-15 21:50 +11:00 · Session 59: Library audit on the page shell (roadmap Phase 2, step 4)
+
+**Summary:** The Library audit is rebuilt on the shared page layout, following the [UI revamp plan](ui-revamp-plan.md): Library, Checks and Findings sections, a strip of counts above the findings, a Details panel that points to the tool that fixes each kind of problem, and marked reading-order folders left out of Duplicates. Scanning, findings and fixing work as before.
+
+**Decisions (owner)**
+- The **Details** button opens a panel over the **right half of the page** (down to the footer), not a separate window, and the panel **points to the correct tool** for each kind of problem.
+- **Library and Checks fold after the first scan** of a folder (the plan's option A), so Findings gets the page. A rescan does not fold them again, and choosing another folder resets that.
+- The Checks switches (Broken, Duplicates, Missing, Junk, CBR, Warnings) decide what is listed, counted and fixed; they act at once without a rescan. (Only the integrity test and cover comparison, which have their own switches, change what the scan does.)
+
+**What changed for the user**
+- **Strip:** "1 broken file · 12 groups of duplicates · 4 series with gaps · …"; each count opens its list. **Details** opens the panel: what was scanned, which checks ran, real `.cbr` files not opened, comics left out as reading orders, findings ignored; then a block per kind with the count and buttons: **Show in list**, **Convert in bulk** (CBR to CBZ on this folder), **Mark reading orders** / **View stats** (Library stats), and **Comics with no series** / **no issue number** (Metadata on this folder, filtered, with a "From Library audit" chip and a Back button). The CBR list also has **Convert in bulk**.
+- **Reading orders:** folders marked in Library stats are left out of Duplicates (counted in a note and in the panel). **Include reading orders in duplicates** brings them back (needs a rescan); a group with one copy inside a marked folder and one outside always keeps the outside one. A **Reading orders** chip lists each marked folder (comics, and how many also exist outside it); nothing to fix.
+- **Footer:** the main button is **Scan library**, then **Fix N checked**, then **Stop** while running; secondary buttons **Rescan**, **Ignored…**, **Archive…**. The confirmation before fixing now has a **Details** button listing every file, what happens to it and whether it can be undone. **Ignore selected**, **Open folder**, **Tick all / Untick all** and the wishlist buttons (Missing chip only) sit above the table.
+- The table is the shared lazy table (own filter box, long lists load as you scroll).
+
+**Changes by file**
+- `audit_core.py`: `find_duplicates(..., orders=)` ranks an outside copy first; `duplicates_for`, `reading_order_rows`, the `ORDER` kind and `Finding.count`, `plan_lines`, `describe_plan`, `build_details`.
+- `page_audit.py`: rewritten on `SegmentPage` (the scan and fix workers, the ignore list, the Ignored and Archive dialogs and the wishlist are the old code).
+- `comic_tool.py`: gives the audit page the shared `ReadingOrders` and `_open_from_audit`, which opens Metadata (filtered, with a chip and Back), CBR to CBZ or Library stats.
+- Tests: new `tests/test_audit_orders.py` (core); `tests/test_audit_ui.py` rewritten; `tests/test_fixes.py` and `tests/test_layout.py` follow the new page (it no longer has an options panel).
+- Docs: `tools.md`, `architecture.md`, `roadmap.md`, `ui-revamp-plan.md`, `known-limitations.md`, `safety.md`, `manual-tests.md` (D1 to D13 reworded, D14 to D16 added), `tests/README.md`, `README.md`, `HANDOFF.md`.
+
+**Technical notes**
+- The table's first column is a hidden picture column, so clicks are tested against the `sel` column's own box, not `#1`.
+- An empty `CTkFrame` (the strip of per-chip buttons) is 200 px tall unless given `height=0`; this showed up in a screenshot and is fixed.
+- The scan runs on a copy of the reading-order list, so marking folders while it runs cannot change it.
+
+**Verification:** `ruff check --select F,E9 .` clean; `python tests/run_all.py` 31 of 31 passed. I looked at screenshots of the findings and of the open Details panel (light theme, 1400 px wide) and fixed the gap and plural wording they showed; dark mode, a narrow window and the confirmation window were not looked at. The `image "pyimage1" doesn't exist` message the audit window test prints comes from the ACEO page's preview callback and was there before this change.
+
+**Known issues:** see Known limitations (unmarked reading-order folders; the toggle needs a rescan; the Metadata pointer opens the whole folder). **Convert in bulk** opens CBR to CBZ on the folder; preloading only the audit's files comes with step 5.
+
+---
+
+## 2026-10-15 21:36 +11:00 · Session 58: Documentation pass before Library audit
+
+**Summary:** Every document read against the app as it is now. No code changed.
+
+**Decisions**
+- Phase 1 (shared page shell, Bulk folder, Library stats) is finished and on `main`; only the `v0.8.0` tag is still to be placed. Phase 2 is under way (Metadata done, Library audit next). Manual tests are set aside for now.
+
+**Changes by file**
+- `README.md`: status line now says the pages are being rebuilt on a shared layout and which are done.
+- `docs/tools.md`: "On every page" no longer claims every page has an options panel; it explains the two kinds of page during the redesign.
+- `docs/safety.md`: Metadata keeps edits pending and writes only on Confirm and save; Bulk folder has a review and a dry run.
+- `docs/known-limitations.md`: Metadata limits added (narrow window, edits and editing way not kept between runs).
+- `docs/roadmap.md`: "Where we are", Phase 1 finished, step 3 described as two columns, step 4 marked next, the stale "Bulk folder has the first step-card layout" line removed.
+- `docs/versioning.md`: `v0.8.0` row says the work is on `main` and the tag is still to be placed.
+- `docs/ui-revamp-plan.md`: intro no longer says nothing is built; status column marks Library stats, Bulk folder and Metadata as built.
+- `docs/manual-tests.md`: section B rewritten for the Metadata page as it is now (it still described the old table with a Set value box). Results of A to J are still unrecorded.
+- `tests/README.md`: run time, the new window tests and the scripts that were missing from the table.
+- `HANDOFF.md`: done and next work brought up to date.
+
+**Verification:** documentation only; checked by reading each page against the code and the tests (30 scripts in `tests/`). Nothing was run for this session.
+
+---
+
 ## 2026-10-15 21:10 +11:00 · Session 57: Metadata in two columns (comics on the left, fields and changes on the right)
 
 **Summary:** The Metadata page no longer stacks Comics, Fix and Review as three segments in one long scrolling column. It is now two columns side by side: the comics you can pick on the left, everything you can edit for the selection on the right, with every change waiting to be saved listed under the fields. Selecting comics updates the right column at once; scrolling down in it shows what will change.

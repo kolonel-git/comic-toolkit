@@ -3,18 +3,19 @@
 [< Docs index](README.md)
 
 Working report on the planned redesign of every page. One section per feature: current state, owner's suggestions, proposed
-design. Nothing here is built yet; [The tools](tools.md) describes the app as it is today.
+design. The status column below says what is built; [The tools](tools.md) describes the app as it is today, and the
+[roadmap](roadmap.md) gives the build order.
 
 | Section | Status |
 |---|---|
 | Global shell and segmented pages | agreed |
-| Library scan / stats | agreed |
+| Library scan / stats | agreed, built |
 | Single issue | agreed |
-| Bulk folder | agreed |
+| Bulk folder | agreed, built (two columns) |
 | Folder icons | agreed (collage deferred) |
-| Metadata (repair editor) | agreed |
+| Metadata (repair editor) | agreed, built (two columns) |
 | CBR to CBZ | agreed |
-| Library audit | agreed |
+| Library audit | agreed, built (two columns) |
 | Reading order | agreed |
 | Add to library | agreed |
 | ACEO sheets | agreed |
@@ -27,7 +28,9 @@ design. Nothing here is built yet; [The tools](tools.md) describes the app as it
 **Current:** left options panel plus main area on most pages; Bulk folder is the first page converted to the shell. Many options sit in one
 panel. Type uses about ten sizes (8 to 28 pt), Segoe UI plus Arial Black headings plus Consolas, and several accent colours.
 
-**Owner's decisions**
+**Owner's decision (Session 60): two columns.** Every page except Library stats is laid out as **two resizable columns** under the header, with the footer below: what you choose (the folder, the list of comics) on the left, and what you can set and the review of what will happen on the right, which scrolls on its own. The divider between the columns is dragged to the width you like (and remembered), and every table column is resizable too. Library stats keeps the stack of segments. Bulk folder, Metadata and Library audit are built this way; Single issue, Folder icons, CBR to CBZ, Reading order, ACEO sheets, the Renamer and Add to library follow when their turn comes (they already have a main area and a draggable options panel, so for them it is mostly regrouping the options into titled blocks and putting the review and the run under them). The per-tool sections below still describe what each part holds; read "segment" as "block of a column" for every page except Library stats.
+
+**Owner's decisions (the original segment design, still true for Library stats)**
 - Every tool is a stack of **collapsible segments**. A finished segment folds to a short summary of what it did or holds.
 - Every tool has the **same three parts**: Header, Segments, Footer. Footer holds only the main action and a few other buttons.
 - **Advanced options** sit in a clearly marked collapsed section *inside* its segment.
@@ -241,6 +244,8 @@ Reading-order copies show up as duplicates.
 
 **Owner's suggestions:** ignore reading-order copies; add a summary strip of counts with a details button; add links between
 tools (see *Links between tools*).
+
+**As built (Sessions 59 and 60, owner decisions):** the **Details** button opens a panel over the right half of the page (not a separate window) which also points to the tool that fixes each kind of problem (Metadata for comics with no series or issue number, CBR to CBZ for `.cbr` files, Library stats for reading orders). The page is two columns: the library and the findings on the left (Library folds to a one-line summary after the first scan of a folder), the Checks always in view in the right column. The strip's counts select their chips; a **Reading orders** chip lists the marked folders; the Checks switches decide which kinds are listed and fixed.
 
 **Proposed design** (Library > Checks > Findings spine)
 - *Header:* "Library audit" and one line: "Find broken, duplicate, missing and untidy comics, then fix them."

@@ -28,33 +28,35 @@ RAR, one issue that is a near-duplicate of another (same cover, different file),
 
 ## B. Metadata extensions (roadmap item 1)
 
-- [ ] **B1. Count parsing.** Rename a copy to `Test 03 (of 12) (2020).cbz`, open the Metadata tool on its folder.
-  *Expect:* the **Of** column shows `12`, Series `Test`, # `03`, Year `2020`. Try `(3 of 12)` and `[of 12]` too.
+Run these in the Metadata page (comics on the left, fields on the right). Section J covers the rest of that page.
+
+- [ ] **B1. Count parsing.** Rename a copy to `Test 03 (of 12) (2020).cbz`, open the Metadata tool on its folder and select that comic.
+  *Expect:* the **Issue count** field offers `12` as a suggestion (read from the file name), the Series suggestion is `Test`, Issue number `3`, Year `2020`. Try `(3 of 12)` and `[of 12]` too.
   Result:
-- [ ] **B2. Count survives into the file.** Write the metadata, then check `ComicInfo.xml` inside the CBZ (open the zip, read the file).
+- [ ] **B2. Count survives into the file.** Press the suggestion for Issue count, then **Review 1 change**, **Confirm and save**, and check `ComicInfo.xml` inside the CBZ (open the zip, read the file).
   *Expect:* `<Count>12</Count>` present.
   Result:
-- [ ] **B3. Inline edit of Of.** Double-click the Of cell, type `24`, press Enter.
-  *Expect:* the row shows `24` and status Update/Add; Escape cancels an edit.
+- [ ] **B3. Typing a value.** Click the comic, type `24` in Issue count.
+  *Expect:* the field says "edited", the comic's row says Edited and the changes list shows Issue count becoming `24`; clearing the box back to the stored value removes the change.
   Result:
-- [ ] **B4. Set for checked rows.** Tick two rows, untick the rest. In "Set for checked rows" choose Genre, type `Superhero, Crime`, click Set value.
-  *Expect:* a confirmation line under the buttons, the two rows show Update, others unchanged. Repeat for Series Group, Alternate series and Publisher.
+- [ ] **B4. Several at once.** Select two comics (Ctrl-click). Fill in Genre `Superhero, Crime` and press **Set for 2 comics**. Repeat for Series group, Alternate series and Publisher (under *Advanced options* where shown).
+  *Expect:* a line in the status saying how many fields were set on how many comics, both comics show Edited, others are unchanged, and the changes list shows each field.
   Result:
-- [ ] **B5. Cancel.** Choose Genre again, leave the box empty, click Set value.
-  *Expect:* the pending Genre disappears from those rows.
+- [ ] **B5. Nothing to set.** With several comics selected leave every box empty and press **Set for N comics**.
+  *Expect:* a red "Fill in a field first"; nothing changes. **Discard edits** clears everything pending.
   Result:
-- [ ] **B6. Nothing checked.** Untick everything and click Set value.
-  *Expect:* a red message asking you to check a row; nothing changes.
+- [ ] **B6. Nothing selected.** Select no comic.
+  *Expect:* the right column says to select a comic on the left; nothing can be edited.
   Result:
-- [ ] **B7. YACReader shows the fields.** Turn on ComicInfo import (Settings > General), Update Library, open the comic's info.
+- [ ] **B7. YACReader shows the fields.** Save, turn on ComicInfo import (Settings > General), Update Library, open the comic's info.
   *Expect:* Issue count, Series Group, Genre, Alternate series, Publisher match what you wrote.
   If any field is blank, note which. That tells me which tags YACReader does not read.
   Result:
-- [ ] **B9. Removing the issue number.** Tick a few rows (include one with no `ComicInfo.xml`), press **Remove from checked rows** under *Issue number*, and write. Then update the YACReader library and sort the folder.
-  *Expect:* the **#** column goes blank for those rows and the status says Update; the confirmation says the number will be removed from N files; afterwards `ComicInfo.xml` has no `<Number>` but keeps its other fields, and YACReader sorts those comics by filename. **Tell me whether the sort really follows the filename.** Also try **Keep it again** before writing, and typing a number in the cell.
+- [ ] **B9. Removing the issue number.** Select a few comics (include one with no `ComicInfo.xml`), choose *Several at once*, open *Advanced options* and press **Remove issue number**, then save. Then update the YACReader library and sort the folder.
+  *Expect:* the **#** column goes blank for the comics that had one and the changes list shows the number becoming "(removed)"; the confirmation note counts the values deleted; afterwards `ComicInfo.xml` has no `<Number>` but keeps its other fields, and YACReader sorts those comics by filename. **Tell me whether the sort really follows the filename.** Also try **Keep it again** before saving.
   Result:
 - [ ] **B8. Layout.** Look at the Metadata page in light and dark mode, and at a narrow window.
-  *Expect:* the new side-panel section and the reminder under the table are readable, nothing clipped.
+  *Expect:* both columns readable, the reminder under the table visible, nothing clipped.
   Result:
 
 ## C. Shared library scan (roadmap item 2)
@@ -94,9 +96,9 @@ The scan has no window yet. It runs from a terminal in the project folder: `pyth
 Open **Library audit** from Home (or drop a folder on it). Use `Test Library` from the setup above, plus the extra files named in each test. Make a copy of the folder first: these tests fix and delete things.
 
 - [ ] **D1. Scan.** Choose the folder, leave the defaults, press **Scan library**.
-  *Expect:* a progress bar and "Scanning n of N", then "Done · N files in …s". The window stays responsive. The chips show counts; **All** excludes Warnings; switching chips is instant.
+  *Expect:* a progress bar and "Scanning n of N" (also in the footer, whose button reads **Stop**), then "Done · N files in …s". The window stays responsive. Library folds to a one-line summary (the Checks stay in the right column) and the Findings show a strip of counts; the chips show counts; **All** excludes Warnings and Reading orders; switching chips is instant.
   Result:
-- [ ] **D2. Broken files.** Add a text file renamed `Broken 01.cbz` and a truncated copy of a CBZ. Scan, then tick **Full integrity test** and scan again.
+- [ ] **D2. Broken files.** Add a text file renamed `Broken 01.cbz` and a truncated copy of a CBZ. Scan, then tick **Full integrity test** (Checks > *Advanced options*) and scan again.
   *Expect:* `Broken 01.cbz` is listed in both scans; the truncated file shows only with the full test (or as not a valid zip). Healthy comics are never listed.
   Result:
 - [ ] **D3. Real RAR files.** With real `.cbr` files present, run the full integrity test with and without **Open real .cbr files**.
@@ -111,10 +113,10 @@ Open **Library audit** from Home (or drop a folder on it). Use `Test Library` fr
 - [ ] **D6. Missing, per type.** Use a series where you know what you own: some single issues, some TPB volumes, an omnibus.
   *Expect:* one row for the series reading like `Issues: #13, #27-#29 · TPB vols: 3, 5`; each format tracked on its own; annuals, specials and ranges not reported. Try **Expect issues from #1**. **Copy wishlist** and **Save wishlist…** (`.txt` and `.csv`) match what you see.
   Result:
-- [ ] **D7. Junk and CBR fixes.** Make sure some CBZ files hold Thumbs.db or `.nfo`, and some `.cbr` files exist. Look at the Junk and CBR chips, then press **Fix checked** on each.
-  *Expect:* both start ticked; the confirmation lists what will happen and only covers the chip you are on; afterwards the files are clean / converted (the `.cbr` is gone once its `.cbz` exists), the list rescans, and a comic still opens in your reader.
+- [ ] **D7. Junk and CBR fixes.** Make sure some CBZ files hold Thumbs.db or `.nfo`, and some `.cbr` files exist. Look at the Junk and CBR chips, then press the footer's **Fix N checked** on each.
+  *Expect:* both start ticked; the confirmation lists what will happen and only covers the chip you are on (its **Details** button lists each file and says whether it can be undone); afterwards the files are clean / converted (the `.cbr` is gone once its `.cbz` exists), the list rescans, and a comic still opens in your reader.
   Result:
-- [ ] **D8. Archive a duplicate.** On Duplicates, tick the extra copy, **Fix checked**, confirm.
+- [ ] **D8. Archive a duplicate.** On Duplicates, tick the extra copy, **Fix N checked**, confirm.
   *Expect:* the file moves to `Archive/<name>.bak` next to where it was; the group disappears; declining changes nothing; the kept copy cannot be ticked.
   Result:
 - [ ] **D9. Ignore.** Select a Missing row and press **Ignore**; rescan; open **Ignored…**.
@@ -131,6 +133,15 @@ Open **Library audit** from Home (or drop a folder on it). Use `Test Library` fr
   Result:
 - [ ] **D13. Look and feel.** View the page in light and dark mode, with the window narrow, and with hundreds of rows.
   *Expect:* the table is readable in both themes, the footer buttons are not clipped, scrolling is smooth. Switching theme while results are shown keeps them.
+  Result:
+- [ ] **D14. Details panel.** After a scan press **Details**. Press **Show in list** on a kind, then reopen it and try **Convert in bulk** (needs `.cbr` files), **Mark reading orders** and, if some comics have no series or issue number, **Comics with no series**.
+  *Expect:* the panel covers the right half of the page down to the footer and says what was scanned, which checks ran and what was left out; each button either selects that list or opens the right tool on this folder (Metadata already filtered, with a "From Library audit" chip and a Back button). Tell me if the wording or the half-page size is wrong for your screen.
+  Result:
+- [ ] **D15. Reading orders.** In Library stats mark a folder of reading-order copies (for example `01 - Name`), then audit the library.
+  *Expect:* the copies are not listed under Duplicates; a **Reading orders** chip lists the folder with how many of its comics also exist elsewhere; turning on **Include reading orders in duplicates** and rescanning pairs them, with the original outside the folder kept.
+  Result:
+- [ ] **D16. Checks and folding.** Switch a check off (for example Junk files), then open Library again.
+  *Expect:* the kind disappears from the strip, chips, list and the fix count at once; Library stays folded after a rescan until you open it yourself, and the first scan of a new folder folds it again.
   Result:
 
 ## E. Reading order (roadmap item 4)
@@ -343,6 +354,18 @@ Use your real library (hundreds of comics if you can) for I1 to I3 and I6.
   Result:
 - [ ] **J5. A real .cbr and a big folder.** Open a folder with a real RAR `.cbr`, then one with a few thousand comics.
   *Expect:* the `.cbr` is listed, greyed and cannot be edited, and **Convert them…** opens CBR to CBZ on that folder; the big folder shows progress while reading and then scrolls smoothly.
+  Result:
+
+## K. Two-column pages
+
+- [ ] **K1. Drag the divider.** On Bulk folder, Metadata and Library audit, drag the thin divider between the columns left and right, then close and reopen the app.
+  *Expect:* the right column gets wider and narrower smoothly, the left column stops at a usable width, text in the right column re-wraps, and the width is the same after reopening.
+  Result:
+- [ ] **K2. Small and large windows.** Make the window narrow, then very wide, on each of the three pages.
+  *Expect:* nothing is cut off that you cannot reach (each column scrolls or wraps), the footer stays visible, and the lists use the height of the page.
+  Result:
+- [ ] **K3. Look.** Compare the three pages in light and dark mode.
+  *Expect:* the same header, divider, headings and spacing on all three. Tell me what feels cramped or wasted.
   Result:
 
 ## When you're done

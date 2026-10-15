@@ -17,7 +17,7 @@ import customtkinter as ctk
 
 from comic_core import FORMATS, HEIGHTS
 from ui_kit import (ACCENT, BG, BORDER, CYAN, DANGER, EDGE, FOCUS, FONT, HEAD, HOVER, MUTED, ON_ACCENT, PANEL, PINK, RAISED,
-                    SCROLL, SWITCH_OFF, TEXT, TYPE_BODY, TYPE_HINT, TYPE_SEGMENT, WELL, Shadow, Toggle, _TOGGLES,
+                    SCROLL, SWITCH_OFF, TEXT, TYPE_BODY, TYPE_HINT, TYPE_SEGMENT, WELL, Shadow, Splitter, Toggle, _TOGGLES,
                     apply_tree_theme, build_tree, button, ensure_hover, entry, menu, pick, refresh_strips, segmented,
                     slider, switch_style, tool_button)
 
@@ -283,6 +283,46 @@ class Segment(Shadow):
             c.create_line(6, 12, 10, 17, 18, 6, fill="#111111", width=3, joinstyle="miter")
 
 
+class Block:
+    """A titled block of a two-column page: a heading with a one-line summary at its right, a rule, and `.body`. It has
+    the small interface of `Segment` (set_summary, set_state, set_open, redraw, state, opened, body), so a page can move
+    from segments to columns almost unchanged; opening and closing do nothing here and a "locked" block only greys its
+    title. Pack it with `.pack()` like a widget."""
+
+    def __init__(self, parent, title, grow=False):
+        self.frame = ctk.CTkFrame(parent, fg_color="transparent", corner_radius=0)
+        self.grow = grow   # fills the height it is given (for a block that holds a table)
+        head = ctk.CTkFrame(self.frame, fg_color="transparent")
+        head.pack(fill="x")
+        self.title = ctk.CTkLabel(head, text=title, font=TYPE_SEGMENT, text_color=TEXT, anchor="w")
+        self.title.pack(side="left")
+        self.summary = ctk.CTkLabel(head, text="", font=TYPE_HINT, text_color=MUTED, anchor="e", justify="right", wraplength=300)
+        self.summary.pack(side="right", fill="x", expand=True, padx=(10, 0))
+        ctk.CTkFrame(self.frame, height=EDGE, fg_color=BORDER, corner_radius=0).pack(fill="x", pady=(4, 10))
+        self.body = ctk.CTkFrame(self.frame, fg_color="transparent")
+        self.body.pack(fill="both" if grow else "x", expand=grow)
+        self.state, self.opened = "idle", True
+        self.pack, self.winfo_y = self.frame.pack, self.frame.winfo_y
+
+    def set_summary(self, text):
+        if self.summary.cget("text") != text:
+            self.summary.configure(text=text)
+
+    def set_state(self, state):
+        if state != self.state:
+            self.state = state
+            self.title.configure(text_color=MUTED if state == "locked" else TEXT)
+
+    def set_open(self, on):
+        pass
+
+    def toggle(self):
+        pass
+
+    def redraw(self):
+        pass
+
+
 # ---------- the table ----------
 
 class LazyTable(ctk.CTkFrame):
@@ -464,6 +504,7 @@ class SegmentPage(ctk.CTkFrame):
     choices = {}
     max_width = 1100
     split = False       # True: no scrolling column; `col` fills the page so the subclass can lay out panes that scroll alone
+    left_min = 400      # the narrowest the left pane may get when the right one is dragged wider
     show_auto = True    # the "open the next section for me" switch (pointless on a page without segments)
 
     def __init__(self, parent):
@@ -504,6 +545,9 @@ class SegmentPage(ctk.CTkFrame):
         self.bind("<Configure>", self._centre)
         self._header()
         self.segments = []
+        self.panes = self.splitter = self.right_wrap = self.right = None
+        self.right_width = 520
+        self._wrappers = []
 
     def _header(self):
         head = ctk.CTkFrame(self.col, fg_color="transparent")
@@ -542,6 +586,53 @@ class SegmentPage(ctk.CTkFrame):
         pad = max(28, int((e.width / scale - self.max_width) / 2))
         self.col.pack_configure(padx=(pad, pad))
 
+    def make_panes(self, right_width=520, lo=340):
+        """Two columns side by side with a divider you drag: returns (left, right). The left one is a plain frame (put a
+        table in it and let it grow); the right one scrolls on its own. The width of the right one is remembered."""
+        self.right_width = right_width
+        self.panes = ctk.CTkFrame(self.col, fg_color="transparent")
+        self.panes.pack(fill="both", expand=True)
+        self.right_wrap = ctk.CTkFrame(self.panes, fg_color=BG, width=right_width, corner_radius=0)
+        self.right_wrap.pack(side="right", fill="y")
+        self.right_wrap.pack_propagate(False)
+        self.splitter = Splitter(self.panes, self.right_wrap, side="right", lo=lo, hi=900, on_change=self._pane_changed)
+        self.splitter.pack(side="right", fill="y")
+        self.left = ctk.CTkFrame(self.panes, fg_color="transparent")
+        self.left.pack(side="left", fill="both", expand=True, padx=(0, 14))
+        self.right = ctk.CTkScrollableFrame(self.right_wrap, fg_color=BG, corner_radius=0, scrollbar_button_color=SCROLL,
+                                            scrollbar_button_hover_color=MUTED)
+        self.right.pack(fill="both", expand=True, padx=(14, 0))
+        self.panes.bind("<Configure>", self._fit_panes, "+")
+        return self.left, self.right
+
+    def add_block(self, title, side="right", grow=False):
+        """A titled `Block` in the left or the right column (`grow`: it takes the height that is left)."""
+        blk = Block(self.right if side == "right" else self.left, title, grow)
+        blk.pack(fill="both" if grow else "x", expand=grow, pady=(0, 18))
+        self.segments.append(blk)
+        return blk
+
+    def fit_right(self, *labels):
+        """Labels in the right column whose wrapping follows the width of that column as it is dragged."""
+        self._wrappers += labels
+        self._pane_changed(None)
+
+    def _fit_panes(self, e):
+        """Keep the left pane at least `left_min` wide whatever the window does."""
+        scale = self._get_widget_scaling()
+        self.splitter.hi = max(self.splitter.lo, int(e.width / scale) - self.left_min - 20)
+        self.splitter.set_width(self.right_width)
+
+    def _pane_changed(self, width):
+        if width is not None:
+            self.right_width = width
+        wrap = max(240, int(self.right_width) - 70)
+        for lab in self._wrappers:
+            try:
+                lab.configure(wraplength=wrap)
+            except tk.TclError:
+                pass
+
     def add_segment(self, title):
         seg = Segment(self.col, title)
         seg.pack(fill="x", pady=(0, 18), padx=(0, 6))
@@ -552,6 +643,13 @@ class SegmentPage(ctk.CTkFrame):
         """`seg` is finished: fold it and open the next section that is not done (when the switch is on)."""
         if not self.auto.get():
             return
+        if self.right is not None:   # columns: nothing folds, just bring the next block into view
+            later = self.segments[self.segments.index(seg) + 1:]
+            nxt = next((x for x in later if x.state != "locked"), None)
+            if nxt is not None:
+                self.update_idletasks()
+                self.reveal(nxt)
+            return
         seg.set_open(False)
         later = self.segments[self.segments.index(seg) + 1:]
         nxt = next((s for s in later if s.state != "locked"), None)
@@ -561,7 +659,13 @@ class SegmentPage(ctk.CTkFrame):
             self.reveal(nxt)
 
     def reveal(self, seg):
-        """Scroll so `seg` is in view."""
+        """Scroll so `seg` is in view (on a two-column page: the right column down to that block)."""
+        if self.right is not None:
+            if isinstance(seg, Block) and seg.frame.master is self.right:
+                canvas = self.right._parent_canvas
+                total = max(1, self.right.winfo_height())
+                canvas.yview_moveto(0.0 if seg is self.segments[0] else max(0.0, min(1.0, (seg.winfo_y() - 8) / total)))
+            return
         canvas = self.scroll._parent_canvas
         total = max(1, self.col.winfo_height())
         canvas.yview_moveto(0.0 if seg is self.segments[0] else max(0.0, min(1.0, (seg.winfo_y() - 16) / total)))
@@ -613,12 +717,17 @@ class SegmentPage(ctk.CTkFrame):
     def state(self):
         out = {k: v.get() for k, v in self.vars.items()}
         out["_auto_advance"] = bool(self.auto.get())
+        if self.right_wrap is not None:
+            out["_split_width"] = int(self.right_width)
         return out
 
     def restore(self, saved):
         saved = saved or {}
         if isinstance(saved.get("_auto_advance"), bool):
             self.auto.set(saved["_auto_advance"])
+        width = saved.get("_split_width")
+        if self.right_wrap is not None and isinstance(width, (int, float)) and not isinstance(width, bool):
+            self.splitter.set_width(width)
         for k, v in saved.items():
             if k in self.vars and (k not in self.choices or v in self.choices[k]):
                 try:
