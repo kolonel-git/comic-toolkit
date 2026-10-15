@@ -8,11 +8,12 @@
 | `ui_kit.py` | Shared look: neo-brutalist (light, dark) palette (`BG`, `INK`, `YELLOW`/`PINK`/`CYAN`, `ACCENT`), the `Shadow` hard-shadow wrapper, `AbstractStrip` shape bands, `IconTile`, canvas `Toggle` and `Slider`, styled widgets, form rows, drop zone (with Add folder / Choose comics buttons), `Splitter` (draggable divider), `toolbar` (grouped buttons with dividers), page scaffold with a resizable options panel, table helpers (resizable columns, horizontal scrollbar) |
 | `batch_page.py` | Base page for run-per-item tools (progress, log, Preview, Stop) |
 | `page_single.py` · `page_bulk.py` · `page_icons.py` | Cover extractor pages (Bulk folder is the first page built on the `flow_kit.py` shell) |
-| `flow_kit.py` | The shared page shell: `SegmentPage` (header, a scrolling column of `Segment`s and a pinned footer set with `set_footer`; `advance` folds a finished segment and opens the next), `Segment` (states active / done / idle / locked, a one-line summary), `Advanced` (the shut block of rare settings; `track` counts changed ones), `LazyTable` (filterable table that loads rows as you scroll, optional pictures per row loaded off the main thread), `ChoiceCards`, `section`, `facts`, `path_row`, `labelled` |
+| `flow_kit.py` | The shared page shell: `SegmentPage` (header, a scrolling column of `Segment`s (or, with `split = True`, a plain column a page fills with panes that scroll on their own) and a pinned footer set with `set_footer`, which only touches what changed (one slim bar, about 50 px, on every page); `advance` folds a finished segment and opens the next), `Segment` (states active / done / idle / locked, a one-line summary; it only repaints when something changed, and `on_open` lets a section catch up when opened), `Advanced` (the shut block of rare settings; `track` counts changed ones), `LazyTable` (filterable table that loads rows as you scroll, `grow=True` to fill the height it is given, optional pictures per row loaded off the main thread), `ChoiceCards`, `section`, `facts`, `path_row`, `labelled` |
 | `picker_core.py` · `picker_window.py` | Pick pages from a comic: grid layout, cover guessing, selection helpers and JPG extraction (no UI) · the thumbnail window (canvas grid, background loader thread, rubber band, reorder and full-view dialogs), opened from the Single issue page |
 | `intake_core.py` · `page_intake.py` | Add to library: plan names, places, duplicates and steps (using the Renamer settings) and run convert, clean, verify and dispose of the original · the page (drop and inbox intake, review table, worker thread) |
 | `page_rename.py` | Renamer page: card and list views, four settings tabs, per-type template editor, conflict handling |
-| `page_metadata.py` | Metadata page |
+| `metadata_core.py` | Metadata editing logic: `Row` (a comic with its pending edits), what is missing (`lacks`, `matches`, `FILTERS`), `fill_from_filename`, `changes` / `writes`, the offer to a series (`others_lacking`) and `SuggestIndex` (suggestions taken from the library). No UI code |
+| `page_metadata.py` | Metadata page on the shell's split layout: comics table on the left; on the right (its own scroll) the one-comic and many-comics forms and the live list of pending changes with save (worker threads for reading and writing) |
 | `page_convert.py` | CBR to CBZ page |
 | `page_order.py` | Reading order page: issue list with drag and tick boxes, plan preview, write worker, copy mode |
 | `page_aceo.py` | ACEO sheets page: cover list with ordering, sheet preview, options, PDF creation worker |
@@ -31,7 +32,7 @@
 | `tests/` | Test scripts and `run_all.py` (`python tests/run_all.py`); see `tests/README.md` |
 | `folder_icons.py` | `folder.ico` / `desktop.ini` / `folder.jpg` generation (Windows) |
 
-Logic modules (`*_core.py`, `archive_tools.py`, `folder_icons.py`, `library_scan.py`, `audit_core.py`, `stats_core.py`, `reading_orders.py`, `reading_order.py`, `name_format.py`, `aceo_core.py`) contain no UI code so they can be tested or reused
+Logic modules (`*_core.py`, `archive_tools.py`, `folder_icons.py`, `library_scan.py`, `audit_core.py`, `stats_core.py`, `metadata_core.py`, `reading_orders.py`, `reading_order.py`, `name_format.py`, `aceo_core.py`) contain no UI code so they can be tested or reused
 from a command line.
 
 ## The library scan

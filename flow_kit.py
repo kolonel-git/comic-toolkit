@@ -217,6 +217,8 @@ class Segment(Shadow):
 
         super().__init__(parent, build, depth=5)
         self.state, self.opened = "idle", True
+        self._painted, self._laid = False, None   # what is on screen, so an unchanged state costs nothing
+        self.on_open = None                       # called when the section is opened (to catch up on what it skipped)
         for w in (self.head, self.marker, self.title, self.summary, self.chevron):
             w.bind("<Button-1>", lambda _: self.toggle())
         self.head.__dict__["_hover_hooks"] = (lambda: self._hover(True), lambda: self._hover(False))
@@ -231,17 +233,23 @@ class Segment(Shadow):
 
     def toggle(self):
         if self.state != "locked":
-            self.opened = not self.opened
-            self._layout()
+            self.set_open(not self.opened)
 
     def set_open(self, on):
+        was = self.opened
         self.opened = on
         self._layout()
+        if on and not was and self.on_open:
+            self.on_open()
 
     def set_summary(self, text):
-        self.summary.configure(text=text)
+        if self.summary.cget("text") != text:
+            self.summary.configure(text=text)
 
     def set_state(self, state):
+        if self._painted and state == self.state:
+            return
+        self._painted = True
         self.state = state
         self.inner.configure(border_color=PINK if state == "active" else BORDER)
         self.title.configure(text_color=MUTED if state == "locked" else TEXT)
@@ -249,9 +257,12 @@ class Segment(Shadow):
         self.redraw()
 
     def _layout(self):
+        locked = self.state == "locked"
+        if self._laid == (locked, self.opened):
+            return
+        self._laid = (locked, self.opened)
         for w in (self.chevron, self.summary):
             w.pack_forget()
-        locked = self.state == "locked"
         if not locked:
             self.chevron.configure(text="▾" if self.opened else "▸")
             self.chevron.pack(side="right")
@@ -281,7 +292,7 @@ class LazyTable(ctk.CTkFrame):
     the rows that are drawn (`loader(key)` returns a PIL image or None)."""
     _count = 0
 
-    def __init__(self, parent, columns, rows=8, empty="", filterable=True, selectmode="extended"):
+    def __init__(self, parent, columns, rows=8, empty="", filterable=True, selectmode="extended", grow=False):
         super().__init__(parent, fg_color="transparent")
         LazyTable._count += 1
         self.style = f"Lazy{LazyTable._count}.Treeview"
@@ -304,7 +315,10 @@ class LazyTable(ctk.CTkFrame):
             self.query.trace_add("write", lambda *_: self._refilter())
         self.box, self.tree = build_tree(self, columns, selectmode=selectmode, empty=empty, style=self.style, picture=True)
         self.tree.configure(height=rows)
-        self.box.pack(fill="x", padx=(0, 6))
+        if grow:   # fills the height it is given (pack the table itself with expand)
+            self.box.pack(fill="both", expand=True, padx=(0, 6))
+        else:
+            self.box.pack(fill="x", padx=(0, 6))
         self._tick()
 
     # --- data
@@ -342,10 +356,27 @@ class LazyTable(ctk.CTkFrame):
         """Indexes (into the rows given to set_rows) of the selected rows."""
         return [int(i) for i in self.tree.selection()]
 
+    def update_row(self, i, values, tags=None):
+        """Change one row's text without redrawing the table (so the scroll position and the selection stay)."""
+        self.all[i] = tuple(values)
+        if tags is not None:
+            self.tags[i] = tuple(tags)
+        iid = str(i)
+        if self.tree.exists(iid):
+            self.tree.item(iid, values=self.all[i], tags=self.tags[i])
+
+    def select(self, indexes):
+        """Select these rows (those that are drawn)."""
+        keep = [str(i) for i in indexes if self.tree.exists(str(i))]
+        self.tree.selection_set(keep)
+        if keep:
+            self.tree.see(keep[0])
+
     # --- loading more while you scroll
     def _tick(self):
         try:
-            if self.shown < len(self.view) and self.tree.yview()[1] >= 0.9:
+            # (not before the table has been laid out: an unsized table reports that all of it is in view)
+            if self.shown < len(self.view) and self.tree.winfo_height() > 20 and self.tree.yview()[1] >= 0.9:
                 self._more()
             self._deliver()
             self.after(120, self._tick)
@@ -432,6 +463,8 @@ class SegmentPage(ctk.CTkFrame):
     defaults = {}
     choices = {}
     max_width = 1100
+    split = False       # True: no scrolling column; `col` fills the page so the subclass can lay out panes that scroll alone
+    show_auto = True    # the "open the next section for me" switch (pointless on a page without segments)
 
     def __init__(self, parent):
         super().__init__(parent, fg_color=BG)
@@ -446,20 +479,26 @@ class SegmentPage(ctk.CTkFrame):
         self.footer.pack(side="bottom", fill="x")
         ctk.CTkFrame(self.footer, height=EDGE, fg_color=BORDER, corner_radius=0).pack(fill="x")
         row = ctk.CTkFrame(self.footer, fg_color="transparent")
-        row.pack(fill="x", padx=28, pady=12)
-        self.bar_btn = button(row, "", None, primary=True, width=280)
-        self.bar_btn.configure(height=50, font=(FONT, 15, "bold"))
+        row.pack(fill="x", padx=28, pady=5)   # one slim bar for every page built on the shell
+        self.bar_btn = button(row, "", None, primary=True, width=220)
+        self.bar_btn.configure(height=32, font=(FONT, 13, "bold"))
         self.bar_btn.pack(side="right")
-        self.side_row = ctk.CTkFrame(row, fg_color="transparent")
+        self._side_labels = []
+        self.side_row = ctk.CTkFrame(row, fg_color="transparent", height=0)  # (an empty frame is 200 px tall otherwise)
         self.side_row.pack(side="left")
-        self.bar_text = ctk.CTkLabel(row, text="", font=(FONT, 14, "bold"), text_color=TEXT, anchor="w", justify="left",
-                                     wraplength=520)
+        self.bar_text = ctk.CTkLabel(row, text="", font=(FONT, 12, "bold"), text_color=TEXT, anchor="w",
+                                     justify="left", wraplength=520)
         self.bar_text.pack(side="left", fill="x", expand=True, padx=(0, 12))
-        self.scroll = ctk.CTkScrollableFrame(self, fg_color=BG, corner_radius=0, scrollbar_button_color=SCROLL,
-                                             scrollbar_button_hover_color=MUTED)
-        self.scroll.pack(fill="both", expand=True)
-        self.col = ctk.CTkFrame(self.scroll, fg_color=BG)
-        self.col.pack(fill="x", padx=40, pady=(24, 24))
+        if self.split:
+            self.scroll = None
+            self.col = ctk.CTkFrame(self, fg_color=BG)
+            self.col.pack(fill="both", expand=True, padx=40, pady=(24, 14))
+        else:
+            self.scroll = ctk.CTkScrollableFrame(self, fg_color=BG, corner_radius=0, scrollbar_button_color=SCROLL,
+                                                 scrollbar_button_hover_color=MUTED)
+            self.scroll.pack(fill="both", expand=True)
+            self.col = ctk.CTkFrame(self.scroll, fg_color=BG)
+            self.col.pack(fill="x", padx=40, pady=(24, 24))
         # (never bind <Configure> on the scrollable frame itself: it replaces the binding that keeps its scroll
         # region up to date and scrolling stops working)
         self.bind("<Configure>", self._centre)
@@ -473,8 +512,29 @@ class SegmentPage(ctk.CTkFrame):
         words.pack(side="left", fill="x", expand=True)
         ctk.CTkLabel(words, text=self.title.upper(), font=(HEAD, 22), text_color=TEXT, anchor="w").pack(fill="x")
         ctk.CTkLabel(words, text=self.subtitle, font=TYPE_BODY, text_color=MUTED, anchor="w").pack(fill="x", pady=(2, 0))
-        Toggle(head, text="Open the next section for me", variable=self.auto, **switch_style()).pack(
-            side="right", anchor="n", pady=(6, 0))
+        if self.show_auto:
+            Toggle(head, text="Open the next section for me", variable=self.auto, **switch_style()).pack(
+                side="right", anchor="n", pady=(6, 0))
+        self.head_frame = head
+        self.origin = ctk.CTkFrame(self.col, fg_color=PANEL, border_color=BORDER, border_width=EDGE, corner_radius=0)
+        self.origin_label = ctk.CTkLabel(self.origin, text="", font=TYPE_BODY, text_color=TEXT, anchor="w")
+        self.origin_label.pack(side="left", padx=14, pady=8)
+        self.origin_back = tool_button(self.origin, "Back", None, 70)
+        self.origin_back.pack(side="right", padx=(0, 8), pady=6)
+
+    def show_origin(self, text, on_back=None, back_label="Back"):
+        """A chip under the header saying where the user came from ("From Library stats · Missing publisher") with a
+        Back button that calls `on_back`."""
+        self.origin_label.configure(text=text)
+        self.origin_back.configure(text=back_label, command=on_back, width=max(70, 24 + 8 * len(back_label)))
+        if on_back is None:
+            self.origin_back.pack_forget()
+        elif not self.origin_back.winfo_manager():
+            self.origin_back.pack(side="right", padx=(0, 8), pady=6)
+        self.origin.pack(fill="x", pady=(0, 14), padx=(0, 6), after=self.head_frame)
+
+    def clear_origin(self):
+        self.origin.pack_forget()
 
     def _centre(self, e):
         """Keep the column at most `max_width` wide and centred however wide the window is."""
@@ -510,10 +570,20 @@ class SegmentPage(ctk.CTkFrame):
         """What the footer says and does: a line of status text, the main button, and any number of secondary buttons
         on the left: (label, command), or (label, command, True) when the command wants the button itself (to open a
         menu above it)."""
-        self.bar_text.configure(text=text)
-        self.bar_btn.configure(text=label, state="normal" if enabled else "disabled")
+        # Only touch what changed: rebuilding the footer on every keystroke makes the whole page flicker.
+        if str(self.bar_text.cget("text")) != text:
+            self.bar_text.configure(text=text)
+        state = "normal" if enabled else "disabled"
+        if str(self.bar_btn.cget("text")) != label or str(self.bar_btn.cget("state")) != state:
+            self.bar_btn.configure(text=label, state=state)
         if command is not None:
             self.bar_btn.configure(command=command)
+        labels = [item[0] for item in secondary]
+        if labels == self._side_labels:   # the same buttons: just point them at the latest commands
+            for btn, (lab, cmd, *anchored) in zip(self.side_row.winfo_children(), secondary):
+                btn.configure(command=(lambda b=btn, c=cmd: c(b)) if anchored and anchored[0] else cmd)
+            return
+        self._side_labels = labels
         for w in self.side_row.winfo_children():
             w.destroy()
         for lab, cmd, *anchored in secondary:

@@ -702,7 +702,7 @@ class BulkPage(SegmentPage):
         self.update_idletasks()
         self.reveal(self.s3)
         threading.Thread(target=_worker, args=(self.q, files, self.folder, o, self.stop), daemon=True).start()
-        self._poll()
+        self.after(60, self._poll)  # (not at once: a fast run would be over before the page showed Stop)
 
     def retry(self):
         """Run again on just the comics that failed."""

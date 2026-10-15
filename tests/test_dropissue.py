@@ -60,39 +60,26 @@ with tempfile.TemporaryDirectory() as d:
     cbz(lib / "Noinfo 04.cbz")
     mp.set_folder(lib); wait(mp)
     rows = {r.path.name: r for r in mp.rows}
-    assert not mp.btn_apply.cget("state") == "normal" or True
-    # nothing checked -> message
-    for r in mp.rows: r.checked = False
-    mp.remove_issue(True); assert "Check at least one row" in mp.status.cget("text")
-    for r in mp.rows: r.checked = True
-    mp.rows[0].checked = mp.rows[1].checked = mp.rows[2].checked = True
+    assert mp.bar_btn.cget("state") == "disabled", "nothing to save yet"
+    # nothing selected: removing an issue number touches nothing
+    mp.remove_issue(True); assert not mp.pending_rows()
+    # select the three Saga comics and remove their issue numbers; the comic with no stored number is left alone
+    mp.comics.tree.selection_set([str(i) for i in range(4)]); root.update()
     mp.remove_issue(True); print(mp.status.cget("text"))
-    vals = [mp.tree.item(r.iid, "values") for r in mp.rows]; print(vals)
-    assert all(v[3] == "" for v in vals), "issue column blank for every checked row"
-    gone = [r for r in mp.rows if r.writes.get("issue", 1) is None]
-    assert len(gone) == 3 and all(r.status == "Update" for r in gone)
-    nf = rows["Noinfo 04.cbz"]; assert "issue" not in nf.writes                                     # filename would add 4; removal cancels it
-    asked = []; messagebox.askyesno = lambda t, m, **k: (asked.append(m), True)[1]
+    saga = [r for r in mp.rows if r.path.name.startswith("Saga")]
+    assert len(saga) == 3 and all(r.pending == {"issue": None} and r.value("issue") == "" for r in saga)
+    nf = rows["Noinfo 04.cbz"]; assert nf.pending == {}, "it had no number stored, so there is nothing to remove"
+    assert "Issue number will be removed from 3 of 4 comics" in mp.status.cget("text")
+    mp.mode.set("One at a time"); mp.go_review(); root.update()
+    assert "3 values will be deleted" in mp.save_note.cget("text"), mp.save_note.cget("text")
     mp.apply(); wait(mp)
-    assert "removed from 3 of them" in asked[0], asked
     for n in (1, 2, 3): assert read_comicinfo(lib / f"Saga {n:02d} (2012).cbz")["issue"] is None
     assert read_comicinfo(lib / "Saga 01 (2012).cbz")["series"] == "Saga"
     assert read_comicinfo(lib / "Noinfo 04.cbz").get("issue") is None
-    # after rescan the removal flag is gone and the filename would re-add the number (default: Fill in missing)
-    mp.rescan(); wait(mp)
-    saga1 = lambda: next(r for r in mp.rows if r.path.name.startswith("Saga 01"))
-    assert saga1().writes.get("issue") == "1" and not saga1().removes
-    # undo removal
-    mp.remove_issue(True); assert "issue" not in saga1().writes  # the file has no number now, so removal also cancels the filename-derived add
-    mp.remove_issue(False); assert "issue" not in saga1().removes and saga1().writes.get("issue") == "1"
-    # typing a value replaces a pending removal
-    r0 = saga1(); r0.removes.add("issue"); r0.edits["issue"] = "9"; mp._compute(r0)
-    mp._editor = None
-    class Ed:  # simulate the inline editor committing a value
-        def get(self): return "7"
-        def destroy(self): pass
-    r0.removes.add("issue"); mp._editor = (Ed(), r0, "issue"); mp._close_editor(True)
-    assert "issue" not in r0.removes and r0.writes.get("issue") == "7", (r0.removes, r0.writes)
+    # after the save the list is re-read: nothing pending, and taking the removal back finds nothing to undo
+    assert not mp.pending_rows() and all(not r.value("issue") for r in mp.rows)
+    mp.comics.tree.selection_set(["0"]); root.update()
+    mp.remove_issue(False); assert not mp.pending_rows()
     mp.destroy()
 
     op = po.OrderPage(root); op.pack(fill="both", expand=True); root.update()

@@ -20,7 +20,7 @@ root = ctk.CTk(); root.geometry("1250x800")
 page = ps.StatsPage(root); page.pack(fill="both", expand=True); root.update()
 page.orders = ReadingOrders()
 opened = []
-page.open_tool = opened.append
+page.open_tool = lambda key, view=None: opened.append((key, view))
 
 
 def wait(t=30):
@@ -49,6 +49,7 @@ with tempfile.TemporaryDirectory() as d:
     at.apply_metadata(lib / "DC" / "Batman v1 001 (1940).cbz", {"publisher": "DC"}, False)
     at.apply_metadata(lib / "DC" / "Batman v2 001 (2011).cbz", {"publisher": "DC"}, False)
 
+    root.update(); assert page.footer.winfo_height() / page._get_widget_scaling() <= 52, page.footer.winfo_height()  # the slim bar
     # nothing scanned: three segments, only Library is open to work in; the footer says why it cannot scan
     assert [s.title.cget("text") for s in page.segments] == ["Library", "Overview", "Needs attention"]
     assert states() == ["active", "locked", "locked"]
@@ -104,8 +105,8 @@ with tempfile.TemporaryDirectory() as d:
     pub = names.index("Have a publisher")
     assert health.items[pub].fix == "Fix these" and health.items[names.index("Single issues")].fix == ""
     health._click(types.SimpleNamespace(x=health.canvas.winfo_width() - 10, y=pub * ps.ROW + 5))
-    assert opened == ["metadata"], opened
-    health._click(types.SimpleNamespace(x=20, y=pub * ps.ROW + 5)); assert opened == ["metadata"], "only the link is clickable"
+    assert opened == [("metadata", "no_publisher")], opened
+    health._click(types.SimpleNamespace(x=20, y=pub * ps.ROW + 5)); assert opened == [("metadata", "no_publisher")], "only the link is clickable"
 
     # clicking a bar lists the comics behind it in a drawer at the side; Close hides it again
     pub = page.charts["Publishers"]

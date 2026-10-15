@@ -12,6 +12,60 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-15 21:10 +11:00 · Session 57: Metadata in two columns (comics on the left, fields and changes on the right)
+
+**Summary:** The Metadata page no longer stacks Comics, Fix and Review as three segments in one long scrolling column. It is now two columns side by side: the comics you can pick on the left, everything you can edit for the selection on the right, with every change waiting to be saved listed under the fields. Selecting comics updates the right column at once; scrolling down in it shows what will change.
+
+**Decisions**
+- **Automatic is the new default way of editing.** One comic selected gives the one-comic form, several give the many-comics form, with a three-way switch (*Automatic*, *One at a time*, *Several at once*) to force one. This replaces the Session 56 follow-up where nothing switched until you picked a card; the owner asked for the right column to update dynamically with the selection. The choice is still not remembered between runs.
+- The list of changes is part of the right column and is always current, instead of a segment that had to be opened. The footer button **Review N changes** now scrolls the right column down to it. **Confirm and save N changes** still sits under the list and is the only thing that writes.
+
+**Changes by file**
+- `flow_kit.py`: `SegmentPage` gets two class attributes, `split` (no scrolling column; `col` fills the page so a page can lay out panes that scroll on their own) and `show_auto` (hides the "Open the next section for me" switch). `LazyTable` takes `grow=True` to fill the height it is given.
+- `page_metadata.py`: segments removed. Left pane: heading with the "N comics · M need attention" summary, drop box, *Include subfolders*, **Select all shown**, the **Show** menu, a tall table, the `.cbr` note and status. Right pane (its own scroll): the mode switch, the target line, the offer, the form, then the changes table, *Advanced options* (original file), the note and **Confirm and save** / **Discard edits**. In the one-comic form a field whose value differs from the file shows "· edited" beside its label.
+- `tests/test_meta_page.py`: rewritten for the two columns (side-by-side geometry, tall list, form follows the selection in Automatic and in each forced way, changes list updates without opening anything, footer scrolls to the changes).
+- Docs: `tools.md`, `architecture.md`, `manual-tests.md` (J2 to J4 reworded), `ui-revamp-plan.md` (Metadata design).
+
+**Verification:** `ruff check --select F,E9 .` clean; `python tests/run_all.py` 30 of 30 passed. The layout (columns side by side, the list taller than 250 px, the form above the changes, the footer scrolling the right column) is asserted by geometry in the window test; it has not been looked at by a person, so the proportions and spacing at your window size are unchecked (see manual test J2).
+
+**Known issues:** in a narrow window the right column's two-column form gets tight (each pane keeps a minimum width of about 420 and 480 px, so a very narrow window clips instead of reflowing).
+
+---
+
+## 2026-10-15 17:26 +11:00 · Session 56: Metadata becomes a repair editor (roadmap Phase 2, step 3)
+
+**Summary:** The Metadata tool is now a manual repair editor on the page shell, following the [UI revamp plan](ui-revamp-plan.md): see what each comic holds and lacks, fix one comic or many at once with suggestions taken from your own library, review every change, then save. It replaces the old "stamp from file names" table.
+
+**What changed for the user**
+- **Comics** segment: filterable table with a mark per comic (complete, needs attention, locked), the series, issue, volume, year and publisher (a dash where missing), a **Show** menu (needs attention, no series, no issue number, no year, no publisher, no ComicInfo.xml). `.cbr` files are listed but locked, with a **Convert them…** link to CBR to CBZ.
+- **Fix** segment: the form follows the selection (one comic gives the one-comic form with cover, Previous and Next; several give the many-comics form) with a switch to override. Every field has suggestion buttons from the library (same series, same folder, file name, elsewhere). Setting a publisher, series group or genre offers it to the rest of the series. Many at once: **Set for N comics**, **Fill blanks from file names**, **Remove issue number** (under Advanced options).
+- **Review** segment: every pending change (comic, field, was, becomes); the footer **Save N changes** asks first (counts, deletions, where originals go) and **Discard edits** clears everything.
+- Library stats links (**Fix these**, **Fix metadata**) open Metadata on the library already filtered, with a chip "From Library stats" and a Back button. Saving re-scans Library stats.
+
+**Follow-up the same session (owner feedback)**
+- The footer is one slim bar (button 32 px, about 50 px in all) shared by every page built on the shell (Library stats, Bulk folder, Metadata). It measured about 265 px, not the 80 px it was meant to be: the frame holding the secondary buttons is an empty `CTkFrame` when there are none, and an empty one is 200 px tall unless given `height=0`. Tests now assert the footer stays under 52 px.
+- The editing way is chosen, not guessed: two cards, *Edit one comic at a time* and *Edit several at once*, and the form appears only after choosing. It is not remembered between runs.
+- The Fix fields have more room, and in two columns: an empty `CTkFrame` is 200 px tall unless given `height=0`, which made the gaps under each field uneven.
+- Typing no longer redraws the page. Edits are kept at once but the table row, review and footer are redrawn when typing pauses (350 ms) or a field is left; `Segment` and `set_footer` now do nothing when nothing changed (no more repacking of every section and rebuilding of the footer buttons), and the review table is only redrawn while it is open.
+- Nothing is written until **Confirm and save N changes** in the Review segment, which shows the counts, deletions and what happens to the originals. The footer button is now **Review N changes** and only opens that segment; the pop-up question is gone.
+
+**Changes by file**
+- `metadata_core.py` (new): `Row`, `lacks`, `matches`, `FILTERS`, `fill_from_filename`, `changes`, `writes`, `others_lacking`, `SuggestIndex`. No UI code.
+- `page_metadata.py`: rewritten on `SegmentPage`.
+- `flow_kit.py`: `LazyTable.update_row` and `select`; `SegmentPage.show_origin` / `clear_origin` (the "From X" chip with a Back button).
+- `page_stats.py`: the links pass a view (`no_publisher`, `no_year`, `no_issue`, `no_comicinfo`) to Metadata.
+- `comic_tool.py`: Metadata gets `open_tool` (the converter) and `on_saved` (re-scan Library stats); Library stats links open Metadata with the origin chip.
+- Tests: `tests/test_metadata_core.py` and `tests/test_meta_page.py` (new), `tests/test_meta.py` keeps only the writer checks, `tests/test_layout.py`, `tests/test_stats_ui.py` and `tests/test_stats_home.py` follow the new page and links.
+- Docs: `tools.md`, `architecture.md`, `known-limitations.md`, `manual-tests.md` (new section J), `roadmap.md`, `README.md`.
+
+**Technical notes:** a CTkLabel loses its picture if the `CTkImage` is garbage collected while the label still shows it, so the cover label always holds a reference and a 1 pixel blank image stands in when there is no cover. Issue numbers and titles are suggested from the file name only, never from other comics. Edits are updated in place in the table so the selection and scroll position stay.
+
+**Verification:** `ruff check --select F,E9 .` passes. `python tests/run_all.py`: 30 of 30 passed. The new page has not been looked at on screen by a person or in a screenshot; the layout is covered by assertions only.
+
+**Known issues:** the Fix links from Library stats pass a filter only to Metadata (Library audit still opens unfiltered). The earlier manual checks B1 to B9 describe the old stamp-from-filenames page and need rewording. Renamer and Add to library do not use the suggestion index yet.
+
+---
+
 ## 2026-10-15 19:10 +11:00 · Session 55: Library stats on the page shell, with reading-order folders (roadmap Phase 1, step 2)
 
 **Summary:** Library stats now uses the shared segment shell, and the list of reading-order folders exists (marked by the user, suggested by a scan, remembered between sessions), following the [UI revamp plan](ui-revamp-plan.md).

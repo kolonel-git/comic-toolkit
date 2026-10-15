@@ -39,6 +39,9 @@ def states(): return [c.state for c in pg.segments]
 def bar(): return pg.bar_btn.cget("text")
 def statuses(): return [pg.review.tree.item(i)["values"][2] for i in pg.review.tree.get_children()]
 
+# the footer is one slim bar, the same on every shell page
+root.update(); assert pg.footer.winfo_height() / pg._get_widget_scaling() <= 52, pg.footer.winfo_height()
+
 # nothing chosen yet: Comics is the only thing to do, the footer button says why it cannot be pressed
 assert states() == ["active", "locked", "locked"] and pg.bar_btn.cget("state") == "disabled"
 assert bar() == "Choose comics first" and "begin" in pg.bar_text.cget("text")

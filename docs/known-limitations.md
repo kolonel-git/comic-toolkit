@@ -16,8 +16,7 @@
   versions kept their real `.cbz` / `.cbr` names and may still be imported: add `.bak` to them by hand, or move those `Archive` folders out
   of your library. *Convert to ZIP* in Single issue also writes a `.zip`, which YACReader supports too.
 - **Issue count is recognised only as "(of N)" / "(3 of 12)".** A bare "(3/12)" is not parsed, to avoid confusing it with dates. The
-  Renamer reads the new fields but has no tokens for them, and the Metadata table shows no columns for Series Group, Genre, Alternate series
-  or Publisher (they appear only in what gets written).
+  Renamer reads the new fields but has no tokens for them.
 - YACReader reads `ComicInfo.xml` **only if you enable it** (Settings > General) **and update the library** afterwards, so metadata written
   by the Metadata tool and the Library audit's fixes won't show until you do.
 - **The scan's deep mode reads only each archive's first page**, so it can miss corruption deeper in a file; use the Library audit's full integrity test for that.
@@ -29,9 +28,8 @@
 - **The audit holds its results in memory only.** Nothing is saved between runs except the scan cache, the settings and the ignore list; a very large library shows every row at once.
 - **Ignoring a Missing row hides everything it shows.** There is no way to ignore one number inside a row; a number that goes missing later still appears. A duplicate group is ignored by its exact set of files, so adding another copy brings it back.
 - **Junk files are only found in zip-based comics.** A real RAR `.cbr` is not opened unless *Open real .cbr files* is on; fixing it converts it, which drops the junk.
-- **Removing issue numbers is one-way per file.** The number is deleted from `ComicInfo.xml` (a `.bak` backup is kept unless you chose to replace), and the Metadata tool will
-  add it back from the filename on its next run unless **Issue number** is unticked under *Fields to write*. Whether YACReader then really sorts by filename is untested
-  (see [manual tests](manual-tests.md), B9 and E13).
+- **Removing issue numbers is saved like any other edit.** The number is deleted from `ComicInfo.xml` (a `.bak` backup is kept unless you chose to replace) and the file name is untouched. Whether YACReader then really sorts by filename is untested (see [manual tests](manual-tests.md), B9 and E13).
+- **The Metadata editor works on `.cbz` only.** A `.cbr` is listed but locked until converted. Suggestions come from the comics in the folder you opened (so open the whole library for library-wide suggestions), and a series name is matched ignoring case, punctuation and a leading *The*. Reading a very large folder takes a while because every comic's `ComicInfo.xml` is read; the table then loads as you scroll.
 - **Reading Order has no cover thumbnails,** and the whole list lives in memory only (no saved order file). It writes only CBZ (or zip-backed) files.
   Whether YACReader sorts the arc number numerically, and which of *Story arc* / *Alternate series* it shows best, is untested (see [manual tests](manual-tests.md), E).
   The filename-prefix recogniser (`01 - Name`, `[01] Name`) can misread a real name such as `100 - Bullets 05`.

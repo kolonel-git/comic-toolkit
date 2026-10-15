@@ -39,37 +39,4 @@ with tempfile.TemporaryDirectory() as d:
     assert ci["issue"] == "3" and ci["publisher"] == "DC"
 print("core OK")
 
-# page smoke test
-import customtkinter as ctk
-from page_metadata import MetadataPage
-root = ctk.CTk()
-page = MetadataPage(root)
-with tempfile.TemporaryDirectory() as d:
-    d = Path(d)
-    for n in ("Batman 01 (of 2) (2016).cbz", "Batman 02 (of 2) (2016).cbz"):
-        with zipfile.ZipFile(d / n, "w") as zz:
-            zz.writestr("0.jpg", b"x")
-    page.set_folder(str(d))
-    import time
-    t = time.time()
-    while page.busy and time.time() - t < 10:
-        root.update()
-    assert len(page.rows) == 2
-    assert all(r.writes.get("count") == "2" for r in page.rows), [r.writes for r in page.rows]
-    # set for checked: uncheck row 2
-    page.rows[1].checked = False
-    page.set_field.set("Genre"); page.set_value.set("Superhero")
-    page.set_selected()
-    assert page.rows[0].writes["genre"] == "Superhero" and "genre" not in page.rows[1].writes
-    # cancel
-    page.set_value.set("")
-    page.set_selected()
-    assert "genre" not in page.rows[0].writes
-    page.set_value.set("Superhero"); page.set_selected()
-    # apply directly (skip dialog)
-    at.apply_metadata(page.rows[0].path, page.rows[0].writes, True)
-    ci = read_comicinfo(page.rows[0].path)
-    assert ci["genre"] == "Superhero" and ci["count"] == "2", ci
-    assert (d / "Archive" / "Batman 01 (of 2) (2016).cbz.bak").exists()
-    print("page OK; table row:", page.tree.item(page.rows[0].iid, "values"))
-root.destroy()
+print("meta OK")

@@ -315,6 +315,8 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         stats.orders = self.orders
         stats.recent_dirs = self.recent_dirs
         stats.open_tool = self._open_from_stats
+        self.pages["metadata"].open_tool = self._open_from_metadata
+        self.pages["metadata"].on_saved = self._stats_refresh
         stats.on_progress = lambda d, t: self.pages["home"].show_summary(None, scanning=(d, t))
         stats.on_scanned = self._scanned
         stats.on_error = lambda e: self.pages["home"].show_summary(None, error=e)
@@ -344,13 +346,31 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         else:
             page.add_paths([Path(path)])
 
-    def _open_from_stats(self, key):
-        """A link on Library stats: open another tool on the library folder."""
+    def _open_from_stats(self, key, view=None):
+        """A link on Library stats: open another tool on the library folder (Metadata opens already filtered to `view`,
+        with a chip saying it came from here and a Back button)."""
         root = self.library_root()
         page = self.pages[key]
         if root is not None:
-            self._open_path(page, root)
+            if hasattr(page, "open_with"):
+                page.open_with(root, view=view, origin="Library stats", back=lambda: self.show("stats"))
+            else:
+                self._open_path(page, root)
         self.show(key)
+
+    def _open_from_metadata(self, key):
+        """A link on the Metadata page (the .cbr converter): open that tool on the folder being edited."""
+        root = self.pages["metadata"].root_dir
+        if root is not None:
+            self._open_path(self.pages[key], root)
+        self.show(key)
+
+    def _stats_refresh(self):
+        """Comics were saved by the Metadata page: re-scan so Library stats and the Home line follow (quick, because the
+        scan cache skips every file that did not change)."""
+        stats = self.pages["stats"]
+        if stats.stats is not None and stats.root() is not None and not stats.q:
+            stats.scan()
 
     def _open_library(self, page):
         root = self.library_root()
