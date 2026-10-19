@@ -30,7 +30,7 @@ Backup `.bak` safety fix, metadata extensions, shared library scan, Library audi
 Library stats, Renamer revamp (cards and a template per type), ACEO sheets, Add to library, page picker, shared library folder,
 recent folders, keyboard layer and Ctrl+K search, and the neo-brutalist UI. Details are in [The tools](tools.md) and the
 [Changelog](CHANGELOG.md). From the revamp below: the shared page shell, Bulk folder, Library stats and the Metadata repair editor (two columns) and the Library audit are built.
-**Where we are:** Phases 0, 1 and 2 are finished and tagged (`v0.8.0`, `v0.9.0`). Phase 3 is under way: Single issue is on the shell (step 6a); its page picker is next (6b).
+**Where we are:** Phases 0, 1 and 2 are finished and tagged (`v0.8.0`, `v0.9.0`). Phase 3 is under way: Single issue (page and picker) is done; Folder icons, Reading order and ACEO sheets follow.
 
 ## Build order: the UI revamp
 
@@ -56,7 +56,7 @@ Every page becomes a Header, two resizable columns and a Footer (Library stats k
 5. CBR to CBZ. **Done.** Two columns (the `.cbr` list on the left; what happens to the original and to an existing `.cbz`, then the review and the run on the right), a dry run, a Delete confirmation, and the link from the Library audit's CBR chip with a Back chip.
 
 **Phase 3: standalone tools** (`v0.10.0`)
-6. Single issue, in two branches. **6a, the page on the shell: done** (two columns; a strip of the first 3 and last 2 pages with a Browse all tile; Save cover or Extract N pages in the footer; one selection shared with the picker window). **6b, the page picker: next** (a toolbar with a visible numbering-order control in place of *Reorder…*, a hint about the gestures, a legend for the orange outline).
+6. Single issue, in two branches. **6a, the page on the shell: done** (two columns; a strip of the first 3 and last 2 pages with a Browse all tile; Save cover or Extract N pages in the footer; one selection shared with the picker window). **6b, the page picker: done** (a visible *Numbering* switch in place of *Reorder…*, a line of gestures and a legend for the orange outline).
 7. Folder icons (needs the folder-shape template art first).
 8. Reading order (builds the multi-drag list).
 9. ACEO sheets (reuses the multi-drag list; new preview).

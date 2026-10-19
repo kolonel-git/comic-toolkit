@@ -12,6 +12,27 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-18 23:50 +11:00 · Session 63: Page picker toolbar (roadmap Phase 3, step 6b)
+
+**Summary:** The picker window opened from Single issue gets a visible numbering control, an always-shown line of gestures and a legend for the orange outline. This finishes Single issue.
+
+**Decisions**
+- The plan replaces *Reorder…* with a visible *Numbering order* control. I made the control a switch, **Numbering: In the order picked / By page number**, and kept the move up and down window under the name **Arrange…**, because the switch alone cannot make an order that is neither the picking order nor page order. **Arrange…** is greyed while *By page number* is on.
+- *By page number* sorts the picks whenever they change; switching back leaves them as they are (the earlier picking order is not remembered).
+
+**Changes by file**
+- `picker_window.py`: toolbar in two rows (selection buttons, count and Extract; then Numbering, Arrange… and the size slider) and a line under them with the gestures on the left and the orange swatch and "Looks like a cover" on the right. The status line no longer carries the gesture text. `numbering` variable; the `order` setter sorts in *By page number* mode and passes the sorted list to `on_change`.
+- `tests/test_picker.py`: the numbering switch, sorted picks, `on_change` receiving the sorted list, Arrange… enabled and disabled, the hint and the legend. `tests/test_single_page.py`: *By page number* reaches the page's ticks.
+- Docs: tools, plan (as built), roadmap, known limitations, manual tests (M7, H11 reworded), HANDOFF.
+
+**Bugs found and fixed:** the first version of the setter told the page the unsorted list; the new test caught it.
+
+**Verification:** `ruff check --select F,E9 .` clean. `python tests/run_all.py`: 32 of 33 passed; `test_meta_page.py` failed once on a window-visibility assertion (`offer_box.winfo_ismapped()`) in code this session did not touch, and passed twice when run again on its own, so I read it as a flaky timing check, not a regression. Not checked: how the toolbar looks at the narrowest window width and in dark mode (see manual test M7).
+
+**Known issues:** see Known limitations (Single issue).
+
+---
+
 ## 2026-10-16 01:47 +11:00 · Session 62: Single issue on the page shell (roadmap Phase 3, step 6a)
 
 **Summary:** Single issue is rebuilt as two resizable columns, like the other revamped pages. The page picker window is untouched apart from two small hooks, so the strip on the page and the picker share one selection; the picker's own redesign is step 6b. Also brings the docs in line with the tags: `v0.8.0` and `v0.9.0` are placed.
