@@ -123,6 +123,9 @@ pg.clear_picks(); root.update(); assert win.order == [] and win.lbl_count.cget("
 pg.set_picked([3]); win.set_order([3]); root.update(); assert win.lbl_count.cget("text").startswith("1 of 8")
 win.select_all(); root.update(); assert len(pg.picked) == 8
 win.clear(); root.update(); assert pg.picked == [] and bar() == "Save cover"
+win.numbering.set("By page number"); win.order = [6, 2, 4]; root.update()
+assert pg.picked == [2, 4, 6] and caps()[3].startswith("✓ Page 7") and caps()[3].endswith("#3"), "numbering by page number reaches the page sorted"
+win.numbering.set("In the order picked"); win.clear(); root.update(); assert pg.picked == []
 # a page of the strip opens the full-size view, where a click or Space picks it
 pg.open_page(2); root.update()
 assert win._full is not None and win._full.winfo_exists() and win._fi == 2

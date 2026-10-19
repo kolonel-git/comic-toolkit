@@ -10,12 +10,14 @@ import customtkinter as ctk
 from PIL import Image, ImageTk
 
 import picker_core as pc
-from ui_kit import slider, ACCENT, BG, BORDER, FONT, MUTED, PANEL, SELECT_BG, TEXT, button, pick
+from ui_kit import slider, ACCENT, BG, BORDER, FONT, MUTED, PANEL, SELECT_BG, TEXT, button, pick, segmented
 
 THUMB_MAX = 360          # longest side of the cached thumbnail
 SIZE_MIN, SIZE_MAX, SIZE_START = 70, 260, 130
 DRAG_PX = 5              # movement before a press counts as a rubber-band drag instead of a click
 COVER = "#E5A100"        # outline colour of pages that look like covers
+NUM_PICKED, NUM_PAGE = "In the order picked", "By page number"   # how the picked pages are numbered in the saved files
+HINT = "Click to pick  ·  Shift-click for a range  ·  Drag a box to pick several  ·  Double-click to enlarge"
 
 
 class PickerWindow(ctk.CTkToplevel):
@@ -31,6 +33,7 @@ class PickerWindow(ctk.CTkToplevel):
         self.geometry("1100x760")
         self.minsize(640, 420)
         self.configure(fg_color=BG)
+        self.numbering = tk.StringVar(value=NUM_PICKED)
 
         self._order = list(order or [])    # picked page indexes, in the order they will be numbered
         self.anchor = None                 # last clicked page, for shift-click ranges
@@ -61,13 +64,20 @@ class PickerWindow(ctk.CTkToplevel):
 
     @order.setter
     def order(self, value):
-        self._order = value
+        self._order = sorted(value) if self.numbering.get() == NUM_PAGE else value
         if self.on_change:
-            self.on_change(list(value))
+            self.on_change(list(self._order))
 
     def set_order(self, order):
         """The page changed the picks (without telling it back)."""
-        self._order = list(order)
+        self._order = sorted(order) if self.numbering.get() == NUM_PAGE else list(order)
+        self._changed()
+
+    def _numbering_changed(self):
+        """By page number: the picks are kept sorted, so the files are numbered in page order. In the order picked: they
+        stay as they are and each new pick goes last."""
+        if self.numbering.get() == NUM_PAGE and self._order != sorted(self._order):
+            self.order = self._order   # the setter sorts them and tells the page
         self._changed()
 
     # ------------------------------------------------------------------ layout
@@ -75,19 +85,36 @@ class PickerWindow(ctk.CTkToplevel):
         bar = ctk.CTkFrame(self, fg_color=PANEL)
         bar.pack(fill="x")
         inner = ctk.CTkFrame(bar, fg_color=PANEL)
-        inner.pack(fill="x", padx=14, pady=10)
+        inner.pack(fill="x", padx=14, pady=(10, 4))
         for text, fn in (("Select all", self.select_all), ("Clear", self.clear), ("Invert", self.invert)):
             button(inner, text, fn, width=84).pack(side="left", padx=(0, 6))
         self.lbl_count = ctk.CTkLabel(inner, text="", font=(FONT, 13), text_color=TEXT, width=150, anchor="w")
         self.lbl_count.pack(side="left", padx=(10, 0))
         self.btn_extract = button(inner, "Extract as JPG…", self.extract, primary=True, width=150)
         self.btn_extract.pack(side="right")
-        self.btn_reorder = button(inner, "Reorder…", self.reorder, width=96)
-        self.btn_reorder.pack(side="right", padx=(0, 8))
+        row = ctk.CTkFrame(bar, fg_color=PANEL)
+        row.pack(fill="x", padx=14, pady=(2, 4))
+        ctk.CTkLabel(row, text="Numbering", font=(FONT, 12, "bold"), text_color=MUTED).pack(side="left", padx=(0, 8))
+        self.seg_numbering = segmented(row, self.numbering, [NUM_PICKED, NUM_PAGE], width=250)
+        self.seg_numbering.pack(side="left")
+        self.numbering.trace_add("write", lambda *_: self._numbering_changed())
+        self.btn_arrange = button(row, "Arrange…", self.reorder, width=96)
+        self.btn_arrange.pack(side="left", padx=(8, 0))
         self.size = tk.IntVar(value=SIZE_START)
-        slider(inner, from_=SIZE_MIN, to=SIZE_MAX, variable=self.size, width=140,
-               command=lambda _: self._schedule()).pack(side="right", padx=(0, 16))
-        ctk.CTkLabel(inner, text="Size", font=(FONT, 12), text_color=MUTED).pack(side="right", padx=(0, 6))
+        slider(row, from_=SIZE_MIN, to=SIZE_MAX, variable=self.size, width=140,
+               command=lambda _: self._schedule()).pack(side="right")
+        ctk.CTkLabel(row, text="Size", font=(FONT, 12), text_color=MUTED).pack(side="right", padx=(0, 6))
+        tips = ctk.CTkFrame(bar, fg_color=PANEL)
+        tips.pack(fill="x", padx=14, pady=(0, 8))
+        self.lbl_hint = ctk.CTkLabel(tips, text=HINT, font=(FONT, 11), text_color=MUTED, anchor="w")
+        self.lbl_hint.pack(side="left")
+        self.legend = ctk.CTkFrame(tips, fg_color=PANEL)
+        self.legend.pack(side="right")
+        swatch = tk.Canvas(self.legend, width=20, height=14, bg=pick(PANEL), highlightthickness=0, bd=0)
+        swatch.create_rectangle(2, 2, 18, 12, outline=COVER, width=3)
+        swatch.pack(side="left", padx=(0, 6))
+        self.lbl_legend = ctk.CTkLabel(self.legend, text="Looks like a cover", font=(FONT, 11), text_color=MUTED)
+        self.lbl_legend.pack(side="left")
 
         self.lbl_status = ctk.CTkLabel(self, text="", font=(FONT, 12), text_color=MUTED, anchor="w")
         self.lbl_status.pack(side="bottom", fill="x", padx=14, pady=(4, 8))
@@ -172,8 +199,8 @@ class PickerWindow(ctk.CTkToplevel):
     def _update_count(self):
         k = len(self.order)
         self.lbl_count.configure(text=f"{k} of {self.n} selected")
-        for b in (self.btn_extract, self.btn_reorder):
-            b.configure(state="normal" if k else "disabled")
+        self.btn_extract.configure(state="normal" if k else "disabled")
+        self.btn_arrange.configure(state="normal" if k and self.numbering.get() == NUM_PICKED else "disabled")
 
     def _changed(self):
         self._update_count()
@@ -219,9 +246,7 @@ class PickerWindow(ctk.CTkToplevel):
         if loaded < self.n:
             self.lbl_status.configure(text=f"Loading thumbnails… {loaded} of {self.n}", text_color=MUTED)
         elif not self.btn_open.winfo_ismapped() and not self._saved_dir:
-            self.lbl_status.configure(text="Click to pick, shift-click for a range, drag to box-select, "
-                                           "double-click to view. Orange outline = looks like a cover.",
-                                      text_color=MUTED)
+            self.lbl_status.configure(text="", text_color=MUTED)   # (the hint and the legend are always shown above)
         self.after(60, self._poll)
 
     # ------------------------------------------------------------------ mouse
@@ -286,7 +311,7 @@ class PickerWindow(ctk.CTkToplevel):
         if not self.order:
             return
         win = ctk.CTkToplevel(self)
-        win.title("Order of picked pages")
+        win.title("Arrange the picked pages")
         win.geometry("340x460")
         win.configure(fg_color=BG)
         win.transient(self)

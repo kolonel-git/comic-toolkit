@@ -116,6 +116,24 @@ with tempfile.TemporaryDirectory() as d:
     e2 = type("E", (), {"x": x1 - 3, "y": y1 - 3, "state": 0})(); w._motion(e2); w._release(e2)
     assert w.order[:2] == [0, 1] and 0 <= len(w.order) <= cols * 2, w.order
 
+    # numbering: always visible, in the order picked or by page number
+    w.clear(); assert not hasattr(w, "btn_reorder") and w.seg_numbering.winfo_ismapped()
+    assert w.numbering.get() == "In the order picked" and w.btn_arrange.cget("state") == "disabled", "nothing picked to arrange"
+    w.clear(); click(5); click(1); click(3)
+    assert w.order == [5, 1, 3] and w.btn_arrange.cget("state") == "normal"
+    seen = []; w.on_change = seen.append
+    w.numbering.set("By page number"); root.update()
+    assert w.order == [1, 3, 5] and seen[-1] == [1, 3, 5] and w.btn_arrange.cget("state") == "disabled"
+    click(0); assert w.order == [0, 1, 3, 5], "new picks fall into page order"
+    w.set_order([4, 2]); assert w.order == [2, 4]
+    w.numbering.set("In the order picked"); root.update()
+    click(1); assert w.order == [2, 4, 1], "back to the order picked: each new pick goes last"
+    assert w.btn_arrange.cget("state") == "normal"
+    w.on_change = None; w.clear()
+    # the hint and the legend are always shown
+    assert "Shift-click" in w.lbl_hint.cget("text") and "Double-click" in w.lbl_hint.cget("text") and w.lbl_hint.winfo_ismapped()
+    assert w.legend.winfo_ismapped() and w.lbl_legend.cget("text") == "Looks like a cover" and w.lbl_legend.winfo_ismapped()
+
     # extraction through the dialog's folder choice
     from tkinter import filedialog
     out = d / "picked"; filedialog.askdirectory = lambda **k: str(out)

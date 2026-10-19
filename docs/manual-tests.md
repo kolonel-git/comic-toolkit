@@ -295,7 +295,7 @@ Use 10 to 20 real comics (plus one loose cover image), the bundled `ACEO - Full 
   *Expect:* the folder button (Open folder in Bulk…) is to the right of Choose comic….
   Result:
 - [ ] **H11. Pick pages.** Load a TPB or compendium (hundreds of pages) in Single issue and press the **Browse all N pages…** tile.
-  *Expect:* the window opens straight away and thumbnails fill in (the ones on screen first) without freezing; the size slider resizes the grid; click, shift-click and a dragged box pick pages; double-click shows a page full screen (click picks, wheel turns pages or scrolls when zoomed, Ctrl+wheel zooms, drag moves, arrows move, Space picks, Esc closes); likely covers have an orange outline; **Reorder…** changes the numbering; **Extract as JPG…** asks for a folder and saves `<name> 1.jpg`, `2.jpg`… in the order shown; **Open folder** opens it. Tell me how many real covers the orange outline misses or wrongly marks.
+  *Expect:* the window opens straight away and thumbnails fill in (the ones on screen first) without freezing; the size slider resizes the grid; click, shift-click and a dragged box pick pages; double-click shows a page full screen (click picks, wheel turns pages or scrolls when zoomed, Ctrl+wheel zooms, drag moves, arrows move, Space picks, Esc closes); likely covers have an orange outline; the **Numbering** switch (in the order picked, or by page number) and **Arrange…** change the numbering; **Extract as JPG…** asks for a folder and saves `<name> 1.jpg`, `2.jpg`… in the order shown; **Open folder** opens it. Tell me how many real covers the orange outline misses or wrongly marks.
   Result:
 
 - [ ] **H12. Add to library.** Put 5 to 10 new comics (a mix of `.cbr` and `.cbz`, one with junk files, one named oddly, one you already own) in a test inbox. In Add to library choose the inbox and an empty Ready folder, press *Scan inbox*.
@@ -411,6 +411,10 @@ Use your real library (hundreds of comics if you can) for I1 to I3 and I6.
   Result:
 - [ ] **M6. Look.** Compare the page with Bulk folder and CBR to CBZ in light and dark mode.
   *Expect:* the same header, divider, headings and spacing. Tell me what feels cramped or wasted.
+  Result:
+
+- [ ] **M7. Picker toolbar.** Open Browse all pages on a long comic. Pick pages out of order, then switch **Numbering** to *By page number* and back; try **Arrange…**.
+  *Expect:* the Numbering switch, the line of gestures and the orange *Looks like a cover* legend are always visible and fit at the narrowest window width; *By page number* sorts the picks (and the ticks on the Single issue page follow); **Arrange…** is greyed in that mode and works in the other; the saved files are numbered in the order shown.
   Result:
 
 ## When you're done
