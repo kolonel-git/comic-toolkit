@@ -194,6 +194,16 @@ Use copies of real issues from at least two series (6 to 10 files) plus one `.cb
   *Expect:* readable, no clipping of the Status column, drag stays smooth, the side panel scrolls to every option.
   Result:
 
+- [ ] **E10. The page layout.** Open Reading order, add a folder, drag the divider, and make the window narrow and wide.
+  *Expect:* the drop box and the list on the left, Stamp and Review on the right (scrolling on their own); the footer reads **Stamp N comics** with **Preview changes** and **Mark as reading order** beside it; nothing is cut off that you cannot reach.
+  Result:
+- [ ] **E11. Marking.** Stamp copies into a new folder. In the question that follows try *Not now*, then *Mark it*, then *Always mark new ones*; afterwards open Library stats.
+  *Expect:* a marked folder is left out of the stats and the duplicate check, **Open a reading order ▾** lists it and adds its comics, and the Advanced setting shows *Always mark it* after the last choice.
+  Result:
+- [ ] **E12. Mark as reading order.** Open one folder that holds an existing reading order (for example `01 - Name` copies) and press **Mark as reading order**.
+  *Expect:* a question naming the folder; after *Yes* the folder is marked (Library stats lists it under Reading orders).
+  Result:
+
 ## F. Renamer: cards, formats and messy folders
 
 Make a deliberately messy folder of copies: single issues, TPBs, hardcovers, omnibuses, compendiums, a `.cbr`, a `.pdf`, an `.epub`, `scan0001.cbz`, names written in

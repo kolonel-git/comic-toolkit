@@ -1,5 +1,7 @@
-"""Reading Order page: put issues in the order you want to read them, then record that order inside each
-CBZ's ComicInfo.xml (and optionally in the filenames, or in a new folder of copies)."""
+"""Reading Order page: put issues in the order you want to read them, then record that order inside each CBZ's
+ComicInfo.xml (and optionally in the filenames, or in a new folder of copies). On the shared page shell in two columns with a
+divider you can drag. Left: Comics (adding issues) and Order (the list). Right, scrolling on its own: Stamp (how the order is
+recorded) and Review (what will happen, then the run)."""
 import queue
 import threading
 from dataclasses import dataclass
@@ -11,9 +13,19 @@ import customtkinter as ctk
 import reading_order as ro
 from archive_tools import BACKUP, REPLACE
 from comic_core import COMIC_EXT, find_comics, natural_key
+from flow_kit import Advanced, SegmentPage, labelled
+from reading_orders import ReadingOrders
 from rename_core import read_comicinfo
-from ui_kit import (tooltip, Toggle, textbox, ACCENT, BG, BORDER, FONT, MUTED, PANEL, TEXT, DropZone, Form, Page, apply_tree_theme, build_tree,
-                    button, entry, menu, switch_style, title_block, toolbar)
+from ui_kit import (BG, BORDER, HEAD, MUTED, PANEL, TEXT, TYPE_BODY, TYPE_HINT, DropZone, Toggle, apply_tree_theme,
+                    build_tree, button, entry, menu, popup_menu, switch_style, textbox, tool_button, toolbar, tooltip)
+
+ASK, ALWAYS, NEVER = "Ask me", "Always mark it", "Never"
+MARKS = [ASK, ALWAYS, NEVER]
+ADVANCED_DEFAULTS = {"prefix": ro.PREFIX_OFF, "drop_issue": False, "copy": False, "original": BACKUP, "mark_copies": ASK}
+
+
+def _plural(n, word):
+    return f"{n} {word}{'' if n == 1 else 's'}"
 
 
 @dataclass
@@ -45,10 +57,16 @@ def _write(q, jobs, backup, dest_dir):
     q.put(("finished",))
 
 
-class OrderPage(Page):
+class OrderPage(SegmentPage):
+    title = "Reading order"
+    subtitle = "Put issues in the order you want to read them and save it in each comic."
     defaults = {"store": ro.STORY, "numbering": ro.NUM_PLAIN, "prefix": ro.PREFIX_OFF, "copy": False,
-                "original": BACKUP, "copy_parent": "", "drop_issue": False}
-    choices = {"store": ro.STORES, "numbering": ro.NUMBERINGS, "prefix": ro.PREFIXES, "original": [BACKUP, REPLACE]}
+                "original": BACKUP, "copy_parent": "", "drop_issue": False, "mark_copies": ASK}
+    choices = {"store": ro.STORES, "numbering": ro.NUMBERINGS, "prefix": ro.PREFIXES, "original": [BACKUP, REPLACE],
+               "mark_copies": MARKS}
+    split = True
+    show_auto = False
+    max_width = 1500
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -57,15 +75,30 @@ class OrderPage(Page):
         self.busy = None  # 'load' | 'write'
         self._drag, self._moved = None, False
         self.arc, self.group = ctk.StringVar(), ctk.StringVar()
+        self._orders = ReadingOrders()   # the folders marked as reading orders (the app shares one list between tools)
+        self.last_dest = None            # the folder the last run of copies went to
+        self.on_marked = None            # the app is told when a folder was marked
+        self.dest_dir = None
 
-        title_block(self.main, "Reading order",
-                    "Arrange issues in the order you want to read them, then record it in each comic.")
-        self.drop = DropZone(self.main, "Drop comics or folders here, or add them below", self.add_files,
+        # ---- Comics
+        self.make_panes(right_width=500, lo=380)
+        self.s1 = self.add_block("Comics", side="left")
+        self.drop = DropZone(self.s1.body, "Drop comics or folders here, or add them below", self.add_files,
                              self.add_folder, self.add_files)
-        self.drop.pack(fill="x")
-        self.meta = ctk.CTkLabel(self.main, text="", font=(FONT, 13), text_color=TEXT, anchor="w")
-        self.meta.pack(fill="x", pady=(14, 6))
-        bar = ctk.CTkFrame(self.main, fg_color=BG)
+        self.drop.pack(fill="x", padx=(0, 6))
+        known = ctk.CTkFrame(self.s1.body, fg_color="transparent")
+        known.pack(fill="x", pady=(10, 0))
+        self.btn_known = tool_button(known, "Open a reading order ▾", self._show_known, 170)
+        self.btn_known.pack(side="left")
+        self.known_note = ctk.CTkLabel(known, text="", font=TYPE_HINT, text_color=MUTED, anchor="w")
+        self.known_note.pack(side="left", padx=(10, 0))
+
+        # ---- Order
+        self.s2 = self.add_block("Order", side="left", grow=True)
+        body = self.s2.body
+        self.meta = ctk.CTkLabel(body, text="", font=TYPE_BODY, text_color=TEXT, anchor="w")
+        self.meta.pack(fill="x", pady=(0, 6))
+        bar = ctk.CTkFrame(body, fg_color="transparent")
         bar.pack(fill="x", pady=(0, 8))
         self.tools = toolbar(
             bar, [("suggest", "Suggest order", 104, self.suggest)],
@@ -74,67 +107,130 @@ class OrderPage(Page):
             [("remove", "Remove", 72, self.remove), ("clear", "Clear", 60, self.clear)])
         for key, tip in (("up", "Move the selected rows up"), ("down", "Move the selected rows down")):
             tooltip(self.tools[key], tip)
-        self.progress = ctk.CTkProgressBar(self.main, height=14, corner_radius=0, border_width=3, border_color=BORDER, fg_color=BORDER,
-                                           progress_color=ACCENT)
-        self.progress.set(0)
-        self.progress.pack(fill="x", pady=(0, 8))
-        wrap, self.tree = build_tree(self.main, [
-            ("sel", "", 38, False), ("num", "#", 52, False), ("file", "File", 220, True),
-            ("new", "New name", 200, True), ("current", "Current arc", 120, False), ("status", "Status", 200, False)], selectmode="extended")
-        wrap.pack(fill="both", expand=True)
-        wrap.set_empty("Add a folder above, then drag the issues into reading order.")
+        wrap, self.tree = build_tree(body, [
+            ("sel", "", 36, False), ("num", "#", 44, False), ("file", "File", 200, True),
+            ("new", "New name", 160, True), ("current", "Current arc", 100, False), ("status", "Status", 150, False)],
+            selectmode="extended")
+        wrap.pack(fill="both", expand=True, padx=(0, 6))
+        wrap.set_empty("Add a folder above, then put the issues in reading order.")
         self.tree.bind("<Button-1>", self._press)
         self.tree.bind("<B1-Motion>", self._motion)
         self.tree.bind("<ButtonRelease-1>", self._release)
-        ctk.CTkLabel(self.main, text="Select several rows (Ctrl or Shift) and drag them, or use ▲ ▼, to move them together. "
-                     "Untick a row to leave it alone (it keeps its place in the numbering).", font=(FONT, 12), text_color=MUTED, anchor="w",
-                     justify="left", wraplength=620).pack(fill="x", pady=(6, 0))
-        ctk.CTkLabel(self.main, text="YACReader shows this after you turn on ComicInfo import (Settings > General) "
-                     "and update the library.", font=(FONT, 12), text_color=MUTED, anchor="w", justify="left",
-                     wraplength=620).pack(fill="x", pady=(2, 0))
+        self.status = ctk.CTkLabel(body, text="", font=TYPE_BODY, text_color=MUTED, anchor="w", justify="left", wraplength=560)
+        self.status.pack(fill="x", pady=(6, 0))
+        self.hint = ctk.CTkLabel(body, text="Select several rows (Ctrl or Shift) and drag them, or use ▲ ▼, to move them together. "
+                                 "Untick a row to leave it alone (it keeps its place in the numbering).", font=TYPE_HINT,
+                                 text_color=MUTED, anchor="w", justify="left", wraplength=560)
+        self.hint.pack(fill="x", pady=(2, 0))
 
+        # ---- Stamp
         v = self.vars
         sw = switch_style()
-        self.form.heading("Reading order")
-        box = self.form.add("Name")
-        entry(box, self.arc).pack(fill="x")
-        menu(self.form.add("Record the order as"), v["store"], ro.STORES).pack(fill="x")
-        menu(self.form.add("Arc numbers"), v["numbering"], ro.NUMBERINGS).pack(fill="x")
-        box = self.form.add("Series group (optional)")
-        entry(box, self.group).pack(fill="x")
-        ctk.CTkLabel(box, text="Labels every issue, e.g. the event or crossover name.", font=(FONT, 11),
-                     text_color=MUTED, anchor="w", justify="left", wraplength=260).pack(fill="x", pady=(4, 0))
-        self.form.heading("Filenames and sorting", collapsible=True, open=False)
-        menu(self.form.add("Also number the filenames"), v["prefix"], ro.PREFIXES).pack(fill="x")
-        box = self.form.add("Sorting in YACReader")
-        Toggle(box, text="Remove issue numbers", variable=v["drop_issue"], **sw).pack(anchor="w")
-        ctk.CTkLabel(box, text="YACReader sorts by issue number before filename. Removing it makes YACReader use "
-                     "the filename, so pair it with a filename prefix.", font=(FONT, 11), text_color=MUTED,
-                     anchor="w", justify="left", wraplength=260).pack(fill="x", pady=(4, 0))
-        self.form.heading("Output")
-        box = self.form.add("Originals")
-        Toggle(box, text="Copy to a new folder instead", variable=v["copy"], **sw).pack(anchor="w")
-        self.orig_row = self.form.add("Original file")
-        menu(self.orig_row, v["original"], [BACKUP, REPLACE]).pack(fill="x")
+        self.s3 = self.add_block("Stamp")
+        body = self.s3.body
+        row = labelled(body, "Reading order name")
+        entry(row.cell, self.arc).pack(fill="x")
+        row.pack(fill="x", pady=(0, 10))
+        row = labelled(body, "Record the order as")
+        menu(row.cell, v["store"], ro.STORES).pack(fill="x")
+        row.pack(fill="x", pady=(0, 10))
+        row = labelled(body, "Arc numbers")
+        menu(row.cell, v["numbering"], ro.NUMBERINGS).pack(fill="x")
+        row.pack(fill="x", pady=(0, 10))
+        row = labelled(body, "Series group (optional)")
+        entry(row.cell, self.group).pack(fill="x")
+        self.group_hint = ctk.CTkLabel(row.cell, text="Labels every issue, e.g. the event or crossover name.", font=TYPE_HINT,
+                                       text_color=MUTED, anchor="w", justify="left", wraplength=440)
+        self.group_hint.pack(fill="x", pady=(4, 0))
+        row.pack(fill="x", pady=(0, 10))
+        self.adv = Advanced(body)
+        self.adv.pack(fill="x", pady=(0, 4))
+        row = labelled(self.adv.body, "Also number the filenames")
+        menu(row.cell, v["prefix"], ro.PREFIXES).pack(fill="x")
+        row.pack(fill="x", pady=(0, 10))
+        Toggle(self.adv.body, text="Remove issue numbers", variable=v["drop_issue"], **sw).pack(anchor="w")
+        self.drop_hint = ctk.CTkLabel(self.adv.body, text="YACReader sorts by issue number before filename. Removing it makes "
+                                      "YACReader use the filename, so pair it with a filename prefix.", font=TYPE_HINT,
+                                      text_color=MUTED, anchor="w", justify="left", wraplength=420)
+        self.drop_hint.pack(fill="x", pady=(4, 10))
+        Toggle(self.adv.body, text="Copy to a new folder instead of changing the originals", variable=v["copy"],
+               **sw).pack(anchor="w", pady=(0, 10))
+        self.orig_row = labelled(self.adv.body, "Original file")
+        menu(self.orig_row.cell, v["original"], [BACKUP, REPLACE]).pack(fill="x")
+        self.orig_row.pack(fill="x", pady=(0, 10))
+        self.mark_row = labelled(self.adv.body, "Mark the folder of copies as a reading order")
+        menu(self.mark_row.cell, v["mark_copies"], MARKS).pack(fill="x")
+        self.mark_hint = ctk.CTkLabel(self.mark_row.cell, text="A marked folder is left out of Library stats and the "
+                                      "duplicate check.", font=TYPE_HINT, text_color=MUTED, anchor="w", justify="left",
+                                      wraplength=420)
+        self.mark_hint.pack(fill="x", pady=(4, 0))
+        self.adv.track(v, ADVANCED_DEFAULTS)
 
-        self.btn_apply = button(self.footer, "Write reading order", self.apply, primary=True)
-        self.btn_apply.pack(pady=(0, 8))
-        self.btn_preview = button(self.footer, "Preview changes", self.preview)
-        self.btn_preview.pack()
+        # ---- Review
+        self.s4 = self.add_block("Review")
+        body = self.s4.body
+        self.headline = ctk.CTkLabel(body, text="", font=(HEAD, 16), text_color=TEXT, anchor="w", justify="left", wraplength=440)
+        self.headline.pack(fill="x")
+        self.subline = ctk.CTkLabel(body, text="", font=TYPE_BODY, text_color=MUTED, anchor="w", justify="left", wraplength=440)
+        self.subline.pack(fill="x", pady=(2, 6))
+        self.yac = ctk.CTkLabel(body, text="YACReader shows this after you turn on ComicInfo import (Settings > General) "
+                                "and update the library.", font=TYPE_HINT, text_color=MUTED, anchor="w", justify="left",
+                                wraplength=440)
+        self.yac.pack(fill="x", pady=(0, 8))
+        self.btn_details = tool_button(body, "Details", self.preview, 90)
+        self.btn_details.pack(anchor="w")
+        self.progress = ctk.CTkProgressBar(body, height=14, corner_radius=0, border_width=3, border_color=BORDER,
+                                           fg_color=BORDER, progress_color=("#FFD60A", "#FFD60A"))
+        self.progress.set(0)
+
+        self.fit_right(self.group_hint, self.drop_hint, self.mark_hint, self.headline, self.subline, self.yac)
         self._preview_win = None
-        self.watch("store", "numbering", "prefix", "copy", "drop_issue", callback=self._replan)
+        self.watch("store", "numbering", "prefix", "copy", "drop_issue", "original", callback=self._replan)
         self.arc.trace_add("write", lambda *_: self._replan())
         self.group.trace_add("write", lambda *_: self._replan())
         self.watch("copy", callback=self._toggle_rows)
         self._toggle_rows()
         self._replan()
 
+    @property
+    def btn_apply(self):
+        return self.bar_btn
+
+    @property
+    def btn_preview(self):
+        return self.side_row.winfo_children()[0]
+
+    # --- the reading orders the user has marked ---
+    @property
+    def orders(self):
+        return self._orders
+
+    @orders.setter
+    def orders(self, value):
+        self._orders = value
+        self._fill_known()
+
+    def _fill_known(self):
+        n = len(self._orders)
+        self.known_note.configure(text="" if n else "None marked yet.")
+
+    def _show_known(self):
+        items = [(f"{Path(f).name}    {Path(f).parent}", lambda f=f: self.add_paths([Path(f)])) for f in self._orders.folders]
+        popup_menu(self.btn_known, items or [("No reading orders marked yet", None)])
+
     # --- theme ---
     def apply_theme(self):
+        super().apply_theme()
         apply_tree_theme(self.tree)
 
     def _toggle_rows(self):
-        Form.show(self.orig_row, not self.vars["copy"].get())
+        copy = self.vars["copy"].get()
+        if copy:
+            self.orig_row.pack_forget()
+            self.mark_row.pack(fill="x", pady=(0, 4))
+        else:
+            self.mark_row.pack_forget()
+            self.orig_row.pack(fill="x", pady=(0, 10))
 
     # --- adding issues ---
     def add_files(self):
@@ -333,14 +429,67 @@ class OrderPage(Page):
                 tags=("bad",) if blocked or row.note == "Failed" else ("dim",) if status in ("No change", "Skipped") else ())
         ready = self._todo()
         n = len(self.rows)
-        self.meta.configure(text=(f"{n} issue{'s' if n != 1 else ''} · {len(ready)} to write" if o["name"] else
-                                  f"{n} issue{'s' if n != 1 else ''} · enter a reading order name") if n
+        self.meta.configure(text=(f"{_plural(n, 'issue')} · {len(ready)} to write" if o["name"] else
+                                  f"{_plural(n, 'issue')} · enter a reading order name") if n
                             else "Add issues to begin")
-        can = bool(ready) and not self.busy
-        self.btn_apply.configure(state="normal" if can else "disabled")
-        self.btn_preview.configure(state="normal" if n and o["name"] and not self.busy else "disabled")
         for key in ("clear", "remove", "up", "down", "top", "bottom", "suggest"):
             self.tools[key].configure(state="normal" if n and not self.busy else "disabled")
+        self._sync_view(o, ready)
+
+    def _sync_view(self, o, ready):
+        """The block summaries, the review on the right and the footer."""
+        n = len(self.rows)
+        folders = len({r.path.parent for r in self.rows})
+        self.s1.set_summary(f"{_plural(n, 'issue')} from {_plural(folders, 'folder')}" if n else "")
+        custom = [r.path for r in self.rows] != sorted((r.path for r in self.rows), key=ro.suggest_key)
+        self.s2.set_summary(f"{_plural(n, 'issue')} · {'custom order' if custom else 'suggested order'}" if n else "")
+        self.s3.set_summary(f"{o['store']} · numbers {o['numbering']}" if o["name"] else "")
+        self.s1.set_state("done" if n else "active")
+        self.s2.set_state("active" if n else "locked")
+        self.s3.set_state("active" if n else "locked")
+        self.s4.set_state("active" if n and o["name"] else "locked")
+        skipped = sum(1 for r in self.rows if not r.checked and not r.why_not)
+        blocked = sum(1 for r in self.rows if r.why_not)
+        same = sum(1 for r in self.rows if r.checked and r.plan and not r.plan["blocked"] and r not in ready)
+        copy = self.vars["copy"].get()
+        if not n:
+            head, sub = "Add issues first.", ""
+        elif not o["name"]:
+            head, sub = "Enter a reading order name.", ""
+        else:
+            head = f"Will stamp {_plural(len(ready), 'comic')}"
+            for count, word in ((same, "already correct"), (skipped, "unticked"), (blocked, "can't be stamped")):
+                if count:
+                    head += f"  ·  {count} {word}"
+            renames = sum(1 for r in ready if r.plan["new_name"] != r.path.name)
+            if copy:
+                sub = (f"Copies go into a new folder named “{ro.folder_name(o['name'])}” inside a folder you choose; "
+                       "the originals are not changed.")
+            else:
+                sub = "Originals are kept in an Archive folder as .bak." if self.vars["original"].get() == BACKUP \
+                    else "Files are replaced in place."
+                if renames:
+                    sub += f" {_plural(renames, 'file')} will also be renamed."
+        self.headline.configure(text=head)
+        self.subline.configure(text=sub)
+        if self.busy == "write":
+            self.progress.pack(fill="x", pady=(10, 0))
+        else:
+            self.progress.pack_forget()
+        if self.busy == "write":
+            text, label, enabled = self.status.cget("text") or "Stamping…", "Stamping…", False
+        elif self.busy:
+            text, label, enabled = "Reading the comics…", f"Stamp {_plural(len(ready), 'comic')}" if ready else "Stamp comics", False
+        elif not n:
+            text, label, enabled = "Add some issues to begin.", "Stamp comics", False
+        elif not o["name"]:
+            text, label, enabled = "Enter a reading order name to stamp.", "Stamp comics", False
+        else:
+            text, label, enabled = f"{_plural(len(ready), 'comic')} to stamp.", f"Stamp {_plural(len(ready), 'comic')}" if ready \
+                else "Nothing to stamp", bool(ready)
+        self.set_footer(text, label, self.apply, enabled=enabled,
+                        secondary=[("Preview changes", self.preview), ("Mark as reading order", self.mark_clicked)])
+        self.btn_preview.configure(state="normal" if n and o["name"] and not self.busy else "disabled")
 
     def _todo(self):
         o = self._plan_options()
@@ -427,6 +576,7 @@ class OrderPage(Page):
                 return
             self.vars["copy_parent"].set(parent)
             dest_dir = Path(parent) / ro.folder_name(o["name"])
+        self.dest_dir = dest_dir
         backup = self.vars["original"].get() == BACKUP
         renames = sum(1 for r in todo if r.plan["new_name"] != r.path.name)
         msg = f"Write the reading order “{o['name']}” to {len(todo)} issue{'s' if len(todo) != 1 else ''}?\n\n"
@@ -460,3 +610,79 @@ class OrderPage(Page):
         if self.failed:
             text += f" · {len(self.failed)} failed ({self.failed[0]})"
         self.say(text, err=bool(self.failed))
+        if self.copied and self.applied and self.dest_dir is not None:
+            self.last_dest = self.dest_dir
+            self._offer_mark(self.dest_dir)
+        self._replan(keep_notes=True)
+
+    # --- marking the folder as a reading order (so Library stats and the duplicate check leave it out) ---
+    def _mark_candidate(self):
+        """The folder Mark as reading order would mark: where the last copies went, else the one folder all the
+        listed issues sit in (an existing reading order opened here)."""
+        if self.last_dest is not None and Path(self.last_dest).is_dir():
+            return Path(self.last_dest)
+        parents = {r.path.parent for r in self.rows}
+        return next(iter(parents)) if len(parents) == 1 else None
+
+    def mark_clicked(self):
+        folder = self._mark_candidate()
+        if folder is None:
+            self.say("Nothing to mark yet: stamp copies into a new folder, or open one folder that is already a reading order.",
+                     err=True)
+            return
+        if self._orders.covers(folder):
+            self.say(f"“{folder.name}” is already marked as a reading order.")
+            return
+        if not messagebox.askyesno("Mark as reading order", f"Mark this folder as a reading order?\n\n{folder}\n\n"
+                                   "Library stats and the duplicate check will leave its comics out.", icon="question"):
+            return
+        self._mark(folder)
+
+    def _mark(self, folder):
+        if self._orders.add(folder):
+            self.say(f"Marked “{Path(folder).name}” as a reading order.")
+            if self.on_marked:
+                self.on_marked(folder)
+        self._fill_known()
+
+    def _offer_mark(self, folder):
+        """Copies were made in `folder`: mark it as a reading order, ask, or leave it, as the setting says."""
+        if self._orders.covers(folder):
+            return
+        mode = self.vars["mark_copies"].get()
+        if mode == NEVER:
+            return
+        if mode == ALWAYS:
+            self._mark(folder)
+            return
+        answer = self._ask_mark(folder)
+        if answer in ("once", "always"):
+            self._mark(folder)
+        if answer == "always":
+            self.vars["mark_copies"].set(ALWAYS)
+
+    def _ask_mark(self, folder):
+        """A small window: Mark it, Always mark new ones, or Not now. Returns "once", "always" or None."""
+        win = ctk.CTkToplevel(self)
+        win.title("Mark as reading order")
+        win.geometry("460x230")
+        win.transient(self.winfo_toplevel())
+        result = {"v": None}
+        ctk.CTkLabel(win, text="Mark this folder as a reading order?", font=(HEAD, 15), anchor="w").pack(fill="x", padx=20, pady=(18, 4))
+        ctk.CTkLabel(win, text=f"{folder}\n\nA marked folder stays out of Library stats and the duplicate check, so these "
+                     "copies are not counted twice.", font=TYPE_BODY, text_color=MUTED, anchor="w", justify="left",
+                     wraplength=420).pack(fill="x", padx=20)
+        row = ctk.CTkFrame(win, fg_color="transparent")
+        row.pack(side="bottom", fill="x", padx=20, pady=16)
+
+        def close(v):
+            result["v"] = v
+            win.destroy()
+        button(row, "Mark it", lambda: close("once"), primary=True, width=110).pack(side="right")
+        button(row, "Always mark new ones", lambda: close("always"), width=170).pack(side="right", padx=(0, 8))
+        button(row, "Not now", lambda: close(None), width=90).pack(side="right", padx=(0, 8))
+        win.protocol("WM_DELETE_WINDOW", lambda: close(None))
+        win.after(150, lambda: (win.lift(), win.focus_force()))
+        win.grab_set()
+        self.wait_window(win)
+        return result["v"]

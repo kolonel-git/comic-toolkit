@@ -25,7 +25,8 @@ Each script finds the project folder from its own location, so run them from any
 | `test_reading_orders.py` | the marked reading-order folders and the suggestion guess |
 | `test_scan.py`, `test_fixes.py` | library scan and cache; audit page failure handling |
 | `test_audit.py`, `test_audit_ui.py` | audit logic and window |
-| `test_order.py`, `test_order_multi.py`, `test_edge.py`, `test_order_ui.py` | reading order logic, multi-select moves, top/bottom, window |
+| `test_order.py`, `test_order_multi.py`, `test_edge.py`, `test_order_ui.py` | reading order logic, multi-select moves, top/bottom, the list and the write |
+| `test_order_page.py` | the Reading order page on the shell: two columns, block summaries, the review and the footer, and marking the folder of copies (ask, always, never, the button, the menu of marked folders) |
 | `test_renamer.py` | parser (years, volumes, collected editions), naming engine, renamer window on a messy folder |
 | `test_intake.py`, `test_intake_ui.py` | Add to library: naming, folders, duplicate flags, the convert / clean / verify / dispose pipeline and failure handling; the page (inbox scan, review table, ticking, confirmation, running, retry) |
 | `test_picker.py` | page picker: grid maths, cover guessing, selection helpers, JPG extraction, and the window (lazy thumbnails, click / shift / box selection, extract, full view) |

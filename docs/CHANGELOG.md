@@ -12,6 +12,29 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-19 19:00 +11:00 · Session 64: Reading order on the page shell (roadmap Phase 3, step 8a)
+
+**Summary:** Reading order is rebuilt as two resizable columns, like the other revamped pages, with a Stamp block, a Review block and a footer that stamps. Folders of copies can be marked as reading orders from the page. The multi-drag list itself is step 8b.
+
+**Decisions**
+- Split step 8 in two, as with Single issue: 8a is the page on the shell; 8b is the multi-drag list (a stacked card, an insertion line, Alt+arrows, *Move to position…*, Ctrl+Z, box selection, more ways to suggest an order), which ACEO will reuse. The list stays the table it was, with its existing drag logic.
+- Review is a headline and a **Details** button, not a second table: the list on the left already shows each issue's new number, filename and status.
+- Marking: after copies are made the page asks once (*Mark it*, *Always mark new ones*, *Not now*); an Advanced setting (*Ask me*, *Always mark it*, *Never*) holds the habit. **Mark as reading order** marks the folder of the last copies, or the one folder that holds every listed issue, after a question that names it.
+
+**Changes by file**
+- `page_order.py`: rewritten on `SegmentPage`. Left: Comics (drop box, **Open a reading order ▾** listing the marked folders) and Order (summary, toolbar, table, hints). Right: Stamp (name, record as, arc numbers, series group, *Advanced options*) and Review. Footer: **Stamp N comics**, **Preview changes**, **Mark as reading order**. The `orders` property takes the shared list of marked folders.
+- `comic_tool.py`: the app gives the page the shared reading-order list.
+- Tests: `tests/test_order_page.py` (new); `test_order_ui.py` (copy mode no longer waits on the marking question); `test_layout.py` (Reading order is no longer an options-panel page).
+- Docs: plan (as built), roadmap, tools, reading order page, architecture, known limitations, manual tests (E10 to E12), tests README, HANDOFF.
+
+**Bugs found and fixed:** the first run of the old UI test hung, because the marking question after a copy run waits for a click; the test now sets the habit to *Never*. `Preview changes` had lost its greyed-out state without a name; restored.
+
+**Verification:** `ruff check --select F,E9 .` clean; `python tests/run_all.py` 34 of 34 passed. Not checked: how the page looks in light and dark mode, the marking window on screen, and dragging the divider by hand (see manual tests E10 to E12).
+
+**Known issues:** see Known limitations (Reading order: marking is by folder; no stacked-card drag until 8b).
+
+---
+
 ## 2026-10-18 23:50 +11:00 · Session 63: Page picker toolbar (roadmap Phase 3, step 6b)
 
 **Summary:** The picker window opened from Single issue gets a visible numbering control, an always-shown line of gestures and a legend for the orange outline. This finishes Single issue.

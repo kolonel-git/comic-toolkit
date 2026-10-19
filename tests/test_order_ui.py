@@ -107,6 +107,7 @@ with tempfile.TemporaryDirectory() as d:
     s = [cbz(d / "Src" / f"Saga {i}.cbz") for i in (1, 2)]
     page.add_paths(s); wait()
     page.arc.set("Saga Run"); page.vars["prefix"].set(ro.PREFIX_BRACKET); page.vars["copy"].set(True)
+    page.vars["mark_copies"].set("Never")   # (the marking itself is tested in test_order_page.py)
     filedialog.askdirectory = lambda **k: str(d / "Out")
     before = [p.read_bytes() for p in s]
     page.apply(); wait()

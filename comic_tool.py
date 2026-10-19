@@ -317,6 +317,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         stats.open_tool = self._open_from_stats
         self.pages["metadata"].open_tool = self._open_from_metadata
         self.pages["audit"].orders = self.orders
+        self.pages["order"].orders = self.orders
         self.pages["audit"].open_tool = self._open_from_audit
         self.pages["metadata"].on_saved = self._stats_refresh
         stats.on_progress = lambda d, t: self.pages["home"].show_summary(None, scanning=(d, t))

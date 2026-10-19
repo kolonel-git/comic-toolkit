@@ -4,14 +4,16 @@
 
 Part of the [roadmap](roadmap.md) (item 4). Found on Home under **Reading Orders**.
 
-For a series or event (a crossover, a story arc) you open one window, put the issues in the order you want to read them, and the tool
+For a series or event (a crossover, a story arc) you open one page, put the issues in the order you want to read them, and the tool
 records that order **inside each comic's `ComicInfo.xml`**, so no file has to be renamed. Optionally it also numbers the filenames, or
 copies the issues into a new folder so the originals are never touched.
 
 ## Using it
 
+The page is two columns with a divider you can drag. On the left, **Comics** (adding issues) and **Order** (the list); on the right, scrolling on its own, **Stamp** (how the order is recorded) and **Review** (what will happen). The footer holds the main button, **Stamp N comics**, with **Preview changes** and **Mark as reading order** beside it.
+
 1. **Add issues:** drop comics or folders on the page (or anywhere on the window while the page is open), click the drop area to pick files,
-   or use **Add folder…**. Folders are searched including subfolders, and issues can come from several folders. Duplicates and non-comics are ignored.
+   or use **Add folder…** (the app adds *Library folder* and *Recent* under it). **Open a reading order ▾** lists the folders you marked as reading orders and adds the comics of the one you choose. Folders are searched including subfolders, and issues can come from several folders. Duplicates and non-comics are ignored.
 2. **Order them:** select one row, or several with Ctrl+click and Shift+click, then drag them (they move as one block, keeping their order) or
    use ▲ ▼ to move the whole selection one place at a time, or **Top** and **Bottom** to send it to the very start or end of the list
    (the rows keep their order among themselves). A block already at the top or bottom stays put. **Suggest order** sorts by series,
@@ -19,10 +21,11 @@ copies the issues into a new folder so the originals are never touched.
    place in the numbering. Clicking a tick box while several rows are selected ticks or unticks all of them. **Remove** takes out every selected row.
 3. **Name the order** (for example "Court of Owls") and choose how to record it. The table shows each issue's arc number, its new filename when
    prefixing is on, the arc it already has, and a status (*Add*, *Update*, *Replaces “old arc”*, *No change*, *Skipped*).
-4. **Preview changes** (optional) opens a window listing, for every issue in order, the new filename and each field that would change from what it is now
+4. **Review** (on the right) says in plain words how many comics will be stamped, how many are already correct, unticked or cannot be stamped, and what happens to the originals. **Preview changes** (optional, or **Details** in the Review) opens a window listing, for every issue in order, the new filename and each field that would change from what it is now
    (for example `StoryArc: (none) -> Court of Owls`), plus unticked, unchanged and blocked issues and where originals or copies would go.
    It changes nothing and can be reopened after any edit.
-5. **Write reading order.** A confirmation says what will happen, then each file is rewritten and verified.
+5. **Stamp N comics.** A confirmation says what will happen, then each file is rewritten and verified.
+6. **Marking.** When copies were made in a new folder, the page asks once whether to mark that folder as a reading order, which leaves it out of Library stats and the duplicate check (*Mark it*, *Always mark new ones* or *Not now*). **Mark as reading order** in the footer does the same for the folder of the last copies, or for the one folder that holds every listed issue.
 
 Re-running renumbers the whole list from 1 (gaps closed), because positions are just metadata. A file already in a different arc is shown
 as *Replaces “…”*; untick it to skip it.
@@ -36,8 +39,9 @@ as *Replaces “…”*; untick it to skip it.
 | **Series group** | Optionally also sets `SeriesGroup` on every issue, e.g. the event name. |
 | **Also number the filenames** | `01 - Name` or `[01] Name`, for browsing in Explorer, where metadata isn't visible. Off by default. Renumbering replaces the old prefix instead of stacking a new one. |
 | **Remove issue numbers** | Also deletes the `Number` tag (the issue number) from every issue that has one. YACReader sorts by issue number before filename, so with the number gone it falls back to the filename, which the prefix has put in reading order. Off by default. Shown in the preview as `Number: 5 -> (removed)`; the preview warns if no filename prefix is on. |
-| **Copy to a new folder instead** | Asks where each time, creates a folder named after the reading order, copies the issues into it (name collisions get `(1)`), and stamps only the copies. The last parent folder is remembered. Originals are not changed and no backup is needed. |
+| **Copy to a new folder instead of changing the originals** | Asks where each time, creates a folder named after the reading order, copies the issues into it (name collisions get `(1)`), and stamps only the copies. The last parent folder is remembered. Originals are not changed and no backup is needed. |
 | **Original file** | For in-place writes: keep a `.bak` backup in `Archive`, or replace the file. |
+| **Mark the folder of copies as a reading order** | Shown with *Copy to a new folder*. *Ask me* (the default), *Always mark it* or *Never*. |
 
 `.cbr` files can't be written to and are shown as *Convert to CBZ first* (use CBR to CBZ).
 

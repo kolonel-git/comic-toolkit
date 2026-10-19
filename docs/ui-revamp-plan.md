@@ -16,7 +16,7 @@ design. The status column below says what is built; [The tools](tools.md) descri
 | Metadata (repair editor) | agreed, built (two columns) |
 | CBR to CBZ | agreed, built (two columns) |
 | Library audit | agreed, built (two columns) |
-| Reading order | agreed |
+| Reading order | agreed, page built (two columns); multi-drag list to follow |
 | Add to library | agreed |
 | ACEO sheets | agreed |
 | Renamer | agreed |
@@ -28,7 +28,7 @@ design. The status column below says what is built; [The tools](tools.md) descri
 **Current:** left options panel plus main area on most pages; Bulk folder is the first page converted to the shell. Many options sit in one
 panel. Type uses about ten sizes (8 to 28 pt), Segoe UI plus Arial Black headings plus Consolas, and several accent colours.
 
-**Owner's decision (Session 60): two columns.** Every page except Library stats is laid out as **two resizable columns** under the header, with the footer below: what you choose (the folder, the list of comics) on the left, and what you can set and the review of what will happen on the right, which scrolls on its own. The divider between the columns is dragged to the width you like (and remembered), and every table column is resizable too. Library stats keeps the stack of segments. Bulk folder, Metadata, Library audit, CBR to CBZ and Single issue are built this way; Folder icons, Reading order, ACEO sheets, the Renamer and Add to library follow when their turn comes (they already have a main area and a draggable options panel, so for them it is mostly regrouping the options into titled blocks and putting the review and the run under them). The per-tool sections below still describe what each part holds; read "segment" as "block of a column" for every page except Library stats.
+**Owner's decision (Session 60): two columns.** Every page except Library stats is laid out as **two resizable columns** under the header, with the footer below: what you choose (the folder, the list of comics) on the left, and what you can set and the review of what will happen on the right, which scrolls on its own. The divider between the columns is dragged to the width you like (and remembered), and every table column is resizable too. Library stats keeps the stack of segments. Bulk folder, Metadata, Library audit, CBR to CBZ, Single issue and Reading order (its page) are built this way; Folder icons, ACEO sheets, the Renamer and Add to library follow when their turn comes (they already have a main area and a draggable options panel, so for them it is mostly regrouping the options into titled blocks and putting the review and the run under them). The per-tool sections below still describe what each part holds; read "segment" as "block of a column" for every page except Library stats.
 
 **Owner's decisions (the original segment design, still true for Library stats)**
 - Every tool is a stack of **collapsible segments**. A finished segment folds to a short summary of what it did or holds.
@@ -303,6 +303,8 @@ movable item; on release they show again, in the same order, at the new place.
   order so it stays out of your stats and duplicate checks?" with an *Always do this* choice. After that, new folders are marked
   automatically. A setting turns it off. The marking uses the shared list from Library stats.
 - *Links:* see *Links between tools*.
+
+**As built (Session 64, step 8a):** two columns. Left: Comics (the drop box, with *Library* and *Recent* added by the app, and **Open a reading order ▾**, a menu of the marked reading-order folders that adds their comics) and Order (the table as before, with the summary "42 issues · custom order" or "suggested order"). Right: Stamp (name, how to record, arc numbers, series group; *Advanced options* for the filename prefix, Remove issue numbers, copy to a new folder, the original file, and the marking habit) and Review (a headline of counts, what happens to the originals, the YACReader reminder, **Details** for the old preview text). Footer: **Stamp N comics**, **Preview changes**, **Mark as reading order**. Marking: after copies are made the page asks once (*Mark it*, *Always mark new ones*, *Not now*), or follows the setting *Ask me / Always mark it / Never*; **Mark as reading order** marks the folder of the last copies, or the one folder every listed issue sits in. The marked list is the one shared with Library stats and the Library audit. Differences from the plan: Review is a headline and a **Details** button, not a second table (the list on the left already shows each issue's new number, name and status); **Suggest order** keeps its single behaviour (series, volume, year, issue number) and the stamp's *Order* summary is not a block of its own. Not done here, left for step 8b: the multi-drag list, Alt+arrows, *Move to position…*, Ctrl+Z, selecting with a box and the three ways of suggesting an order. The *Metadata* link after stamping is left for the links pass.
 
 ## Add to library
 
