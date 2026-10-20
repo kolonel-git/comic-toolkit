@@ -279,6 +279,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
                       "audit": AuditPage(content), "order": OrderPage(content),
                       "aceo": AceoPage(content), "intake": IntakePage(content)}
         self.pages["intake"].rename_source = self.pages["rename"].state  # names follow the Renamer's settings
+        self.pages["intake"].open_renamer = lambda: self.show("rename")      # its Naming settings button
         self.nav = {}
         self.current = None
         Logo(side, lambda: self.show("home")).pack(fill="x", padx=(12, 8), pady=(14, 8))

@@ -10,6 +10,7 @@ from page_audit import AuditPage
 from page_bulk import BulkPage
 from page_convert import ConvertPage
 from page_icons import IconsPage
+from page_intake import IntakePage
 from page_metadata import MetadataPage
 from page_order import OrderPage
 from page_rename import RenamePage
@@ -27,7 +28,7 @@ def ev(x): return types.SimpleNamespace(x_root=x)
 
 
 root = ctk.CTk(); root.geometry("1300x800")
-PAGES = [SinglePage, BulkPage, IconsPage, RenamePage, MetadataPage, ConvertPage, AuditPage, OrderPage, AceoPage]
+PAGES = [SinglePage, BulkPage, IconsPage, RenamePage, MetadataPage, ConvertPage, AuditPage, OrderPage, AceoPage, IntakePage]
 pages = [P(root) for P in PAGES]
 
 # every page offers a folder button and a comics button in the same box as the drop area
@@ -49,20 +50,19 @@ for pg in pages:
     if type(pg) in EXPECT:  # (Bulk folder, Metadata, Library audit, CBR to CBZ, Single issue and Reading order are segment pages, tested in their own page tests)
         assert headings(pg) == EXPECT[type(pg)], (type(pg).__name__, headings(pg))
 
-# the options panel can be dragged wider and narrower, within limits, and the width is saved
-from page_intake import IntakePage   # (the one page that still has an options panel)
-pg = IntakePage(root); pg.pack(fill="both", expand=True); root.update()
-w0 = pg.side.winfo_width()
-pg.splitter._press(ev(1000)); pg.splitter._drag(ev(900)); pg.splitter._release(None); root.update()
+# the right column of a two-column page can be dragged wider and narrower, within limits, and the width is saved
+pg = RenamePage(root); pg.pack(fill="both", expand=True); root.update()
 k = pg.splitter._scale()  # display scaling: mouse movement is in pixels, widths in scaled units
-assert abs(pg.side_width - (310 + 100 / k)) <= 2 and abs(pg.side.winfo_width() - pg.side_width * k) <= 3, (pg.side_width, pg.side.winfo_width(), k)
-pg.splitter._press(ev(1000)); pg.splitter._drag(ev(0)); pg.splitter._release(None)
-assert pg.side_width == 560, pg.side_width
-pg.splitter._press(ev(0)); pg.splitter._drag(ev(2000)); pg.splitter._release(None)
-assert pg.side_width == 270, pg.side_width
-assert pg.state()["_side_width"] == 270
-pg.restore({"_side_width": 350}); root.update(); assert pg.side_width == 350
-pg.restore({"_side_width": "junk"}); assert pg.side_width == 350
+w0 = pg.right_width
+pg.splitter._press(ev(1000)); pg.splitter._drag(ev(900)); pg.splitter._release(None); root.update()
+assert abs(pg.right_width - (w0 + 100 / k)) <= 2 and abs(pg.right_wrap.winfo_width() - pg.right_width * k) <= 3, (w0, pg.right_width, k)
+pg.splitter._press(ev(1000)); pg.splitter._drag(ev(-3000)); pg.splitter._release(None)
+assert pg.right_width == pg.splitter.hi, pg.right_width
+pg.splitter._press(ev(0)); pg.splitter._drag(ev(5000)); pg.splitter._release(None)
+assert pg.right_width == pg.splitter.lo, pg.right_width
+assert pg.state()["_split_width"] == pg.splitter.lo
+pg.restore({"_split_width": 500}); root.update(); assert pg.right_width == 500
+pg.restore({"_split_width": "junk"}); assert pg.right_width == 500
 pg.pack_forget()
 
 # every table column can be made narrow (and wide); each table has a horizontal scrollbar

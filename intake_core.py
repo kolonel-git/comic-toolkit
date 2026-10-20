@@ -32,6 +32,7 @@ class Item:
     error: str = ""                   # why the last run failed; cleared to try again
     checked: bool = True
     manual: bool = False              # the user ticked or unticked it, so a recompute keeps their choice
+    series: str = ""                  # a series the user typed for it (Set series…); it wins over the name and ComicInfo
     steps: str = ""
     iid: str = field(default="", repr=False)
 
@@ -93,12 +94,14 @@ def existing_folders(root):
     return {_norm(d.name): d.name for d in root.iterdir() if d.is_dir() and d.name != ARCHIVE_DIR}
 
 
-def name_for(src, ci, s, fallback_series=None):
+def name_for(src, ci, s, fallback_series=None, series=""):
     """(fields, stem) the Renamer would give this comic. stem is the file name without extension."""
     parsed = parse_filename(src.stem, volume_as_issue=s["vol_mode"] == VOL_ISSUE)
     f = merge(parsed, ci or {}, s["use_ci"])
     if not s["detect_collected"]:
         f = apply_type(f, "Issue")
+    if series:
+        f["series"] = series
     if not f.get("series") and fallback_series:
         f["series"] = fallback_series
     if not f.get("series"):
@@ -122,7 +125,7 @@ def plan(items, ready, s, o, inbox=None):
         if inbox and it.src.parent != Path(inbox) and it.src.parent.name:
             fallback = it.src.parent.name  # a file called just '012.cbz' inside a series folder
         if o["rename"]:
-            it.fields, stem = name_for(it.src, it.ci, s, fallback)
+            it.fields, stem = name_for(it.src, it.ci, s, fallback, it.series)
         else:
             it.fields, stem = {}, it.src.stem
         name = nf.safe_name(stem, opts["illegal"]) + nf.ext_text(".cbz", opts["ext_case"])
@@ -227,3 +230,27 @@ def find_sources(paths, recursive=True):
                 seen.add(str(f).lower())
                 out.append(f)
     return sorted(out, key=lambda p: natural_key(str(p)))
+
+
+class Settling:
+    """Which files in a watched folder have stopped growing: a file counts once its size is the same on two looks in a row
+    (a download in progress keeps changing), so a half-copied comic is never picked up."""
+
+    def __init__(self):
+        self.last = {}
+
+    def stable(self, sizes):
+        """`sizes` is {path: size now}; returns the paths whose size is unchanged since the last call (and not empty)."""
+        done = [p for p, n in sizes.items() if n > 0 and self.last.get(p) == n]
+        self.last = dict(sizes)
+        return done
+
+
+def sizes_of(paths):
+    out = {}
+    for p in paths:
+        try:
+            out[p] = Path(p).stat().st_size
+        except OSError:
+            pass
+    return out

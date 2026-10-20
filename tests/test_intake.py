@@ -90,4 +90,13 @@ with tempfile.TemporaryDirectory() as d:
     saga = inbox / "Saga" / "003.cbz"; ic.add_comic(saga, ready / "Saga" / "Saga 003.cbz")
     ic.prune_empty(saga.parent, inbox); assert not (inbox / "Saga").exists() and inbox.exists()
     assert ic.find_sources([inbox / "nope", ready / "k.cbz"]) == [ready / "k.cbz"]
+# a series typed by hand wins over the name; the watch only reports files whose size has stopped changing
+it = ic.Item(Path("012.cbz"), ci={}); it.series = "Saga"
+ic.plan([it], str(Path(tempfile.gettempdir()) / "nowhere-ready"), ic.rename_settings(), {"rename": True, "folders": True, "junk": True, "pages": False})
+assert it.fields["series"] == "Saga" and it.dest.name.startswith("Saga") and it.status != ic.NO_SERIES
+w = ic.Settling()
+assert w.stable({"a": 10, "b": 5}) == []                        # first look: nothing is settled yet
+assert w.stable({"a": 10, "b": 8}) == ["a"]                     # b grew; a did not
+assert w.stable({"a": 10, "b": 8, "c": 0}) == ["a", "b"]        # an empty file never counts
+assert w.stable({}) == []
 print("intake core OK")

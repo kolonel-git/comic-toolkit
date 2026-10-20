@@ -12,7 +12,32 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
-## 2026-10-21 00:40 +11:00 · Session 68: Renamer on the page shell (roadmap Phase 4, step 10)
+## 2026-10-20 23:45 +11:00 · Session 69: Add to library on the page shell (roadmap Phase 4, step 11)
+
+**Summary:** Add to library is rebuilt as two resizable columns. Every comic is a card with what it becomes; comics that need a look come first with a fix on the card (*Set series…*, *Add anyway*, *Skip*). *Watch this folder* lists new comics in the inbox once they stop growing. The run can be stopped, and failed comics retried from the footer.
+
+**Decisions**
+- Two columns instead of five segments (as for the other pages): Inbox and Review on the left; Destination and Clean-up on the right.
+- *Set series…* sets `Item.series`, which wins over the filename and `ComicInfo.xml`, and the series is also written into the new comic's `ComicInfo.xml` after it is added (if that write fails the comic is still added and the card says so).
+- The watch never adds by itself; it only lists. A file counts as settled when its size is the same on two looks (`intake_core.Settling`); comics it has listed are remembered for the session so a kept original is not listed again.
+- The Renamer link is a **Naming settings** button (`open_renamer`, wired in `comic_tool.py`).
+
+**Changes by file**
+- `page_intake.py`: rewritten on `SegmentPage` with a `CardList` (`reorder=False`), the watch, a stop flag, retry and the footer.
+- `intake_core.py`: `Item.series`, `name_for(..., series)`, `Settling`, `sizes_of`.
+- `comic_tool.py`: wires `open_renamer`.
+- Tests: `test_intake.py` (series override, `Settling`), `test_intake_ui.py` (rewritten: flagged first, the three fixes, a real run with the series in `ComicInfo.xml`, failure and retry, Stop, the watch), `test_layout.py` (no page has an options panel any more: the splitter check now uses the right column of the Renamer; Add to library joins the folder/comics button check).
+- Docs: tools, plan (as built), roadmap, architecture, known limitations (the watch is a poll), manual tests (H12 reworded, H12b, H12c), tests README, HANDOFF.
+
+**Bugs found and fixed:** `IntakePage._draw` shadowed a CustomTkinter method (renamed `_redraw`).
+
+**Verification:** `ruff check --select F,E9 .` clean; `python tests/run_all.py` 38 of 38 passed. Looked at a screenshot of the page. Not checked: a real inbox with a large file being copied, real `.cbr` files (manual tests H12 to H12c).
+
+**Known issues:** see Known limitations (Add to library: the watch is a poll).
+
+---
+
+## 2026-10-20 23:30 +11:00 · Session 68: Renamer on the page shell (roadmap Phase 4, step 10)
 
 **Summary:** The Renamer is rebuilt as two resizable columns around a card list. Every file is a card with a type chip and a green, amber or red dot for how sure the reading of its name is; unsure files come first with suggestions and reasons; types can be set one by one, in bulk or with a letter key; choices can be kept as saved rules; the plan can be exported.
 

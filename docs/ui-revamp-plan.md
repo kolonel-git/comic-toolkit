@@ -17,7 +17,7 @@ design. The status column below says what is built; [The tools](tools.md) descri
 | CBR to CBZ | agreed, built (two columns) |
 | Library audit | agreed, built (two columns) |
 | Reading order | agreed, built (two columns, and the multi-drag list) |
-| Add to library | agreed |
+| Add to library | agreed, built |
 | ACEO sheets | agreed, built (two columns) |
 | Renamer | agreed, built |
 | Future work (all tools) | agreed |
@@ -312,7 +312,9 @@ movable item; on release they show again, in the same order, at the new place.
 
 ## Add to library
 
-**Current:** takes comics from an Inbox folder or a drop; one button runs the chain (verified `.cbz`, junk removed, renamed
+**As built (Session 69, step 11):** two columns instead of five segments. Left: **Inbox** (compact drop box with *Scan inbox*, the inbox folder, *Include subfolders*, **Watch this folder**) and **Review** (a `CardList`, `reorder=False`; flagged comics first with a red stripe and *Set series…*, *Add anyway* or *Skip*; the full path under the list). Right: **Destination** (Ready folder, filing, naming line, **Naming settings** opens the Renamer) and **Clean-up** (junk, page names, **The original comic** as three cards that state the consequence, extra junk patterns under Advanced options). Footer: **Add N comics**, **Stop**, **Open Ready folder**, **Retry N failed**. *Set series…* sets `Item.series`, which wins over the name and ComicInfo, and writes `Series` into the new comic's `ComicInfo.xml` afterwards. The watch (`intake_core.Settling`) lists a comic once its size is the same on two looks three seconds apart. Differences from the plan: the Review table's Steps are written as text on the card, not icons; *Add anyway* on an *Exists* comic adds it under a numbered name; suggestions for *Set series…* from the local library are not built (the dialog is a plain box); the *Summary* lines of the segments are not shown.
+
+**Current (before the revamp):** takes comics from an Inbox folder or a drop; one button runs the chain (verified `.cbz`, junk removed, renamed
 with the Renamer's settings, filed into a series folder in the Ready folder, original handled). The table shows
 Becomes / Steps / Status (Ready, Duplicate, Exists, No series, Failed); flagged rows start unticked.
 

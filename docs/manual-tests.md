@@ -356,7 +356,13 @@ Use 10 to 20 real comics (plus one loose cover image), the bundled `ACEO - Full 
   Result:
 
 - [ ] **H12. Add to library.** Put 5 to 10 new comics (a mix of `.cbr` and `.cbz`, one with junk files, one named oddly, one you already own) in a test inbox. In Add to library choose the inbox and an empty Ready folder, press *Scan inbox*.
-  *Expect:* every row shows the right new name and folder, the one you already own is flagged *Duplicate* and unticked, the oddly named one is *No series*. Press *Add to library* and accept the prompt: the Ready folder gets verified `.cbz` files, the originals are gone (with the default), empty inbox folders are removed, and the status line says how many were added. Open one in your reader. Tell me about any name that is wrong and any duplicate that was missed.
+  *Expect:* every card shows the right new name and folder, the one you already own is flagged *Duplicate* or *Exists* and unticked and listed first, the oddly named one is *No series*. Press **Add N comics** and accept the prompt: the Ready folder gets verified `.cbz` files, the originals are gone (with the default), empty inbox folders are removed, and the status line says how many were added. Open one in your reader. Tell me about any name that is wrong and any duplicate that was missed.
+  Result:
+- [ ] **H12b. Fixing flagged comics.** On the *No series* card press **Set series…** and type a series; on the duplicate press **Add anyway**, then **Skip**.
+  *Expect:* the series card gets a new name and series folder and turns Ready; after adding, its `ComicInfo.xml` (open it in your reader or the Metadata page) has that series; *Add anyway* ticks the card and *Skip* unticks it.
+  Result:
+- [ ] **H12c. Watch, Stop and Retry.** Turn on **Watch this folder**, then copy a large comic into the inbox. Add a few comics and press **Stop** during the run; make one comic unreadable and use **Retry N failed**.
+  *Expect:* the comic appears in the list a few seconds after the copy finishes (not while it is still growing) and is not added by itself; Stop ends after the comic in hand; Retry only runs the failed one. After restarting the app the switch keeps its setting.
   Result:
 
 - [ ] **H13. Sidebar sections.** Shrink the window height until the sidebar is full. Scroll the sidebar with the mouse wheel. Click a section heading, then click it again. Press **Reorder sections…**, move a few headings with Up and Down, press Reset.
