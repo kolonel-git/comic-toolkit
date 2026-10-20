@@ -79,9 +79,14 @@ class ChoiceCards(ctk.CTkFrame):
     """Pick one of a few options by clicking a card (a title and a line saying what you get). The chosen card is
     pink and the one under the pointer lifts. Tab reaches the cards, Space or Enter picks one, arrows move."""
 
-    def __init__(self, parent, var, options, columns=2, on_pick=None):
+    def __init__(self, parent, var, options, columns=2, on_pick=None, picture=None):
+        """`picture` is (width, height) in pixels: each card then carries a small picture above its title (filled in with
+        `set_picture`), which shows what the choice does instead of describing it."""
         super().__init__(parent, fg_color="transparent")
         self.var, self.options, self.on_pick = var, options, on_pick
+        self.picture = picture
+        self.pics = {}
+        self._images = {}
         self.cards = {}
         for c in range(columns):
             self.grid_columnconfigure(c, weight=1, uniform="choice")
@@ -90,11 +95,16 @@ class ChoiceCards(ctk.CTkFrame):
                                 cursor="hand2")
             card.grid(row=n // columns, column=n % columns, sticky="nsew",
                       padx=(0, 8) if n % columns != columns - 1 else (0, 0), pady=(0, 8))
+            pic = None
+            if picture:
+                pic = ctk.CTkLabel(card, text="", width=picture[0], height=picture[1], fg_color="transparent")
+                pic.pack(padx=10, pady=(10, 0))
+                self.pics[value] = pic
             name = ctk.CTkLabel(card, text=title, font=(FONT, 13, "bold"), anchor="w", justify="left")
-            name.pack(fill="x", padx=12, pady=(9, 0))
+            name.pack(fill="x", padx=12, pady=(9 if pic is None else 6, 0))
             sub = ctk.CTkLabel(card, text=desc, font=TYPE_HINT, anchor="w", justify="left", wraplength=250)
             sub.pack(fill="x", padx=12, pady=(2, 9))
-            for w in (card, name, sub):
+            for w in (card, name, sub) + ((pic,) if pic is not None else ()):
                 w.bind("<Button-1>", lambda _, v=value: self.pick(v))
             card.__dict__["_hover_hooks"] = (lambda v=value: self._hover(v, True), lambda v=value: self._hover(v, False))
             tk.Frame.configure(card, takefocus=1)
@@ -132,6 +142,15 @@ class ChoiceCards(ctk.CTkFrame):
 
     def describe(self, value, text):
         self.cards[value][2].configure(text=text)
+
+    def set_picture(self, value, image):
+        """Show a PIL image on a card (it is scaled to the card's picture size)."""
+        if value not in self.pics or image is None:
+            return
+        w, h = self.picture
+        img = image.copy()
+        self._images[value] = ctk.CTkImage(light_image=img, dark_image=img, size=(w, h))   # (kept, or it would vanish)
+        self.pics[value].configure(image=self._images[value])
 
     def paint(self):
         for value, (card, name, sub) in self.cards.items():
@@ -475,7 +494,7 @@ class LazyTable(ctk.CTkFrame):
         if img is None or self.loader is None or not self.tree.exists(iid):
             return
         from PIL import ImageTk
-        photo = ImageTk.PhotoImage(img)
+        photo = ImageTk.PhotoImage(img, master=self.tree)
         self._photos[iid] = photo  # keep a reference or Tk drops the picture
         self.tree.item(iid, image=photo)
 

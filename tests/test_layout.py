@@ -45,7 +45,7 @@ sg.pack_forget()
 # every options panel is grouped under headings, always starting with the source or main subject and ending with the output
 def headings(pg): return pg.form.headings
 EXPECT = {IconsPage: ["Cover", "Output"],
-          AceoPage: ["Template", "Covers", "Cards", "Output"]}
+}
 for pg in pages:
     if type(pg) in EXPECT:  # (Bulk folder, Metadata, Library audit, CBR to CBZ, Single issue and Reading order are segment pages, tested in their own page tests)
         assert headings(pg) == EXPECT[type(pg)], (type(pg).__name__, headings(pg))

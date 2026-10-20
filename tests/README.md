@@ -34,6 +34,6 @@ Each script finds the project folder from its own location, so run them from any
 | `test_picker.py` | page picker: grid maths, cover guessing, selection helpers, JPG extraction, and the window (lazy thumbnails, click / shift / box selection, extract, full view) |
 | `test_stats.py`, `test_stats_ui.py`, `test_stats_home.py` | library statistics logic, the Library stats page (scan, bars, drill-down, export), the Home summary line and its saved numbers |
 | `test_layout.py`, `test_layout_app.py` | resizable panels and sidebar (the two-column pages' dividers are checked in their own page tests), table column sizes, grouped buttons, Add folder / Choose comics on every page |
-| `test_aceo_core.py`, `test_aceo_ui.py` | ACEO template slots, fitting, PDF output, outline colour, window and full-screen view |
+| `test_aceo_core.py`, `test_aceo_ui.py` | ACEO template slots, fitting, PDF output, outline colour, both pages of a comic, copies per cover, dashed empty slots, the option pictures; the page: the cover cards (copies, front / back, order), the preview, its strip and swapping covers by dragging, the empty-slot note, the PDF, stopping, the full-screen view |
 
 What no script can check is listed in `docs/manual-tests.md`.

@@ -206,6 +206,29 @@ assert cl._press(ev("c03")) == "break" and cl._d is None
 assert not cl.move_selected(1) and not cl.to_edge(True) and not cl.undo()
 cl.busy = lambda: False
 
+# pictures and buttons on a card (the ACEO cover list): drawn, hit-tested, and a button press is not a click on the card
+from PIL import Image
+pics = [Image.new("RGB", (60, 90), (200, 40, 40)), Image.new("RGB", (60, 90), (40, 40, 200))]
+pressed = []
+cl.cards = None
+pl = CardList(root, lambda i: {"num": "1", "title": "Cover", "sub": "Sheet 1 · card 1", "images": pics, "image_on": 1,
+                               "buttons": [("back", "Front"), ("less", "−"), (None, "×2"), ("more", "+")]},
+              on_button=lambda i, k: pressed.append((i, k)), card_h=76, noun="cover")
+cl.pack_forget(); pl.pack(fill="both", expand=True); pl.set_order(["a", "b"]); root.update()
+assert pl.card_box("a")[3] - pl.card_box("a")[1] == pl.u(76)
+boxes = {k: bb for k, _t, bb in pl._button_boxes(pl.render("a"), pl.card_box("a")) if k}
+assert set(boxes) == {"back", "less", "more"} and boxes["back"][0] < boxes["less"][0] < boxes["more"][0], "left to right, as given"
+pic_boxes = pl._picture_boxes(pl.render("a"), pl.card_box("a")[0] + 100, (pl.card_box("a")[1] + pl.card_box("a")[3]) / 2)
+assert len(pic_boxes) == 2 and pic_boxes[0][1][2] < pic_boxes[1][1][0], "two pictures side by side"
+assert any(pl.canvas.type(i) == "image" for i in pl.canvas.find_all()), "the pictures are drawn"
+def over(key):
+    x0, y0, x1, y1 = boxes[key]; e = E(); e.x, e.y, e.state = int((x0 + x1) / 2), int((y0 + y1) / 2), 0; return e
+assert pl._press(over("more")) == "break" and pressed == [("a", "more")] and pl.sel == set() and pl._d is None, "a button is not a click on the card"
+pl._press(over("back")); pl._press(over("less")); assert pressed[-2:] == [("a", "back"), ("a", "less")]
+e = ev_card = E(); x0, y0, x1, y1 = pl.card_box("b"); e.x, e.y, e.state = int(x0 + 160), int((y0 + y1) / 2), 0
+pl._press(e); pl._release(e); assert pl.sel == {"b"} and len(pressed) == 3, "the rest of the card selects it"
+pl.pack_forget(); cl.pack(fill="both", expand=True); root.update()
+
 # the look: every tone and the dark theme draw without trouble
 ctk.set_appearance_mode("dark"); cl.apply_theme(); root.update(); assert cv.find_all()
 ctk.set_appearance_mode("light"); cl.apply_theme(); root.update()

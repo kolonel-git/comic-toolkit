@@ -116,6 +116,21 @@ def load_cover(path, source=SOURCES[0]):
         comic.close()
 
 
+def load_pair(path):
+    """(front, back) image bytes of one source in a single opening: a comic's first and last page, or an image (no back).
+    The back is None for an image, or for a comic with a single page."""
+    path = Path(path)
+    if path.suffix.lower() in IMG_EXT:
+        return path.read_bytes(), None
+    comic = Comic(path)
+    try:
+        front = comic.read(comic.pages[0])
+        back = comic.read(comic.pages[-1]) if len(comic.pages) > 1 else None
+        return front, back
+    finally:
+        comic.close()
+
+
 def find_sources(paths):
     """Comics and images from files and folders, folders searched including subfolders. Archive folders are skipped."""
     from comic_core import in_archive
@@ -158,6 +173,39 @@ def fit_card(img, size, o):
     return ImageOps.fit(img, (w, h), Image.LANCZOS)
 
 
+def sample_cover(size=(300, 450)):
+    """A made-up cover to show what a fit, a turn or a margin does when there is no real cover yet: a gradient with a
+    frame and a mark at the top, so cropping, stretching and turning are easy to see."""
+    w, h = size
+    img = Image.new("RGB", size, (60, 90, 200))
+    d = ImageDraw.Draw(img)
+    for y in range(h):
+        t = y / h
+        d.line([(0, y), (w, y)], fill=(round(60 + 170 * t), round(90 + 40 * t), round(200 - 120 * t)))
+    d.rectangle([w * 0.06, h * 0.04, w * 0.94, h * 0.96], outline=(255, 255, 255), width=max(2, w // 40))
+    d.rectangle([w * 0.18, h * 0.10, w * 0.82, h * 0.30], fill=(255, 214, 10))
+    d.ellipse([w * 0.30, h * 0.45, w * 0.70, h * 0.45 + w * 0.40], fill=(255, 79, 163))
+    return img
+
+
+def card_picture(cover, o, size=(112, 80), tpl=None):
+    """What one card would look like with these options, as a picture of `size`: the cover fitted into a card-shaped slot
+    on a pale sheet, with the margin as the gap round it. Used for the small pictures on the option cards."""
+    o = {**DEFAULT_OPTIONS, **o}
+    w, h = size
+    sheet = Image.new("RGB", size, (236, 232, 252))
+    slot_pt = (tpl.slots[0].w, tpl.slots[0].h) if tpl else (252.0, 180.0)
+    k = (w - 8) / slot_pt[0]                       # pixels per point, so the margin is drawn to scale
+    cw, ch = round(slot_pt[0] * k), round(slot_pt[1] * k)
+    inset = round(float(o["inset"] or 0) * k)
+    x0, y0 = (w - cw) // 2, (h - ch) // 2
+    ImageDraw.Draw(sheet).rectangle([x0, y0, x0 + cw, y0 + ch], fill=(255, 255, 255), outline=(17, 17, 17), width=1)
+    iw, ih = max(2, cw - 2 * inset), max(2, ch - 2 * inset)
+    sheet.paste(fit_card(cover, (iw, ih), o), (x0 + inset, y0 + inset))
+    ImageDraw.Draw(sheet).rectangle([x0, y0, x0 + cw, y0 + ch], outline=(17, 17, 17), width=1)
+    return sheet
+
+
 def parse_hex(text):
     """'#RRGGBB', 'RRGGBB' or '#RGB' as an (r, g, b) tuple, or None when it is not a colour."""
     m = re.fullmatch(r"#?([0-9a-fA-F]{6}|[0-9a-fA-F]{3})", (text or "").strip())
@@ -188,8 +236,23 @@ def outline_width(tpl, o):
     return w if w > 0 else tpl.line_width
 
 
-def compose_sheet(tpl, covers, o, dpi, outlines_in_image=False):
-    """One page as a picture. `covers` has one entry per slot: image bytes, a PIL image, or None for an empty slot."""
+def _dashed_rect(draw, box, rgb, width, dash=10, gap=6):
+    """A rectangle drawn as a dashed line (PIL has no dashes of its own)."""
+    x0, y0, x1, y1 = box
+    for ax, ay, bx, by in ((x0, y0, x1, y0), (x1, y0, x1, y1), (x1, y1, x0, y1), (x0, y1, x0, y0)):
+        length = math.hypot(bx - ax, by - ay)
+        t = 0.0
+        while t < length:
+            e = min(t + dash, length)
+            draw.line([(ax + (bx - ax) * t / length, ay + (by - ay) * t / length),
+                       (ax + (bx - ax) * e / length, ay + (by - ay) * e / length)], fill=rgb, width=width)
+            t += dash + gap
+
+
+def compose_sheet(tpl, covers, o, dpi, outlines_in_image=False, empty_style=None, marks=()):
+    """One page as a picture. `covers` has one entry per slot: image bytes, a PIL image, or None for an empty slot.
+    For the screen: `empty_style="dashed"` draws empty slots as dashed cards and `marks` is a set of slot numbers to
+    outline in a strong colour (the selected covers)."""
     o = {**DEFAULT_OPTIONS, **o}
     s = dpi / 72
     page = Image.new("RGB", (round(tpl.width * s), round(tpl.height * s)), (255, 255, 255))
@@ -204,11 +267,20 @@ def compose_sheet(tpl, covers, o, dpi, outlines_in_image=False):
         box = (round(x * s), round(y * s), max(1, round(w * s)), max(1, round(h * s)))
         img = cover if isinstance(cover, Image.Image) else decode(cover, max_side=max(box[2], box[3]) * 2)
         page.paste(fit_card(img, (box[2], box[3]), o), (box[0], box[1]))
-    if outlines_in_image:  # used for the on-screen preview; the PDF gets the template's own vector lines
+    if outlines_in_image or empty_style or marks:  # for the on-screen preview; the PDF gets the template's own vector lines
         d = ImageDraw.Draw(page)
         rgb, lw = outline_rgb(o), max(1, round(outline_width(tpl, o) * s))
-        for slot in tpl.slots:
-            d.rectangle([slot.x * s, slot.y * s, (slot.x + slot.w) * s, (slot.y + slot.h) * s], outline=rgb, width=lw)
+        for k, (slot, cover) in enumerate(zip(tpl.slots, covers)):
+            box = [slot.x * s, slot.y * s, (slot.x + slot.w) * s, (slot.y + slot.h) * s]
+            if cover is None and empty_style == "dashed":
+                _dashed_rect(d, box, (150, 150, 165), max(1, round(s * 0.8)), dash=max(4, round(s * 5)), gap=max(3, round(s * 3)))
+            elif outlines_in_image:
+                d.rectangle(box, outline=rgb, width=lw)
+        for k in marks:
+            if 0 <= k < len(tpl.slots):
+                slot = tpl.slots[k]
+                d.rectangle([slot.x * s, slot.y * s, (slot.x + slot.w) * s, (slot.y + slot.h) * s], outline=(31, 79, 255),
+                            width=max(3, round(s * 2.5)))
     return page
 
 
@@ -217,8 +289,22 @@ def sheet_count(n_cards, tpl):
 
 
 def expand(covers, copies):
-    """Each cover repeated `copies` times in a row (A A B B ...)."""
-    return [c for c in covers for _ in range(max(1, int(copies or 1)))]
+    """Each cover repeated `copies` times in a row (A A B B ...). `copies` is one number for every cover, or a list with a
+    number for each."""
+    counts = list(copies) if isinstance(copies, (list, tuple)) else [copies] * len(covers)
+    return [c for c, n in zip(covers, counts) for _ in range(max(1, min(50, int(n or 1))))]
+
+
+def card_owners(counts):
+    """For each card position, the number of the cover (0, 1, ...) that is printed there, when cover k is printed
+    `counts[k]` times in a row."""
+    return [k for k, n in enumerate(counts) for _ in range(max(1, min(50, int(n or 1))))]
+
+
+def empty_slots(n_cards, tpl):
+    """How many slots of the last sheet stay empty (0 when it is full or there are no cards)."""
+    per = len(tpl.slots)
+    return (-n_cards) % per if n_cards else 0
 
 
 def chunk(cards, tpl):

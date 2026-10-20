@@ -18,7 +18,7 @@ design. The status column below says what is built; [The tools](tools.md) descri
 | Library audit | agreed, built (two columns) |
 | Reading order | agreed, built (two columns, and the multi-drag list) |
 | Add to library | agreed |
-| ACEO sheets | agreed |
+| ACEO sheets | agreed, built (two columns) |
 | Renamer | agreed |
 | Future work (all tools) | agreed |
 | Links between tools | agreed |
@@ -28,7 +28,7 @@ design. The status column below says what is built; [The tools](tools.md) descri
 **Current:** left options panel plus main area on most pages; Bulk folder is the first page converted to the shell. Many options sit in one
 panel. Type uses about ten sizes (8 to 28 pt), Segoe UI plus Arial Black headings plus Consolas, and several accent colours.
 
-**Owner's decision (Session 60): two columns.** Every page except Library stats is laid out as **two resizable columns** under the header, with the footer below: what you choose (the folder, the list of comics) on the left, and what you can set and the review of what will happen on the right, which scrolls on its own. The divider between the columns is dragged to the width you like (and remembered), and every table column is resizable too. Library stats keeps the stack of segments. Bulk folder, Metadata, Library audit, CBR to CBZ, Single issue and Reading order are built this way; Folder icons, ACEO sheets, the Renamer and Add to library follow when their turn comes (they already have a main area and a draggable options panel, so for them it is mostly regrouping the options into titled blocks and putting the review and the run under them). The per-tool sections below still describe what each part holds; read "segment" as "block of a column" for every page except Library stats.
+**Owner's decision (Session 60): two columns.** Every page except Library stats is laid out as **two resizable columns** under the header, with the footer below: what you choose (the folder, the list of comics) on the left, and what you can set and the review of what will happen on the right, which scrolls on its own. The divider between the columns is dragged to the width you like (and remembered), and every table column is resizable too. Library stats keeps the stack of segments. Bulk folder, Metadata, Library audit, CBR to CBZ, Single issue, Reading order and ACEO sheets are built this way; Folder icons, ACEO sheets, the Renamer and Add to library follow when their turn comes (they already have a main area and a draggable options panel, so for them it is mostly regrouping the options into titled blocks and putting the review and the run under them). The per-tool sections below still describe what each part holds; read "segment" as "block of a column" for every page except Library stats.
 
 **Owner's decisions (the original segment design, still true for Library stats)**
 - Every tool is a stack of **collapsible segments**. A finished segment folds to a short summary of what it did or holds.
@@ -366,6 +366,8 @@ last sheet.
      - Print quality (150 / 300 / 600 dpi) and *Open the PDF when done* sit here, with a hint to print at 100% scale.
 - *Footer:* main action **Create PDF**; secondary: **Open PDF**, **Open folder**.
 - *Links:* empty state links to Bulk folder and Single issue to get covers.
+
+**As built (Session 66, step 9):** two columns. Left: **Covers**, a compact drop box and the card list (`CardList`, which learned to draw small pictures and buttons on a card: `images`, `image_on` and `buttons` in what `render` returns, `on_button`); each cover card has its front picture and, for a comic with more than one page, its back picture, a **Front / Back** switch, and a **− ×N +** stepper; the cover's pictures are made while it is read (the back at 360 px, the original of the last page only when the PDF or the full-screen view needs it). Right: **Preview and print** first (so it stays in view while you change the options) and **Cards** below it. The preview is a canvas: the sheet at print appearance with empty slots dashed (`compose_sheet(empty_style="dashed", marks=…)`), a quick low-resolution draw and the sharp one 180 ms later, ◀ ▶, **Full screen**, and a strip of every sheet (cached by what is on the sheet and the options). A click on a card selects its cover in the list; a drag onto another card swaps the two covers (they keep their own copies); holding the dragged card over a sheet in the strip switches to that sheet, so covers can be swapped across sheets. The option cards are `ChoiceCards` with a picture (`picture=(w, h)`, `set_picture`): `card_picture` draws one card with the cover fitted, turned, backed and inset the way that choice says. Differences from the plan: the global *Copies of each cover* option is gone (copies are per cover); there is no **Move to slot…** button (the owner removed *Move to position* from Reading order; the list's keys and buttons, and the swap, do the same job); *Image from each comic* is now "Covers you add next come from" under Advanced options, because each cover has its own switch; Preview and print is above Cards on the page.
 
 ## Renamer
 

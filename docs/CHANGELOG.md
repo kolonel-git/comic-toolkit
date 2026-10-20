@@ -12,6 +12,32 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-20 22:50 +11:00 · Session 66: ACEO sheets on the page shell (roadmap Phase 3, step 9)
+
+**Summary:** ACEO sheets is rebuilt as two resizable columns, one card per cover on the left and the sheet preview and the options on the right. It is the first of the remaining steps done in one run (ACEO, Folder icons, Renamer, Add to library, the links pass, packaging), each on its own branch stacked on the one before.
+
+**Decisions**
+- Followed the plan's ACEO section, with the Reading order list's gestures for the cover list (hold a card and drag, Ctrl and Shift, a box, Alt+arrows, Undo).
+- Copies are per cover (a stepper on each card), so the global *Copies of each cover* option is gone. The old *Image from each comic* option stays, as "Covers you add next come from" under Advanced options, because each cover now has its own **Front / Back** switch. Both pages of a comic are read when it is added, so the back is shown at once.
+- Preview and print sits above Cards on the right so the sheet stays in view while the options change; the plan listed it last.
+- No **Move to slot…** button: the owner removed *Move to position* from Reading order; the list's keys and the swap in the preview do the same job.
+
+**Changes by file**
+- `page_aceo.py`: rewritten on `SegmentPage`. Left: Covers (a compact drop box, one row of buttons, the cover cards, a hint and a status line). Right: Preview and print (a note on the empty slots, ◀ ▶ and Full screen, the sheet on a canvas, a strip of every sheet, print quality, *Open the PDF*) and Cards (pictures for the fit, the turning, the background and the margin; Advanced options for the outlines, any margin, which page new covers use, and the template). Footer: **Create PDF** (**Stop** while it works), **Open PDF** and **Open folder** after a save. A click on a card in the preview selects its cover in the list; dragging one card onto another swaps the covers, and holding the dragged card over a sheet in the strip goes to that sheet; the preview draws a quick low-resolution sheet and the sharp one 180 ms later.
+- `aceo_core.py`: `load_pair` (front and back in one opening), `expand` takes a number per cover, `card_owners`, `empty_slots`, `sample_cover`, `card_picture`, and `compose_sheet` can draw empty slots dashed and mark chosen slots.
+- `cardlist.py`: a card can carry small pictures (`images`, `image_on`) and buttons (`buttons`, `on_button`), and a list can have taller cards (`card_h`).
+- `flow_kit.py`: `ChoiceCards(picture=(w, h))` and `set_picture`; its pictures, like the others, are made for the window they are shown in (an image made for another window did not exist there, which broke two older tests that open a second app).
+- Tests: `test_aceo_ui.py` rewritten; `test_aceo_core.py` and `test_cardlist.py` extended; `test_layout.py` no longer treats ACEO as an options-panel page.
+- Docs: tools, plan (as built), roadmap, architecture, known limitations, manual tests (G1 to G1d, G4 and G6 reworded), tests README, HANDOFF.
+
+**Bugs found and fixed:** the first full run failed three tests: a layout check that still expected ACEO's old option headings, and two tests that open the whole app after another window (the preview pictures were bound to the first window). Both fixed.
+
+**Verification:** `ruff check --select F,E9 .` clean; `python tests/run_all.py` 36 of 36 passed. I rendered the page in the whole app (light and dark) and looked at the screenshots: the cover cards with their pictures and buttons, the preview, the strip, and the option pictures. Not checked: dragging with a real mouse, printing a sheet at 100% (manual test G3), and a very long list of covers.
+
+**Known issues:** see Known limitations (ACEO sheets: the preview is a picture).
+
+---
+
 ## 2026-10-20 01:45 +11:00 · Session 65: Reading order as cards (roadmap Phase 3, step 8b)
 
 **Summary:** The Reading order list is now a list of cards: each comic is one card that you hold and drag anywhere to move it. Ctrl+click and Shift+click select several, a dragged box selects the ones it touches, and dragging any selected card moves them all as one stacked card with a count. The first version of this step (a table with a drag grip and a *Move to position* box) was replaced after review; *Move to position* is gone.

@@ -12,7 +12,9 @@ for lists whose order matters: Reading order today, the ACEO cover list next.
   card, Ctrl+Z undoes a move (`move_selected`, `to_edge` and `undo` are methods for the page's buttons).
 
 `render(id)` returns what to draw: {"num", "title", "sub", "status", "tone" ("", "dim" or "bad"), "checked" (None for no tick
-box)}. The page owns what the ids mean; this list owns their order, the selection and the undo history, and calls
+box)}, and optionally "images" (a list of small PIL pictures drawn at the left of the card; "image_on" is the index of the one
+that is in use and gets a thick outline) and "buttons" (a list of (key, text) drawn at the right of the card; a key of None is
+a plain label, any other makes a small button that calls `on_button(id, key)`). The page owns what the ids mean; this list owns their order, the selection and the undo history, and calls
 `on_reorder()` after the order changed by a move or an undo.
 """
 from __future__ import annotations
@@ -23,6 +25,7 @@ import tkinter.font as tkfont
 import time
 
 import customtkinter as ctk
+from PIL import ImageTk
 
 import blocks
 from ui_kit import (ACCENT, BG, BORDER, DANGER, EDGE, FOCUS, FONT, HOVER, INK, MUTED, ON_ACCENT, PINK, RAISED, SCROLL,
@@ -39,13 +42,17 @@ WHEEL_PX = 60
 
 
 class CardList(ctk.CTkFrame):
-    def __init__(self, parent, render, on_reorder=None, on_tick=None, noun="item", empty="", busy=None, on_stack=None):
+    def __init__(self, parent, render, on_reorder=None, on_tick=None, noun="item", empty="", busy=None, on_stack=None,
+                 card_h=CARD_H, on_button=None):
         """`on_tick(id)` is called for a press on a card's tick box; `busy()` returns True while nothing may be moved;
         `on_stack(can_undo)` is told when undo becomes available or not; `noun` is the word after the count."""
         super().__init__(parent, fg_color=BG, border_color=BORDER, border_width=EDGE, corner_radius=0)
         self.render = render
         self.on_reorder = on_reorder
         self.on_tick = on_tick
+        self.on_button = on_button
+        self.card_h = card_h        # the height of a card in pixels at 96 dpi (a list with pictures wants taller cards)
+        self._photos = {}
         self.noun = noun
         self.empty = empty
         self.busy = busy or (lambda: False)
@@ -213,7 +220,7 @@ class CardList(ctk.CTkFrame):
 
     # ------------------------------------------------------------------ geometry
     def _pitch(self):
-        return self.u(CARD_H + GAP)
+        return self.u(self.card_h + GAP)
 
     def _content(self):
         return self.u(PAD) * 2 + len(self.order) * self._pitch() - self.u(GAP)
@@ -230,7 +237,7 @@ class CardList(ctk.CTkFrame):
             return None
         i = self.order.index(iid)
         y0 = self.u(PAD) + i * self._pitch() - self.offset
-        return self.u(6), y0, max(self.u(60), self.canvas.winfo_width() - self.u(10)), y0 + self.u(CARD_H)
+        return self.u(6), y0, max(self.u(60), self.canvas.winfo_width() - self.u(10)), y0 + self.u(self.card_h)
 
     def _hit(self, x, y):
         """(the index of the card at this point, True if the point is on the card itself and not in the gap beside it)."""
@@ -241,14 +248,14 @@ class CardList(ctk.CTkFrame):
         if i >= len(self.order):
             return None, False
         x0, _, x1, _ = self.card_box(self.order[i])
-        return int(i), (ay % self._pitch()) < self.u(CARD_H) and x0 <= x <= x1
+        return int(i), (ay % self._pitch()) < self.u(self.card_h) and x0 <= x <= x1
 
     def _boundary(self, y):
         """The gap in the list the pointer is at: 0 is above the first card, len(order) below the last."""
         ay = y + self.offset - self.u(PAD)
         if ay <= 0 or not self.order:
             return 0
-        return max(0, min(len(self.order), math.ceil((ay - self.u(CARD_H) / 2) / self._pitch())))
+        return max(0, min(len(self.order), math.ceil((ay - self.u(self.card_h) / 2) / self._pitch())))
 
     def _line_y(self, boundary):
         return self.u(PAD) + boundary * self._pitch() - self.u(GAP) // 2 - self.offset
@@ -272,7 +279,7 @@ class CardList(ctk.CTkFrame):
         if args[0] == "moveto":
             self.offset = int(float(args[1]) * total)
         elif args[0] == "scroll":
-            step = self._view_h() if args[2] == "pages" else self.u(CARD_H)
+            step = self._view_h() if args[2] == "pages" else self.u(self.card_h)
             self.offset += int(args[1]) * step
         self._clamp()
         self._schedule()
@@ -349,15 +356,31 @@ class CardList(ctk.CTkFrame):
             c.create_rectangle(x0 + u(2), y0 + u(2), x0 + u(8), y1 - u(2), fill=pick(PINK), outline="")
         cy = (y0 + y1) / 2
         text_color = pick(MUTED) if tone == "dim" else pick(TEXT)
+        left = x0 + u(16)
         if v.get("checked") is not None:
             t = u(20)
-            c.create_rectangle(x0 + u(16), cy - t / 2, x0 + u(16) + t, cy + t / 2, fill=pick(RAISED), outline=ink, width=u(2))
+            c.create_rectangle(left, cy - t / 2, left + t, cy + t / 2, fill=pick(RAISED), outline=ink, width=u(2))
             if v["checked"]:
-                c.create_text(x0 + u(16) + t / 2, cy, text="✓", fill=ink, font=(FONT, 13, "bold"))
-        bx = x0 + u(46)
-        c.create_rectangle(bx, cy - u(15), bx + u(40), cy + u(15), fill=pick(ACCENT), outline=ink, width=u(2))
-        c.create_text(bx + u(20), cy, text=self._fit(v.get("num", ""), self.f_num, u(36)), fill=ON_ACCENT, font=self.f_num)
-        tx0, tx1 = x0 + u(98), x1 - u(14)
+                c.create_text(left + t / 2, cy, text="✓", fill=ink, font=(FONT, 13, "bold"))
+            left += u(30)
+        c.create_rectangle(left, cy - u(15), left + u(40), cy + u(15), fill=pick(ACCENT), outline=ink, width=u(2))
+        c.create_text(left + u(20), cy, text=self._fit(v.get("num", ""), self.f_num, u(36)), fill=ON_ACCENT, font=self.f_num)
+        left += u(52)
+        for k, (img, box) in enumerate(self._picture_boxes(v, left, cy)):
+            c.create_image(box[0], box[1], image=self._photo(img, box[2] - box[0], box[3] - box[1]), anchor="nw")
+            on = v.get("image_on") == k
+            c.create_rectangle(box[0] - 1, box[1] - 1, box[2], box[3], outline=pick(FOCUS) if on else ink, width=u(3) if on else u(1))
+            left = box[2] + u(8)
+        tx0 = left + u(2)
+        tx1 = x1 - u(14)
+        for key, text, bb in self._button_boxes(v, (x0, y0, x1, y1)):
+            if key is None:
+                c.create_text((bb[0] + bb[2]) / 2, cy, text=text, fill=text_color, font=self.f_title)
+            else:
+                c.create_rectangle(bb[0] + u(2), bb[1] + u(2), bb[2] + u(2), bb[3] + u(2), fill=ink, outline=ink)
+                c.create_rectangle(*bb, fill=pick(RAISED), outline=ink, width=u(2))
+                c.create_text((bb[0] + bb[2]) / 2, cy, text=text, fill=pick(TEXT), font=self.f_num)
+            tx1 = min(tx1, bb[0] - u(10))
         status = self._fit(v.get("status", ""), self.f_sub, int((tx1 - tx0) * 0.42))
         sw = self.f_sub.measure(status) if status else 0
         sub = self._fit(v.get("sub", ""), self.f_sub, tx1 - tx0)
@@ -368,6 +391,41 @@ class CardList(ctk.CTkFrame):
             c.create_text(tx1, ty, text=status, anchor="e", font=self.f_sub, fill=pick(DANGER) if tone == "bad" else pick(MUTED))
         if sub:
             c.create_text(tx0, cy + u(11), text=sub, anchor="w", fill=pick(MUTED), font=self.f_sub)
+
+    def _picture_boxes(self, v, left, cy):
+        """[(picture, (x0, y0, x1, y1))] for the small pictures at the left of a card, each scaled to fit the card's height."""
+        out = []
+        h = self.u(self.card_h) - self.u(14)
+        for img in v.get("images") or []:
+            w = max(1, round(h * img.width / img.height))
+            out.append((img, (left, cy - h / 2, left + w, cy + h / 2)))
+            left += w + self.u(8)
+        return out
+
+    def _photo(self, img, w, h):
+        """A picture as the canvas wants it (kept, so it is made once)."""
+        key = (id(img), int(w), int(h))
+        photo = self._photos.get(key)
+        if photo is None:
+            if len(self._photos) > 400:
+                self._photos.clear()
+            photo = self._photos[key] = ImageTk.PhotoImage(img.resize((max(1, int(w)), max(1, int(h)))), master=self.canvas)
+            self._photo_owner = getattr(self, "_photo_owner", {})
+            self._photo_owner[key] = img   # (so the id() of a picture cannot be reused while its photo is kept)
+        return photo
+
+    def _button_boxes(self, v, box):
+        """[(key, text, (x0, y0, x1, y1))] for the buttons and labels at the right of a card, drawn right to left."""
+        u = self.u
+        x0, y0, x1, y1 = box
+        cy = (y0 + y1) / 2
+        out, right = [], x1 - u(14)
+        for key, text in reversed(v.get("buttons") or []):
+            w = max(u(26) if key else u(8), self.f_num.measure(text) + (u(16) if key else u(6)))
+            h = u(24) if key else u(20)
+            out.append((key, text, (right - w, cy - h / 2, right, cy + h / 2)))
+            right -= w + u(6)
+        return out[::-1]
 
     def _draw_overlay(self):
         """The line, the stacked card and the selection box: drawn over the cards, from the gesture in progress."""
@@ -424,7 +482,12 @@ class CardList(ctk.CTkFrame):
             self._d = {"kind": "box", "x0": e.x, "y0": e.y + self.offset, "x": e.x, "y": e.y, "base": base, "moved": False}
             return "break"
         iid = self.order[i]
-        x0, y0, _, y1 = self.card_box(iid)
+        x0, y0, x1, y1 = self.card_box(iid)
+        if self.on_button:
+            for key, _text, bb in self._button_boxes(self.render(iid), (x0, y0, x1, y1)):
+                if key and bb[0] <= e.x <= bb[2] and bb[1] <= e.y <= bb[3]:
+                    self.on_button(iid, key)
+                    return "break"
         t = self.u(20)
         if self.on_tick and v_checked(self.render(iid)) and x0 + self.u(10) <= e.x <= x0 + self.u(16) + t + self.u(6):
             self.on_tick(iid)
@@ -482,7 +545,7 @@ class CardList(ctk.CTkFrame):
         hit = []
         for i, iid in enumerate(self.order):
             cy0 = top + i * pitch
-            if cy0 + self.u(CARD_H) > y0 and cy0 < y1:
+            if cy0 + self.u(self.card_h) > y0 and cy0 < y1:
                 hit.append(iid)
         self._set_sel(set(d["base"]) | set(hit))
 

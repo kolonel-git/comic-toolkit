@@ -255,26 +255,31 @@ used to go wrong: `Batman 001 (Oct 2016)`, `Batman 001 (2016, DC)`, `Wolverine v
 
 Use 10 to 20 real comics (plus one loose cover image), the bundled `ACEO - Full Page BLANK.pdf`, and a printer or a PDF viewer with a ruler.
 
-- [ ] **G1. Adding and ordering.** Drop a folder of comics, then a loose `.jpg`, then add the same folder again. Reorder with ▲ ▼ Top Bottom (select several), remove one, and look at the Sheet · card column.
-  *Expect:* every comic gives one cover, a comic that can't be read is skipped with a message, repeated adds don't duplicate, the list numbering and sheet positions follow your order, and the preview changes with the sheets (◀ ▶).
+- [ ] **G1. Adding and ordering.** Drop a folder of comics, then a loose `.jpg`, then add the same folder again. Hold a cover and drag it to a new place, select several (Ctrl+click, Shift+click) and drag them, use ▲ ▼ Top Bottom, Alt+Up / Alt+Down and Undo, remove one, and look at the "Sheet · card" line on each cover.
+  *Expect:* every comic gives one cover, a comic that can't be read is skipped with a message, repeated adds don't duplicate, the numbers and sheet positions follow your order, and the preview changes with them.
   Result:
-- [ ] **G1b. Layout and full screen.** Look at the page at your usual window size, then press **Full screen** on the preview.
-  *Expect:* the whole file name and the Sheet · card column are readable in the list, the preview sits at the right edge and shows the complete sheet (nothing cut off), and **Full screen** fills the screen with a much larger sheet; ◀ ▶ and the Left/Right keys change sheet, Esc or **Close** returns. Tell me if anything is clipped at your screen scaling or on a second monitor.
+- [ ] **G1b. Layout and full screen.** Look at the page at your usual window size, drag the divider, then press **Full screen** on the preview.
+  *Expect:* the covers on the left with their pictures and buttons, the preview, the strip of sheets and the option pictures on the right (scrolling on their own); the whole sheet is shown with nothing cut off, and **Full screen** fills the screen with a much larger sheet (arrow keys change sheet, Esc closes).
   Result:
-- [ ] **G2. The PDF.** Press **Create PDF…** with the defaults and open the result.
+- [ ] **G1c. Copies, front and back.** On a few covers press **+** and **−**, and on a comic press **Front / Back**.
+  *Expect:* the count and the "Sheet · card" range change, the empty-slot note and the sheet count follow, the picture in use is outlined, and the preview and the PDF use that page. A loose image has no Front / Back switch.
+  Result:
+- [ ] **G1d. Swapping in the preview.** Click a card in the preview, then drag one card onto another, and hold a dragged card over another sheet in the strip before dropping it.
+  *Expect:* the click selects that cover in the list; the drop swaps the two covers (also across sheets); Undo puts them back; dropping on an empty slot does nothing.
+  Result:
+- [ ] **G2. The PDF.** Press **Create PDF** with the defaults and open the result.
   *Expect:* a Letter PDF with 8 cards per page in the template's slots, the covers filling their cards (turned so the top is on the left), outlines drawn, and the last page blank where covers ran out. Tell me if the cards sit in the wrong place, are cropped too much or look soft.
   Result:
 - [ ] **G3. Size on paper.** Print one sheet at 100% (no scaling to fit) and measure a card.
   *Expect:* each card is 3.5" × 2.5" (88.9 × 63.5 mm) and the outlines line up with where you will cut. Tell me if anything is off.
   Result:
-- [ ] **G4. Options.** Create PDFs with each **Fit the cover**, **Turn the cover** and **Behind the cover** choice, a margin of 6, outlines off, and 2 copies of each cover.
-  Also set **Behind the cover** to black with **Fit inside**, and try each **Outline colour** (automatic should give white lines on black), a custom `#FF8800` and a thickness of 2 or more; type a bad colour such as `#12`.
-  *Expect:* each option visibly does what it says, copies repeat each cover in a row, and the outlines can be switched off.
+- [ ] **G4. Options.** Click each picture under **Cards**: every fit, turning, background colour and margin; then under Advanced options turn the outlines off, try each **Outline colour** (automatic should give white lines on black), a custom `#FF8800` and a thickness of 2 or more, and type a bad colour such as `#12`.
+  *Expect:* each picture shows what its choice does on your first cover, the sheet preview and the PDF do the same, and a bad colour is called out and the automatic colour is used instead.
   Result:
 - [ ] **G5. Quality and size.** Create a Draft, Standard and High PDF of 3 sheets and compare them.
   *Expect:* Draft is small and acceptable on screen, Standard looks sharp in print, High is sharper but large (and slower); note the file sizes and times for me.
   Result:
-- [ ] **G6. Back covers and images.** Switch **Image from each comic** to the last page, and add loose cover images (jpg, png, webp).
+- [ ] **G6. Back covers and images.** Set **Covers you add next come from** (under Advanced options) to the last page and add comics, then use a cover's **Front / Back** switch, and add loose cover images (jpg, png, webp).
   *Expect:* the back pages or images appear on the cards instead.
   Result:
 - [ ] **G7. A different template.** Choose another PDF template (or one you edit), then **Use the bundled one**.

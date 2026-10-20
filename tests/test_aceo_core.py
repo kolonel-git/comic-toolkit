@@ -134,4 +134,39 @@ with tempfile.TemporaryDirectory() as d:
     p[NameObject("/Contents")] = w._add_object(st); two = d / "two.pdf"; w.write(open(two, "wb"))
     t2 = ac.read_template(two); print(t2.slots); assert len(t2.slots) == 2 and t2.slots[0].y == 400 - 20 - 160 and t2.slots[0].x == 20
     n2 = ac.render_pdf(t2, cards[:3], {"dpi": "Draft (150 dpi)"}, d / "two_out.pdf"); assert n2 == 2
+# ---- what the redone page needs: both pages of a comic, copies per cover, dashed empty slots, option pictures
+with tempfile.TemporaryDirectory() as dd:
+    dd = Path(dd)
+    z = dd / "Two.cbz"
+    with zipfile.ZipFile(z, "w") as f:
+        f.writestr("000.jpg", cover(top=(220, 30, 30))); f.writestr("001.jpg", cover(top=(30, 220, 30)))
+    one = dd / "One.cbz"
+    with zipfile.ZipFile(one, "w") as f: f.writestr("000.jpg", cover())
+    img = dd / "pic.jpg"; img.write_bytes(cover())
+    front, back = ac.load_pair(z)
+    assert front == ac.load_cover(z, ac.SOURCES[0]) and back == ac.load_cover(z, ac.SOURCES[1]) and front != back
+    assert ac.load_pair(one)[1] is None and ac.load_pair(img)[1] is None and ac.load_pair(img)[0] == img.read_bytes()
+assert ac.expand(["a", "b", "c"], [2, 1, 3]) == ["a", "a", "b", "c", "c", "c"] and ac.expand(["a", "b"], 2) == ["a", "a", "b", "b"]
+assert ac.expand(["a", "b"], [0, 99]) == ["a"] + ["b"] * 50, "at least one, at most fifty"
+assert ac.card_owners([2, 1, 3]) == [0, 0, 1, 2, 2, 2] and ac.card_owners([]) == []
+tpl8 = ac.read_template(ac.default_template())
+assert [ac.empty_slots(n, tpl8) for n in (0, 1, 7, 8, 9, 16)] == [0, 7, 1, 0, 7, 0]
+# an empty slot is drawn dashed on the screen, a chosen slot is marked, and neither touches the PDF's own picture
+cv = ac.decode(cover(), max_side=300)
+plain = ac.compose_sheet(tpl8, [cv] + [None] * 7, {}, 40)
+dashed = ac.compose_sheet(tpl8, [cv] + [None] * 7, {}, 40, empty_style="dashed")
+marked = ac.compose_sheet(tpl8, [cv] + [None] * 7, {}, 40, marks={0})
+assert plain.tobytes() != dashed.tobytes() and plain.tobytes() != marked.tobytes() and plain.size == dashed.size == marked.size
+s40 = 40 / 72; x, y = round((tpl8.slots[0].x + 3) * s40), round(tpl8.slots[0].y * s40)
+assert marked.getpixel((x, y + 2)) == (31, 79, 255) or marked.getpixel((x, y)) == (31, 79, 255) or any(marked.getpixel((x + i, y + j)) == (31, 79, 255) for i in range(-3, 4) for j in range(-3, 4))
+sl = tpl8.slots[3]
+rows = [[dashed.getpixel((round(sl.x * s40) + i, round(sl.y * s40) + dy)) for i in range(0, round(sl.w * s40))] for dy in (-1, 0, 1)]
+assert any(len(set(r)) > 1 for r in rows), "a dashed edge alternates ink and paper"
+# the pictures on the option cards: a made-up cover, and a card with the fit, the turn, the background and the margin in it
+sample = ac.sample_cover(); assert sample.size == (300, 450)
+pics = {f: ac.card_picture(sample, {"fit": f}, tpl=tpl8) for f in ac.FITS}
+assert all(p.size == (112, 80) for p in pics.values()) and len({p.tobytes() for p in pics.values()}) == 3, "each fit looks different"
+assert ac.card_picture(sample, {"rotate": ac.ROTATIONS[0]}).tobytes() != ac.card_picture(sample, {"rotate": ac.ROTATIONS[1]}).tobytes()
+assert ac.card_picture(sample, {"fit": ac.FITS[1], "background": "Black"}).tobytes() != ac.card_picture(sample, {"fit": ac.FITS[1]}).tobytes()
+assert ac.card_picture(sample, {"inset": 0}).tobytes() != ac.card_picture(sample, {"inset": 12}).tobytes()
 print("ACEO CORE OK")
