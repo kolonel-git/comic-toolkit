@@ -37,17 +37,21 @@ def wait():
 
 
 def names(): return [r.path.name for r in page.rows]
-def col(i): return [page.tree.item(r, "values")[i] for r in page.tree.get_children()]
+KEYS = {1: "num", 2: "title", 3: "new", 4: "arc", 5: "status"}   # the old column numbers, now what each card says
+def col(i): return [r.view[KEYS[i]] for r in page.rows]
 
 
 class E: pass
 
 
-def ev(iid, c="#3", state=0):
-    e = E(); x, y, w, h = page.tree.bbox(iid, c); e.x, e.y, e.state = x + 5, y + 5, state; return e
+def ev(iid, state=0, low=False, tick=False):
+    """A mouse event over a card; `low` is the lower half of the card (the drop line then goes below it)."""
+    cards = page.cards; x0, y0, x1, y1 = cards.card_box(iid)
+    e = E(); e.x, e.y, e.state = (x0 + cards.u(26) if tick else x0 + 200), (y0 + y1) // 2 + (cards.u(18) if low else -cards.u(18)), state
+    return e
 
 
-assert str(page.tree.cget("selectmode")) == "extended"
+cards = page.cards
 with tempfile.TemporaryDirectory() as d:
     d = Path(d); fs = []
     for i in range(1, 9):
@@ -56,40 +60,39 @@ with tempfile.TemporaryDirectory() as d:
     page.add_paths(fs); wait(); page.arc.set("Run"); root.update()
     ids = [r.iid for r in page.rows]
     # select issues 3..5 and move the block up twice, then once more at the top, then down once
-    page.tree.selection_set(ids[2:5]); page.shift(-1); page.shift(-1)
+    cards.select(ids[2:5]); page.shift(-1); page.shift(-1)
     print(names()); assert names()[:3] == ["Saga 03.cbz", "Saga 04.cbz", "Saga 05.cbz"] and col(1)[:3] == ["1", "2", "3"]
     page.shift(-1); assert names()[:3] == ["Saga 03.cbz", "Saga 04.cbz", "Saga 05.cbz"]       # at the top: stays
     page.shift(1); assert names()[:5] == ["Saga 01.cbz", "Saga 03.cbz", "Saga 04.cbz", "Saga 05.cbz", "Saga 02.cbz"]
-    assert page.tree.selection() == tuple(ids[2:5])                                         # selection survives
+    assert cards.sel == set(ids[2:5])                                                       # selection survives
     # drag the 3-row block down to the last row
     root.update()
-    kids = page.tree.get_children()
+    kids = cards.order
     first = page.rows[1].iid
-    assert page._press(ev(first)) == "break"                    # keeps the multi-selection for dragging
-    page._motion(ev(kids[-1])); page._release(None)
+    assert cards._press(ev(first)) == "break" and cards.sel == set(ids[2:5])   # pressing a selected card keeps the selection
+    cards._motion(ev(first, low=True)); cards._motion(ev(kids[-1], low=True)); cards._release(ev(kids[-1], low=True))
     print(names()); assert names() == ["Saga 01.cbz", "Saga 02.cbz", "Saga 06.cbz", "Saga 07.cbz", "Saga 08.cbz", "Saga 03.cbz", "Saga 04.cbz", "Saga 05.cbz"]
-    assert col(1) == [str(i) for i in range(1, 9)] and len(page.tree.selection()) == 3
-    # a plain click (no movement) on one of the selected rows selects only it
-    sel_row = page.rows[6].iid
-    page._press(ev(sel_row)); page._release(None); assert page.tree.selection() == (sel_row,)
-    # Ctrl+click is left to the default selection handling and starts no drag
-    assert page._press(ev(page.rows[0].iid, state=4)) is None and page._drag is None
-    # a drag started from an unselected row moves just that row
-    page.tree.selection_set(page.rows[5].iid)
-    start = page.rows[0].iid; assert page._press(ev(start)) is None
-    page._motion(ev(page.rows[2].iid)); page._release(None)
+    assert col(1) == [str(i) for i in range(1, 9)] and len(cards.sel) == 3
+    # Ctrl+click adds a card to the selection and Shift+click a range
+    n0 = len(cards.sel); cards._press(ev(page.rows[0].iid, state=4)); cards._release(ev(page.rows[0].iid)); assert len(cards.sel) == n0 + 1
+    cards._press(ev(page.rows[0].iid)); cards._release(ev(page.rows[0].iid))
+    cards._press(ev(page.rows[2].iid, state=1)); cards._release(ev(page.rows[2].iid)); assert cards.sel == {r.iid for r in page.rows[:3]}
+    # a drag started on an unselected card moves just that card
+    cards.select([page.rows[5].iid])
+    start = page.rows[0].iid; assert cards._press(ev(start)) == "break" and cards.sel == {start}
+    cards._motion(ev(start, low=True)); cards._motion(ev(page.rows[2].iid, low=True)); cards._release(ev(page.rows[2].iid, low=True))
     print(names()); assert names()[2] == "Saga 01.cbz" and names()[0] == "Saga 02.cbz"
     # tick box applies to the whole selection
-    sel = [page.rows[1].iid, page.rows[2].iid, page.rows[3].iid]; page.tree.selection_set(sel)
-    assert page._press(ev(sel[0], "#1")) == "break" and [r.checked for r in page.rows[1:4]] == [False] * 3 and page.rows[0].checked
-    page._press(ev(sel[1], "#1")); assert all(r.checked for r in page.rows[1:4])
-    page.tree.selection_set([page.rows[0].iid]); page._press(ev(sel[1], "#1"))
+    sel = [page.rows[1].iid, page.rows[2].iid, page.rows[3].iid]; cards.select(sel)
+    assert cards._press(ev(sel[0], tick=True)) == "break" and [r.checked for r in page.rows[1:4]] == [False] * 3 and page.rows[0].checked
+    cards._press(ev(sel[1], tick=True)); assert all(r.checked for r in page.rows[1:4])
+    cards.select([page.rows[0].iid]); cards._press(ev(sel[1], tick=True))
     assert [r.checked for r in page.rows[:4]] == [True, True, False, True]  # row not in the selection: only that one
-    page._press(ev(sel[1], "#1"))
+    cards._press(ev(sel[1], tick=True))
     # remove a block
-    n = len(page.rows); page.tree.selection_set([page.rows[2].iid, page.rows[3].iid, page.rows[4].iid]); page.remove()
-    assert len(page.rows) == n - 3 and len(page.tree.get_children()) == n - 3 and len(page.by_iid) == n - 3
-    assert page.tree.selection() and col(1) == [str(i) for i in range(1, n - 2)]
+    n = len(page.rows); cards.select([page.rows[2].iid, page.rows[3].iid, page.rows[4].iid]); page.remove()
+    assert len(page.rows) == n - 3 and len(cards.order) == n - 3 and len(page.by_iid) == n - 3
+    assert cards.sel and col(1) == [str(i) for i in range(1, n - 2)]
 
     # ---- preview
     assert page.btn_preview.cget("state") == "normal"

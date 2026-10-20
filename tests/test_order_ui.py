@@ -26,7 +26,8 @@ def wait():
 
 
 def names(): return [r.path.name for r in page.rows]
-def col(i): return [page.tree.item(r, "values")[i] for r in page.tree.get_children()]
+KEYS = {1: "num", 2: "title", 3: "new", 4: "arc", 5: "status"}   # the old column numbers, now what each card says
+def col(i): return [r.view[KEYS[i]] for r in page.rows]
 
 
 with tempfile.TemporaryDirectory() as d:
@@ -54,29 +55,29 @@ with tempfile.TemporaryDirectory() as d:
     assert page.btn_apply.cget("state") == "normal"
 
     # shuffle: move Robin 01 to the top using select + up x3
-    page.tree.selection_set(page.rows[3].iid)
+    page.cards.select([page.rows[3].iid])
     for _ in range(3): page.shift(-1)
     assert names()[0] == "Robin 01.cbz" and col(2)[0] == "Robin 01.cbz"
     # drag: simulate press on row 4's file column, motion to row 0, release
-    tree = page.tree
-    kids = tree.get_children()
-    def ev(iid, col_id="#3"):
+    cards = page.cards
+    def ev(iid, dy=0, tick=False):
         class E: pass
-        e = E(); x, y, w, h = tree.bbox(iid, col_id); e.x, e.y = x + 5, y + 5; e.state = 0; return e
+        x0, y0, x1, y1 = cards.card_box(iid)
+        e = E(); e.x, e.y = (x0 + cards.u(26) if tick else x0 + 200), (y0 + y1) // 2 + dy; e.state = 0; return e
     root.update()
-    src = kids[4]; tgt = kids[1]
-    assert page._press(ev(src)) is None
-    page._motion(ev(tgt)); page._release(None)
+    src = cards.order[4]; tgt = cards.order[1]
+    assert cards._press(ev(src)) == "break"                      # a card is picked up anywhere
+    cards._motion(ev(src, cards.u(10))); cards._motion(ev(tgt, -cards.u(18))); cards._release(ev(tgt, -cards.u(18)))
     print("after drag:", names())
     assert names()[1] == page.by_iid[src].path.name
     # suggest order restores series/issue order
     page.suggest(); print("suggested:", names())
     assert names() == ["Batman 01.cbz", "Batman 02.cbz", "Batman 03.cbz", "Legacy 01.cbr", "Robin 01.cbz", "Robin 02.cbz"], names()
     # untick Robin 02 (keeps its place in numbering)
-    iid = page.rows[5].iid; page._press(ev(iid, "#1")); assert page.rows[5].checked is False and col(5)[5] == "Skipped" and col(1)[5] == "6"
-    page._press(ev(iid, "#1")); assert page.rows[5].checked
+    iid = page.rows[5].iid; cards._press(ev(iid, tick=True)); assert page.rows[5].checked is False and col(5)[5] == "Skipped" and col(1)[5] == "6"
+    cards._press(ev(iid, tick=True)); assert page.rows[5].checked
     # remove the cbr
-    page.tree.selection_set(page.rows[3].iid); page.remove(); assert len(page.rows) == 5 and names()[3] == "Robin 01.cbz"
+    page.cards.select([page.rows[3].iid]); page.remove(); assert len(page.rows) == 5 and names()[3] == "Robin 01.cbz"
     # --- write in place with prefix
     page.vars["prefix"].set(ro.PREFIX_DASH); root.update()
     print(col(3))
@@ -95,7 +96,7 @@ with tempfile.TemporaryDirectory() as d:
     # --- rows follow the files; re-plan -> No change
     page._replan(); assert set(col(5)) == {"No change"}, col(5)
     # --- reorder + renumber: prefixes replaced not stacked
-    page.tree.selection_set(page.rows[2].iid)
+    page.cards.select([page.rows[2].iid])
     for _ in range(2): page.shift(-1)
     page.apply(); wait()
     print(names())
@@ -107,6 +108,7 @@ with tempfile.TemporaryDirectory() as d:
     s = [cbz(d / "Src" / f"Saga {i}.cbz") for i in (1, 2)]
     page.add_paths(s); wait()
     page.arc.set("Saga Run"); page.vars["prefix"].set(ro.PREFIX_BRACKET); page.vars["copy"].set(True)
+    page.vars["mark_copies"].set("Never")   # (the marking itself is tested in test_order_page.py)
     filedialog.askdirectory = lambda **k: str(d / "Out")
     before = [p.read_bytes() for p in s]
     page.apply(); wait()

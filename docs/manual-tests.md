@@ -194,6 +194,29 @@ Use copies of real issues from at least two series (6 to 10 files) plus one `.cb
   *Expect:* readable, no clipping of the Status column, drag stays smooth, the side panel scrolls to every option.
   Result:
 
+- [ ] **E10. The page layout.** Open Reading order, add a folder, drag the divider, and make the window narrow and wide.
+  *Expect:* the drop box and the list on the left, Stamp and Review on the right (scrolling on their own); the footer reads **Stamp N comics** with **Preview changes** and **Mark as reading order** beside it; nothing is cut off that you cannot reach.
+  Result:
+- [ ] **E11. Marking.** Stamp copies into a new folder. In the question that follows try *Not now*, then *Mark it*, then *Always mark new ones*; afterwards open Library stats.
+  *Expect:* a marked folder is left out of the stats and the duplicate check, **Open a reading order ▾** lists it and adds its comics, and the Advanced setting shows *Always mark it* after the last choice.
+  Result:
+- [ ] **E12. Mark as reading order.** Open one folder that holds an existing reading order (for example `01 - Name` copies) and press **Mark as reading order**.
+  *Expect:* a question naming the folder; after *Yes* the folder is marked (Library stats lists it under Reading orders).
+  Result:
+
+- [ ] **E13. Dragging cards.** Add 20 or more issues. Hold one card and drag it to a new place; then select five (Ctrl+click, Shift+click, or drag a box from the space between or under the cards) and drag any one of them.
+  *Expect:* a single card moves as it is; five collapse into one stacked card with "5 issues" that follows the pointer, a thick line shows where they will land, the list scrolls when you hold the pointer near its top or bottom edge, and on release they arrive together in their old order and flash. Escape during the drag puts nothing in motion. A click on one of several selected cards selects just that card.
+  Result:
+- [ ] **E14. Keys and buttons.** With cards selected, try ▲ ▼ Top Bottom, Alt+Up, Alt+Down, the arrow keys with and without Shift, Home, End, Ctrl+A, Space on a card, then **Undo** and Ctrl+Z several times.
+  *Expect:* the block moves as one and keeps its order; the arrow keys move and extend the selection; Space ticks the card; each Undo takes back one move, and the button is greyed when there is nothing to take back or after issues are added or removed.
+  Result:
+- [ ] **E15. Suggest order.** Open **Suggest order ▾** and try each of the four ways, then Undo.
+  *Expect:* the list is sorted as the entry says (publication date uses ComicInfo year, month and day, then the year in the name; issues without one go last), and the status line says how.
+  Result:
+- [ ] **E16. Look.** Drag in light and dark mode and with a narrow left column.
+  *Expect:* the card, the line and the tint are visible in both modes and the cards are not cramped in a narrow window. Tell me what feels wrong.
+  Result:
+
 ## F. Renamer: cards, formats and messy folders
 
 Make a deliberately messy folder of copies: single issues, TPBs, hardcovers, omnibuses, compendiums, a `.cbr`, a `.pdf`, an `.epub`, `scan0001.cbz`, names written in

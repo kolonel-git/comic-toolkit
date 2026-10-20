@@ -87,4 +87,23 @@ with tempfile.TemporaryDirectory() as d:
     pw = ro.plan_item(src, {}, 2, 5, ao); at.apply_metadata(src, pw["writes"], False)
     assert ro.current_arc(read_comicinfo(src), ro.ALTERNATE) == ("Court of Owls", "2")
     ci = read_comicinfo(src); assert ci["alternate_count"] == "5" and ci["alternate_number"] == "2"
+# --- other ways of suggesting an order
+names = ["Saga 10 (2013).cbz", "Saga 02 (2012).cbz", "Batman 05 (2016).cbz", "Batman 01 (2016).cbz", "Zed.cbz"]
+by_issue = [n for n in sorted(names, key=lambda n: ro.issue_key(Path(n)))]
+assert by_issue[:2] == ["Batman 01 (2016).cbz", "Saga 02 (2012).cbz"] and by_issue[-1] == "Zed.cbz", by_issue
+assert sorted(names, key=lambda n: ro.name_key(Path(n))) == ["Batman 01 (2016).cbz", "Batman 05 (2016).cbz", "Saga 02 (2012).cbz", "Saga 10 (2013).cbz", "Zed.cbz"]
+assert sorted(["Saga 10.cbz", "Saga 9.cbz", "Saga 100.cbz"], key=lambda n: ro.name_key(Path(n))) == ["Saga 9.cbz", "Saga 10.cbz", "Saga 100.cbz"], "numbers compare as numbers"
+# publication date: ComicInfo year, month and day win over the file name; no date goes last
+cis = {"Saga 10 (2013).cbz": {}, "Saga 02 (2012).cbz": {}, "Batman 05 (2016).cbz": {"year": "2011", "month": "9"},
+       "Batman 01 (2016).cbz": {"year": "2011", "month": "2", "day": "20"}, "Zed.cbz": {}}
+by_date = sorted(names, key=lambda n: ro.date_key(Path(n), cis[n]))
+assert by_date == ["Batman 01 (2016).cbz", "Batman 05 (2016).cbz", "Saga 02 (2012).cbz", "Saga 10 (2013).cbz", "Zed.cbz"], by_date
+assert ro.date_key(Path("A 01 (2014).cbz"), None) < ro.date_key(Path("Zed.cbz"), {})
+# ComicInfo month and day are read for the publication-date order
+with tempfile.TemporaryDirectory() as td:
+    z = Path(td) / "Dated 01.cbz"
+    with zipfile.ZipFile(z, "w") as f:
+        f.writestr("0.jpg", b"x"); f.writestr("ComicInfo.xml", "<ComicInfo><Series>Dated</Series><Year>2020</Year><Month>3</Month><Day>14</Day></ComicInfo>")
+    ci = read_comicinfo(z); assert (ci["year"], ci["month"], ci["day"]) == ("2020", "3", "14")
+    assert ro.date_key(z, ci)[:4] == (False, 2020.0, 3.0, 14.0)
 print("ORDER CORE OK")

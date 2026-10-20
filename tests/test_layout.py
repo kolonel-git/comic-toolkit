@@ -45,9 +45,9 @@ sg.pack_forget()
 # every options panel is grouped under headings, always starting with the source or main subject and ending with the output
 def headings(pg): return pg.form.headings
 EXPECT = {IconsPage: ["Cover", "Output"],
-          OrderPage: ["Reading order", "Filenames and sorting", "Output"], AceoPage: ["Template", "Covers", "Cards", "Output"]}
+          AceoPage: ["Template", "Covers", "Cards", "Output"]}
 for pg in pages:
-    if type(pg) in EXPECT:  # (Bulk folder, Metadata, Library audit, CBR to CBZ and Single issue are segment pages, tested in their own page tests)
+    if type(pg) in EXPECT:  # (Bulk folder, Metadata, Library audit, CBR to CBZ, Single issue and Reading order are segment pages, tested in their own page tests)
         assert headings(pg) == EXPECT[type(pg)], (type(pg).__name__, headings(pg))
 
 # the options panel can be dragged wider and narrower, within limits, and the width is saved
@@ -98,7 +98,7 @@ assert tb2["x"].winfo_x() < tb2["y"].winfo_x(), "right-anchored rows keep the vi
 od = pages[7]; root.update()
 xs = {k: b.winfo_rootx() for k, b in od.tools.items()}
 assert xs["top"] < xs["up"] < xs["down"] < xs["bottom"]
-assert xs["up"] - xs["top"] < 80 and xs["remove"] - xs["bottom"] > xs["bottom"] - xs["down"], "dividers separate groups"
+assert xs["up"] - xs["top"] < 80 and xs["undo"] - xs["bottom"] > xs["bottom"] - xs["down"], "dividers separate groups"
 
 with tempfile.TemporaryDirectory() as d:
     d = Path(d)

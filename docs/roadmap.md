@@ -30,7 +30,7 @@ Backup `.bak` safety fix, metadata extensions, shared library scan, Library audi
 Library stats, Renamer revamp (cards and a template per type), ACEO sheets, Add to library, page picker, shared library folder,
 recent folders, keyboard layer and Ctrl+K search, and the neo-brutalist UI. Details are in [The tools](tools.md) and the
 [Changelog](CHANGELOG.md). From the revamp below: the shared page shell, Bulk folder, Library stats and the Metadata repair editor (two columns) and the Library audit are built.
-**Where we are:** Phases 0, 1 and 2 are finished and tagged (`v0.8.0`, `v0.9.0`). Phase 3 is under way: Single issue (page and picker) is done; Folder icons, Reading order and ACEO sheets follow.
+**Where we are:** Phases 0, 1 and 2 are finished and tagged (`v0.8.0`, `v0.9.0`). Phase 3 is under way: Single issue and Reading order are done; ACEO sheets (which reuses the multi-drag list) is next, and Folder icons waits for the folder-shape art.
 
 ## Build order: the UI revamp
 
@@ -58,8 +58,8 @@ Every page becomes a Header, two resizable columns and a Footer (Library stats k
 **Phase 3: standalone tools** (`v0.10.0`)
 6. Single issue, in two branches. **6a, the page on the shell: done** (two columns; a strip of the first 3 and last 2 pages with a Browse all tile; Save cover or Extract N pages in the footer; one selection shared with the picker window). **6b, the page picker: done** (a visible *Numbering* switch in place of *Reorder…*, a line of gestures and a legend for the orange outline).
 7. Folder icons (needs the folder-shape template art first).
-8. Reading order (builds the multi-drag list).
-9. ACEO sheets (reuses the multi-drag list; new preview).
+8. Reading order, in two branches. **8a, the page on the shell: done** (two columns; Stamp and Review on the right; the footer says Stamp N comics; the folder of copies can be marked as a reading order, shared with Library stats and the audit). **8b, the card list: done** (`cardlist.py`: each comic is a card you hold and drag; Ctrl and Shift select; a drag box; a stacked card with a count, a drop line, scrolling near the edges, Alt+↑ / Alt+↓, Undo and Ctrl+Z; *Suggest order* by series, date, issue number or file name). ACEO reuses it.
+9. ACEO sheets (reuses the card list, `cardlist.py`; new preview).
 
 **Phase 4: the heavy ones** (`v0.11.0`)
 10. Renamer: type prompts, suggestions, saved rules.
