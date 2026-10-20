@@ -262,7 +262,8 @@ def read_comicinfo(path):
     if volume and valid_year(volume):
         volume, year = None, year or volume
     return {"series": get("Series") or None, "volume": volume,
-            "issue": get("Number") or None, "year": year, "title": get("Title") or None,
+            "issue": get("Number") or None, "year": year, "month": pos_int("Month"), "day": pos_int("Day"),
+            "title": get("Title") or None,
             "count": pos_int("Count"), "publisher": get("Publisher") or None,
             "series_group": get("SeriesGroup") or None, "genre": get("Genre") or None,
             "alternate_series": get("AlternateSeries") or None, "alternate_number": get("AlternateNumber") or None,

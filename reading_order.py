@@ -82,6 +82,33 @@ def suggest_key(path):
             num(f.get("year")) or 0, issue is None, issue or 0, natural_key(Path(path).name))
 
 
+def _num(v):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def issue_key(path):
+    """Sort key: issue number first (anything without one goes last), then series and name."""
+    f = parse_filename(Path(path).stem)
+    issue = _num(f.get("issue"))
+    return (issue is None, issue or 0, (f.get("series") or "").lower(), natural_key(Path(path).name))
+
+
+def name_key(path):
+    """Sort key: the file name, with numbers in it compared as numbers."""
+    return natural_key(Path(path).name)
+
+
+def date_key(path, ci):
+    """Sort key: publication date from ComicInfo.xml (year, month, day), else the year in the file name; issues with no
+    date at all go last, in the usual series order."""
+    ci = ci or {}
+    year = _num(ci.get("year")) or _num(parse_filename(Path(path).stem).get("year"))
+    return (year is None, year or 0, _num(ci.get("month")) or 0, _num(ci.get("day")) or 0, suggest_key(path))
+
+
 def plan_item(path, ci, n, total, o, why_not=None):
     """What would happen to one issue at position `n`. `o` holds name, store, numbering, group, prefix.
     Returns {'writes', 'new_name', 'status', 'blocked'}."""
@@ -145,38 +172,8 @@ def folder_name(arc):
 
 
 # ---------- moving several issues at once ----------
-
-def move_block(order, selected, delta):
-    """Shift every selected item one place up (delta -1) or down (+1), keeping their order relative to each
-    other. Items already at the edge stay put, and the rest of the block still moves."""
-    sel, out = set(selected), list(order)
-    for i in (range(len(out)) if delta < 0 else range(len(out) - 1, -1, -1)):
-        j = i + delta
-        if out[i] in sel and 0 <= j < len(out) and out[j] not in sel:
-            out[i], out[j] = out[j], out[i]
-    return out
-
-
-def send_to_edge(order, selected, top):
-    """Move the selected items, as one block in their current order, to the very top (or bottom)."""
-    sel = set(selected)
-    items = [i for i in order if i in sel]
-    rest = [i for i in order if i not in sel]
-    return items + rest if top else rest + items
-
-
-def drop_block(order, selected, target):
-    """Move the selected items, as one block in their current order, to where `target` is: after it when
-    dragging down, before it when dragging up. Dropping on a selected item changes nothing."""
-    sel = set(selected)
-    if target in sel or target not in order:
-        return list(order)
-    items = [i for i in order if i in sel]
-    if not items:
-        return list(order)
-    rest = [i for i in order if i not in sel]
-    at = rest.index(target) + (1 if order.index(target) > order.index(items[0]) else 0)
-    return rest[:at] + items + rest[at:]
+# (the maths lives in blocks.py so other lists can use it; these names stay for the callers and tests that use them here)
+from blocks import drop_block, move_block, send_to_edge  # noqa: E402,F401
 
 
 # ---------- preview ----------

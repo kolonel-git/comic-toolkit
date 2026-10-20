@@ -23,15 +23,15 @@ with tempfile.TemporaryDirectory() as d:
     names = lambda: [r.path.name[5:7] for r in page.rows]
     ids = [r.iid for r in page.rows]
     assert page.tools["top"].cget("state") == "normal" and page.tools["bottom"].cget("state") == "normal"
-    page.tree.selection_set(ids[4]); page.to_edge(True); assert names() == list("51234678".replace("5", "5")) or True
+    page.cards.select([ids[4]]); page.to_edge(True); assert names() == list("51234678".replace("5", "5")) or True
     print(names()); assert names() == ["05", "01", "02", "03", "04", "06", "07", "08"]
-    page.tree.selection_set([ids[1], ids[6]]); page.to_edge(False)
+    page.cards.select([ids[1], ids[6]]); page.to_edge(False)
     print(names()); assert names() == ["05", "01", "03", "04", "06", "08", "02", "07"]
-    page.tree.selection_set([ids[2], ids[3], ids[7]]); page.to_edge(True)
+    page.cards.select([ids[2], ids[3], ids[7]]); page.to_edge(True)
     print(names()); assert names() == ["03", "04", "08", "05", "01", "06", "02", "07"]
-    assert page.tree.selection() == tuple(ids[i] for i in (2, 3, 7)) or set(page.tree.selection()) == {ids[2], ids[3], ids[7]}
-    assert [page.tree.item(i, "values")[1] for i in page.tree.get_children()] == [str(i) for i in range(1, 9)]
-    page.tree.selection_set(()); page.to_edge(True); assert names()[0] == "03"        # nothing selected: no-op
+    assert page.cards.sel == {ids[2], ids[3], ids[7]}
+    assert [r.view["num"] for r in page.rows] == [str(i) for i in range(1, 9)]
+    page.cards.select([]); page.to_edge(True); assert names()[0] == "03"        # nothing selected: no-op
     page.clear(); assert page.tools["top"].cget("state") == "disabled" and page.tools["bottom"].cget("state") == "disabled"
 root.destroy()
 print("EDGE OK")

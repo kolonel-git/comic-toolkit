@@ -98,7 +98,7 @@ assert tb2["x"].winfo_x() < tb2["y"].winfo_x(), "right-anchored rows keep the vi
 od = pages[7]; root.update()
 xs = {k: b.winfo_rootx() for k, b in od.tools.items()}
 assert xs["top"] < xs["up"] < xs["down"] < xs["bottom"]
-assert xs["up"] - xs["top"] < 80 and xs["remove"] - xs["bottom"] > xs["bottom"] - xs["down"], "dividers separate groups"
+assert xs["up"] - xs["top"] < 80 and xs["undo"] - xs["bottom"] > xs["bottom"] - xs["down"], "dividers separate groups"
 
 with tempfile.TemporaryDirectory() as d:
     d = Path(d)

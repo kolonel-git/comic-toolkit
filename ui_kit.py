@@ -823,24 +823,105 @@ def toolbar(parent, *groups, side="left"):
     return out
 
 
+class FlowRow(ctk.CTkFrame):
+    """A row of widgets that wraps onto more rows when the room is too narrow, so nothing is cut off. `add(widget)` puts the
+    next one in; `add(divider, divider=True)` is a rule between groups, which is never left at the start or end of a line."""
+
+    def __init__(self, parent, gap=6):
+        super().__init__(parent, fg_color="transparent")
+        self.items = []     # (widget, is_divider)
+        self.gap = gap
+        self._width = 0
+        self._pending = None
+        self.bind("<Configure>", self._configured)
+
+    def add(self, widget, divider=False):
+        self.items.append((widget, divider))
+        self._schedule()
+
+    def _configured(self, e):
+        if e.width != self._width:
+            self._width = e.width
+            self._schedule()
+
+    def _schedule(self):
+        if self._pending is None:
+            self._pending = self.after_idle(self.layout)
+
+    def layout(self):
+        self._pending = None
+        self.update_idletasks()   # (the buttons settle on their real size first)
+        scale = self._get_widget_scaling()
+        gap = max(1, round(self.gap * scale))
+        room = self._width if self._width > 40 else 10 ** 6   # not laid out yet: one row
+        lines, line, used = [], [], 0
+        for w, div in self.items:
+            need = w.winfo_reqwidth() + gap
+            if line and used + need > room:
+                lines.append(line)
+                line, used = [], 0
+            line.append((w, div))
+            used += need
+        if line:
+            lines.append(line)
+        shown = set()
+        y = 0
+        for line in lines:
+            while line and line[0][1]:    # no rule at the start of a line
+                line = line[1:]
+            while line and line[-1][1]:   # nor at the end
+                line = line[:-1]
+            if not line:
+                continue
+            x, tall = 0, max(w.winfo_reqheight() for w, _ in line)
+            for w, _ in line:
+                k = scale if hasattr(w, "_apply_widget_scaling") else 1   # (customtkinter widgets scale what they are placed at)
+                w.place(x=x / k, y=(y + (tall - w.winfo_reqheight()) // 2) / k)   # one by one: wrapped rows must not share columns
+                shown.add(w)
+                x += w.winfo_reqwidth() + gap
+            y += tall + gap
+        for w, _ in self.items:
+            if w not in shown:
+                w.place_forget()
+        self.configure(height=max(1, (y - gap) / scale))
+
+
 class DropZone(Shadow):
     """The 'add your comics' box. With on_folder / on_files it also carries an Add folder and a Choose comics button,
     so every page offers both in the same place."""
 
     def __init__(self, parent, prompt, on_click, on_folder=None, on_files=None,
-                 folder_text="Add folder…", files_text="Choose comics…", files_first=False):
+                 folder_text="Add folder…", files_text="Choose comics…", files_first=False, compact=False):
+        """`compact`: a slim box for pages whose list needs the room: the prompt in one line and every button (the app adds
+        Library folder and Recent, a page may add its own with `add_extra`) in one wrapping row."""
         pair = [("folder", folder_text, on_folder), ("files", files_text, on_files)]
         buttons = [(k, t, None, c) for k, t, c in (pair[::-1] if files_first else pair) if c]
         super().__init__(parent, lambda p: ctk.CTkFrame(
             p, fg_color=WELL, border_color=BORDER, border_width=EDGE, corner_radius=0,
             height=104 if buttons else 88), depth=5)
         box = self.inner
-        box.pack_propagate(False)
+        self.compact = compact
+        if not compact:
+            box.pack_propagate(False)
         self._row = None
         self.prompt = prompt
-        self.label = ctk.CTkLabel(box, text=prompt, font=(FONT, 14, "bold"), text_color=MUTED)
         self.buttons = {}
-        if buttons:
+        if compact:
+            self.label = ctk.CTkLabel(box, text=prompt, font=(FONT, 12, "bold"), text_color=MUTED, anchor="w")
+            self.label.pack(fill="x", padx=12, pady=(8, 4))
+            self.flow = FlowRow(box)
+            self.flow.pack(fill="x", padx=10, pady=(0, 2))
+            self._row = self.flow
+            for k, t, _w, c in buttons:
+                self.buttons[k] = tool_button(self.flow, t, c, None)
+                self.flow.add(self.buttons[k])
+            if self.buttons:
+                next(iter(self.buttons.values())).configure(fg_color=ACCENT, text_color=ON_ACCENT, hover_color=ACCENT_HOVER)
+        else:
+            self.label = ctk.CTkLabel(box, text=prompt, font=(FONT, 14, "bold"), text_color=MUTED)
+        if compact:
+            pass
+        elif buttons:
             row = ctk.CTkFrame(box, fg_color="transparent")
             row.pack(side="bottom", pady=(0, 12))
             self._row = row
@@ -858,16 +939,20 @@ class DropZone(Shadow):
     def set(self, text=None):
         self.label.configure(text=text or self.prompt, text_color=TEXT if text else MUTED)
 
+    def add_extra(self, key, text, command, width=None):
+        """A button of the page's own at the end of a compact box's row (not counted among `buttons`)."""
+        if not self.compact:
+            return None
+        self.extra = getattr(self, "extra", {})
+        self.extra[key] = tool_button(self.flow, text, command, width)
+        self.flow.add(self.extra[key])
+        return self.extra[key]
+
     def add_shortcuts(self, on_library, get_recent, on_open):
         """Two quick ways in on a line under Add folder: *Library folder* (the folder Library stats scans) and *Recent*, a menu of the folders
         used lately. get_recent() returns folder paths; on_open(path) uses one."""
         if self._row is None:
             return
-        row = ctk.CTkFrame(self.inner, fg_color="transparent")  # a second, smaller line under the main buttons
-        row.pack(side="bottom", pady=(0, 8), before=self._row)
-        self.inner.configure(height=140)
-        self.buttons["library"] = tool_button(row, "Library folder", on_library, 116)
-        self.buttons["library"].pack(side="left", padx=(0, 6))
 
         def show_recent():
             def where(p):  # the folder's parent, shortened from the left so the list stays narrow
@@ -875,6 +960,22 @@ class DropZone(Shadow):
                 return text if len(text) <= 42 else "…" + text[-41:]
             items = [(f"{Path(p).name}    {where(p)}", lambda p=p: on_open(p)) for p in get_recent()]
             popup_menu(self.buttons["recent"], items or [("No recent folders yet", None)])
+        if self.compact:   # in the one row, before the page's own buttons
+            self.buttons["library"] = tool_button(self.flow, "Library folder", on_library, 116)
+            self.buttons["recent"] = tool_button(self.flow, "Recent ▾", show_recent, 88)
+            mine = list(getattr(self, "extra", {}).values())
+            for w in mine:
+                self.flow.items = [it for it in self.flow.items if it[0] is not w]
+            self.flow.add(self.buttons["library"])
+            self.flow.add(self.buttons["recent"])
+            for w in mine:
+                self.flow.add(w)
+            return
+        row = ctk.CTkFrame(self.inner, fg_color="transparent")  # a second, smaller line under the main buttons
+        row.pack(side="bottom", pady=(0, 8), before=self._row)
+        self.inner.configure(height=140)
+        self.buttons["library"] = tool_button(row, "Library folder", on_library, 116)
+        self.buttons["library"].pack(side="left", padx=(0, 6))
         self.buttons["recent"] = tool_button(row, "Recent ▾", show_recent, 88)
         self.buttons["recent"].pack(side="left")
 

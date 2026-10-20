@@ -12,6 +12,37 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-20 01:45 +11:00 · Session 65: Reading order as cards (roadmap Phase 3, step 8b)
+
+**Summary:** The Reading order list is now a list of cards: each comic is one card that you hold and drag anywhere to move it. Ctrl+click and Shift+click select several, a dragged box selects the ones it touches, and dragging any selected card moves them all as one stacked card with a count. The first version of this step (a table with a drag grip and a *Move to position* box) was replaced after review; *Move to position* is gone.
+
+**Decisions (owner)**
+- Remove *Move to position* completely.
+- Treat each comic as a single card, picked up and dragged by holding it; select several with Shift and Ctrl.
+
+**Decisions**
+- The cards are drawn on a canvas (only the ones in view), so a long reading order stays quick, and the widget is reusable: ACEO (step 9) will use it. The table, its grip column and `draglist.py` are gone.
+- A card says: a tick box, a number badge, the file name, a muted line with the new name and the arc it is in now, and a status. Cards with nothing to add under their name centre it.
+- The half of a card the pointer is in decides whether the cards land before or after it; a thick line shows the gap.
+- *Suggest order* became a menu with four ways: series, volume, year and issue number (as before), publication date, issue number, file name. `read_comicinfo` now also returns the month and day.
+
+**Changes by file**
+- `cardlist.py` (new): `CardList(parent, render, on_reorder, on_tick, noun, empty, busy, on_stack)`: the cards, selection (click, Ctrl, Shift, box, arrow keys, Home, End, Ctrl+A), dragging with the stacked card, the drop line, scrolling near the edges and a tint on the cards that moved, Alt+Up / Alt+Down, Space to tick, Escape, Ctrl+Z, `move_selected`, `to_edge`, `undo` (50 moves, forgotten when cards are added or removed).
+- `blocks.py` (new, no UI): `move_block`, `send_to_edge`, `drop_block` (moved from `reading_order.py`, which re-exports them) and `insert_block`.
+- `reading_order.py`: `issue_key`, `name_key`, `date_key`. `rename_core.py`: `month` and `day` in `read_comicinfo`.
+- `ui_kit.py`: `FlowRow` (a row of widgets that wraps only when it is too narrow; a rule is never left at the start or end of a line) and `DropZone(compact=True)` with `add_extra`, a slim box whose buttons share one wrapping row.
+- `page_order.py`: the Order block holds the cards, the toolbar (*Suggest order ▾*, ▲ ▼ Top Bottom, *Undo*, *Remove*, *Clear*, all in one row), the hint and a status line that shows only while it has something to say; the drop box is compact and carries *Open a reading order ▾*; "N issues · K to write" moved into the block's summary, so the list gets about three more cards at the default window size; each row keeps what its card says in `view`. The hint and status are packed first, so a short window clips the list, not the text.
+- Tests: `test_cardlist.py` (new, the maths and the widget); `test_flowrow.py` (new); `test_order_page.py`, `test_order_ui.py`, `test_order_multi.py`, `test_edge.py`, `test_order.py` and `test_layout.py` moved to the cards.
+- Docs: tools, the reading order page, plan (as built), roadmap, architecture, known limitations, manual tests (E13 to E16), tests README, HANDOFF.
+
+**Bugs found and fixed:** a click on an already selected single card did not move the Shift anchor; the new tests caught it. The first wrapping toolbar used grid columns, which are shared between rows, so wrapped buttons spread apart and the last one was clipped; it now places each button itself (and customtkinter scales the place coordinates, which the first attempt forgot). Three mistakes in my own tests (a drag threshold, a stale history, a hard-coded card size).
+
+**Verification:** `ruff check --select F,E9 .` clean; `python tests/run_all.py` 36 of 36 passed. I rendered the page with sample data in light and dark mode, and inside the whole app at the default 1200 x 780 window, and looked at the screenshots (cards, the selection, the stacked drag card with "3 issues", the wrapping toolbar and drop box); the layout fixes they showed (clipped hint text, a card with no second line, buttons spread by shared grid columns, a clipped last button) are in. Not checked: dragging with a real mouse (the tests send synthetic events), scrolling a very long list by hand, and a narrow window (manual tests E13 to E16).
+
+**Known issues:** see Known limitations (Reading order: undo covers moves only; a box does not scroll the list; cards are not read by a screen reader).
+
+---
+
 ## 2026-10-19 19:00 +11:00 · Session 64: Reading order on the page shell (roadmap Phase 3, step 8a)
 
 **Summary:** Reading order is rebuilt as two resizable columns, like the other revamped pages, with a Stamp block, a Review block and a footer that stamps. Folders of copies can be marked as reading orders from the page. The multi-drag list itself is step 8b.

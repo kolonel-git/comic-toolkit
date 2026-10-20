@@ -2,6 +2,7 @@
 ComicInfo.xml (and optionally in the filenames, or in a new folder of copies). On the shared page shell in two columns with a
 divider you can drag. Left: Comics (adding issues) and Order (the list). Right, scrolling on its own: Stamp (how the order is
 recorded) and Review (what will happen, then the run)."""
+import itertools
 import queue
 import threading
 from dataclasses import dataclass
@@ -13,11 +14,12 @@ import customtkinter as ctk
 import reading_order as ro
 from archive_tools import BACKUP, REPLACE
 from comic_core import COMIC_EXT, find_comics, natural_key
+from cardlist import CardList
 from flow_kit import Advanced, SegmentPage, labelled
 from reading_orders import ReadingOrders
 from rename_core import read_comicinfo
-from ui_kit import (BG, BORDER, HEAD, MUTED, PANEL, TEXT, TYPE_BODY, TYPE_HINT, DropZone, Toggle, apply_tree_theme,
-                    build_tree, button, entry, menu, popup_menu, switch_style, textbox, tool_button, toolbar, tooltip)
+from ui_kit import (BG, BORDER, HEAD, MUTED, PANEL, TEXT, TYPE_BODY, TYPE_HINT, DropZone, FlowRow, Toggle, button, divider,
+                    entry, menu, popup_menu, switch_style, textbox, tool_button, tooltip)
 
 ASK, ALWAYS, NEVER = "Ask me", "Always mark it", "Never"
 MARKS = [ASK, ALWAYS, NEVER]
@@ -37,6 +39,7 @@ class Row:
     plan: dict = None
     note: str = ""  # result of the last write ("Copied", ...), cleared when anything changes
     iid: str = ""
+    view: dict = None  # what the card says: num, title, new, arc, status, sub, tone, checked
 
 
 def _load(q, paths):
@@ -71,9 +74,9 @@ class OrderPage(SegmentPage):
     def __init__(self, parent):
         super().__init__(parent)
         self.rows, self.by_iid = [], {}
+        self._ids = itertools.count(1)
         self.q = None
         self.busy = None  # 'load' | 'write'
-        self._drag, self._moved = None, False
         self.arc, self.group = ctk.StringVar(), ctk.StringVar()
         self._orders = ReadingOrders()   # the folders marked as reading orders (the app shares one list between tools)
         self.last_dest = None            # the folder the last run of copies went to
@@ -81,47 +84,45 @@ class OrderPage(SegmentPage):
         self.dest_dir = None
 
         # ---- Comics
-        self.make_panes(right_width=500, lo=380)
+        self.make_panes(right_width=460, lo=360)
         self.s1 = self.add_block("Comics", side="left")
-        self.drop = DropZone(self.s1.body, "Drop comics or folders here, or add them below", self.add_files,
-                             self.add_folder, self.add_files)
+        self.drop = DropZone(self.s1.body, "Drop comics or folders here", self.add_files, self.add_folder, self.add_files,
+                             compact=True)
         self.drop.pack(fill="x", padx=(0, 6))
-        known = ctk.CTkFrame(self.s1.body, fg_color="transparent")
-        known.pack(fill="x", pady=(10, 0))
-        self.btn_known = tool_button(known, "Open a reading order ▾", self._show_known, 170)
-        self.btn_known.pack(side="left")
-        self.known_note = ctk.CTkLabel(known, text="", font=TYPE_HINT, text_color=MUTED, anchor="w")
-        self.known_note.pack(side="left", padx=(10, 0))
+        self.btn_known = self.drop.add_extra("known", "Open a reading order ▾", self._show_known, 170)
 
         # ---- Order
         self.s2 = self.add_block("Order", side="left", grow=True)
         body = self.s2.body
-        self.meta = ctk.CTkLabel(body, text="", font=TYPE_BODY, text_color=TEXT, anchor="w")
-        self.meta.pack(fill="x", pady=(0, 6))
-        bar = ctk.CTkFrame(body, fg_color="transparent")
-        bar.pack(fill="x", pady=(0, 8))
-        self.tools = toolbar(
-            bar, [("suggest", "Suggest order", 104, self.suggest)],
-            [("top", "Top", 48, lambda: self.to_edge(True)), ("up", "▲", 34, lambda: self.shift(-1)),
-             ("down", "▼", 34, lambda: self.shift(1)), ("bottom", "Bottom", 64, lambda: self.to_edge(False))],
-            [("remove", "Remove", 72, self.remove), ("clear", "Clear", 60, self.clear)])
-        for key, tip in (("up", "Move the selected rows up"), ("down", "Move the selected rows down")):
+        self.meta = ctk.CTkLabel(body, text="", font=TYPE_BODY, text_color=TEXT, anchor="w")   # (kept up to date, not shown: the block's summary says it)
+        bar = FlowRow(body)
+        bar.pack(fill="x", pady=(0, 2))
+        self.tools = {}
+        groups = [[("suggest", "Suggest order ▾", 112, self._show_suggest)],
+                  [("top", "Top", 44, lambda: self.to_edge(True)), ("up", "▲", 30, lambda: self.shift(-1)),
+                   ("down", "▼", 30, lambda: self.shift(1)), ("bottom", "Bottom", 58, lambda: self.to_edge(False))],
+                  [("undo", "Undo", 50, lambda: self.undo())],
+                  [("remove", "Remove", 64, self.remove), ("clear", "Clear", 52, self.clear)]]
+        for g, group in enumerate(groups):
+            if g:
+                bar.add(divider(bar), divider=True)
+            for key, text, width, cmd in group:
+                self.tools[key] = tool_button(bar, text, cmd, width)
+                bar.add(self.tools[key])
+        for key, tip in (("up", "Move the selected cards up (Alt+Up)"), ("down", "Move the selected cards down (Alt+Down)"),
+                         ("undo", "Take back the last move (Ctrl+Z)")):
             tooltip(self.tools[key], tip)
-        wrap, self.tree = build_tree(body, [
-            ("sel", "", 36, False), ("num", "#", 44, False), ("file", "File", 200, True),
-            ("new", "New name", 160, True), ("current", "Current arc", 100, False), ("status", "Status", 150, False)],
-            selectmode="extended")
-        wrap.pack(fill="both", expand=True, padx=(0, 6))
-        wrap.set_empty("Add a folder above, then put the issues in reading order.")
-        self.tree.bind("<Button-1>", self._press)
-        self.tree.bind("<B1-Motion>", self._motion)
-        self.tree.bind("<ButtonRelease-1>", self._release)
-        self.status = ctk.CTkLabel(body, text="", font=TYPE_BODY, text_color=MUTED, anchor="w", justify="left", wraplength=560)
-        self.status.pack(fill="x", pady=(6, 0))
-        self.hint = ctk.CTkLabel(body, text="Select several rows (Ctrl or Shift) and drag them, or use ▲ ▼, to move them together. "
-                                 "Untick a row to leave it alone (it keeps its place in the numbering).", font=TYPE_HINT,
+        self.hint = ctk.CTkLabel(body, text="Hold a card and drag it. Ctrl or Shift selects several, or drag a box; they move together. "
+                                 "Alt+Up / Alt+Down move them, Ctrl+Z undoes. Untick a card to skip it (it keeps its number).", font=TYPE_HINT,
                                  text_color=MUTED, anchor="w", justify="left", wraplength=560)
-        self.hint.pack(fill="x", pady=(2, 0))
+        self.hint.pack(side="bottom", fill="x", pady=(2, 0))
+        self.status = ctk.CTkLabel(body, text="", font=TYPE_BODY, text_color=MUTED, anchor="w", justify="left", wraplength=560)
+        self.cards = CardList(body, self._render, on_reorder=self._moved, on_tick=self._tick, noun="issue",
+                              empty="Add a folder above, then put the issues in reading order.",
+                              busy=lambda: bool(self.busy), on_stack=lambda _: self._buttons())
+        self.cards.pack(fill="both", expand=True, padx=(0, 6))
+        body.bind("<Configure>", lambda e: [w.configure(wraplength=max(200, int(e.width / self._get_widget_scaling()) - 20))
+                                            for w in (self.hint, self.status)], add="+")
 
         # ---- Stamp
         v = self.vars
@@ -211,8 +212,15 @@ class OrderPage(SegmentPage):
         self._fill_known()
 
     def _fill_known(self):
-        n = len(self._orders)
-        self.known_note.configure(text="" if n else "None marked yet.")
+        """(The menu reads the list when it is opened, so there is nothing to refresh.)"""
+
+    def say(self, msg, err=False):
+        """The status line takes room from the list, so it shows only while it has something to say."""
+        super().say(msg, err)
+        if msg:
+            self.status.pack(side="bottom", fill="x", pady=(4, 0), after=self.hint)
+        else:
+            self.status.pack_forget()
 
     def _show_known(self):
         items = [(f"{Path(f).name}    {Path(f).parent}", lambda f=f: self.add_paths([Path(f)])) for f in self._orders.folders]
@@ -221,7 +229,7 @@ class OrderPage(SegmentPage):
     # --- theme ---
     def apply_theme(self):
         super().apply_theme()
-        apply_tree_theme(self.tree)
+        self.cards.apply_theme()
 
     def _toggle_rows(self):
         copy = self.vars["copy"].get()
@@ -271,11 +279,15 @@ class OrderPage(SegmentPage):
                 kind = msg[0]
                 if kind == "row":
                     row = msg[1]
-                    row.iid = self.tree.insert("", "end", values=("", "", row.path.name, "", "", ""))
+                    row.iid = f"r{next(self._ids)}"
+                    row.view = {"num": "", "title": row.path.name, "new": "", "arc": "", "status": "", "sub": "", "tone": "",
+                                "checked": None}
+                    self.cards.append([row.iid])
                     self.rows.append(row)
                     self.by_iid[row.iid] = row
                 elif kind == "loaded":
                     self.busy = self.q = None
+                    self.cards.forget()
                     self._replan()
                     return
                 elif kind == "start":
@@ -295,114 +307,82 @@ class OrderPage(SegmentPage):
 
     # --- ordering ---
     def _sync(self):
-        self.rows = [self.by_iid[i] for i in self.tree.get_children()]
+        self.rows = [self.by_iid[i] for i in self.cards.order]
 
-    def suggest(self):
+    SUGGESTIONS = [("series", "Series, volume, year, issue number"), ("date", "Publication date"),
+                   ("issue", "Issue number"), ("name", "File name")]
+
+    def _show_suggest(self):
+        popup_menu(self.tools["suggest"], [(label, lambda k=key: self.suggest(k)) for key, label in self.SUGGESTIONS])
+
+    def suggest(self, kind="series"):
+        """Sort the list: by series, volume, year and issue number (the default), by publication date, by issue number or by
+        file name. It can be undone."""
         if self.busy or not self.rows:
             return
-        for row in sorted(self.rows, key=lambda r: ro.suggest_key(r.path)):
-            self.tree.move(row.iid, "", "end")
-        self._sync()
-        self._replan()
-        self.say("Sorted by series, volume, year and issue number.")
+        keys = {"series": lambda r: ro.suggest_key(r.path), "date": lambda r: ro.date_key(r.path, r.ci),
+                "issue": lambda r: ro.issue_key(r.path), "name": lambda r: ro.name_key(r.path)}
+        label = dict(self.SUGGESTIONS)[kind]
+        done = self.cards.apply([r.iid for r in sorted(self.rows, key=keys[kind])], flash=[])
+        self.say(f"Sorted by {label.lower()}." if done else f"Already in that order ({label.lower()}).")
 
-    def _reorder(self, order):
-        """Put the table rows in `order` (a list of iids) and refresh numbers."""
-        for i, iid in enumerate(order):
-            self.tree.move(iid, "", i)
+    def _moved(self):
+        """The cards were put in a new order (by dragging, the keys, the buttons or Undo): number them again."""
         self._sync()
         self._replan()
 
     def shift(self, delta):
-        """Move every selected row one place up or down, together."""
-        sel = self.tree.selection()
-        if self.busy or not sel:
-            return
-        order = list(self.tree.get_children())
-        new = ro.move_block(order, sel, delta)
-        if new != order:
-            self._reorder(new)
-        self.tree.see(sel[0] if delta < 0 else sel[-1])
+        """Move every selected card one place up or down, together."""
+        self.cards.move_selected(delta)
 
     def to_edge(self, top):
-        """Send every selected row to the very top (or bottom), keeping their order."""
-        sel = self.tree.selection()
-        if self.busy or not sel:
-            return
-        order = list(self.tree.get_children())
-        new = ro.send_to_edge(order, sel, top)
-        if new != order:
-            self._reorder(new)
-        self.tree.see(sel[0] if top else sel[-1])
+        """Send every selected card to the very top (or bottom), keeping their order."""
+        self.cards.to_edge(top)
+
+    def undo(self):
+        if self.cards.undo():
+            self.say("Took back the last move.")
+
+    def _tick(self, iid):
+        """A press on a tick box: every selected card follows the one clicked."""
+        sel = self.cards.sel
+        rows = [self.by_iid[i] for i in self.cards.selected()] if iid in sel and len(sel) > 1 else [self.by_iid[iid]]
+        value = not self.by_iid[iid].checked
+        for r in rows:
+            r.checked = value
+        self._replan()
+
+    def _render(self, iid):
+        row = self.by_iid.get(iid)
+        return row.view if row and row.view else {"title": str(iid)}
+
+    def _buttons(self):
+        n = len(self.rows)
+        busy = bool(self.busy)
+        for key in ("clear", "remove", "up", "down", "top", "bottom", "suggest"):
+            self.tools[key].configure(state="normal" if n and not busy else "disabled")
+        self.tools["undo"].configure(state="normal" if self.cards.can_undo and not busy else "disabled")
 
     def remove(self):
-        sel = self.tree.selection()
+        sel = self.cards.selected()
         if self.busy or not sel:
             return
-        i = min(self.tree.index(s) for s in sel)
-        for s in sel:
-            self.by_iid.pop(s, None)
-        self.tree.delete(*sel)
+        i = min(self.cards.order.index(x) for x in sel)
+        for x in sel:
+            self.by_iid.pop(x, None)
+        self.cards.remove(sel)
         self._sync()
-        kids = self.tree.get_children()
-        if kids:
-            self.tree.selection_set(kids[min(i, len(kids) - 1)])
+        if self.cards.order:
+            self.cards.select([self.cards.order[min(i, len(self.cards.order) - 1)]])
         self._replan()
 
     def clear(self):
         if self.busy:
             return
-        self.tree.delete(*self.tree.get_children())
+        self.cards.clear()
         self.rows, self.by_iid = [], {}
         self.say("")
         self._replan()
-
-    # mouse: tick box in column 1; elsewhere click / Ctrl+click / Shift+click select, and dragging moves
-    # the whole selection as a block
-    def _press(self, e):
-        self._drag, self._moved = None, False
-        iid = self.tree.identify_row(e.y)
-        if self.tree.identify_region(e.x, e.y) != "cell" or not iid:
-            return None
-        if self.tree.identify_column(e.x) == "#1":
-            sel = self.tree.selection()
-            rows = [self.by_iid[i] for i in sel] if iid in sel and len(sel) > 1 else [self.by_iid[iid]]
-            value = not self.by_iid[iid].checked  # every ticked row follows the one clicked
-            for r in rows:
-                r.checked = value
-            self._replan()
-            return "break"
-        if e.state & 0x5:  # Shift or Ctrl: normal selection, no drag
-            return None
-        self._drag = iid
-        if iid in self.tree.selection() and len(self.tree.selection()) > 1:
-            return "break"  # keep the multi-selection so it can be dragged
-        return None
-
-    def _motion(self, e):
-        if not self._drag or self.busy:
-            return
-        target = self.tree.identify_row(e.y)
-        if not target:
-            return
-        sel = self.tree.selection()
-        sel = sel if self._drag in sel else (self._drag,)
-        order = list(self.tree.get_children())
-        new = ro.drop_block(order, sel, target)
-        if new != order:
-            self._moved = True
-            for i, iid in enumerate(new):
-                self.tree.move(iid, "", i)
-
-    def _release(self, _):
-        if not self._drag:
-            return
-        drag, self._drag = self._drag, None
-        if self._moved:
-            self._sync()
-            self._replan()
-        elif len(self.tree.selection()) > 1 and drag in self.tree.selection():
-            self.tree.selection_set(drag)  # a plain click on one of several selected rows selects just it
 
     # --- plan and table ---
     def _plan_options(self):
@@ -423,17 +403,17 @@ class OrderPage(SegmentPage):
             else:
                 status, new_name = row.note or "", ""
             blocked = bool(row.why_not)
-            self.tree.item(row.iid, values=(
-                "☑" if row.checked and not blocked else "☐", ro.number_text(k, total, o["numbering"]),
-                row.path.name, new_name, old, status),
-                tags=("bad",) if blocked or row.note == "Failed" else ("dim",) if status in ("No change", "Skipped") else ())
+            tone = "bad" if blocked or row.note == "Failed" else "dim" if status in ("No change", "Skipped") else ""
+            sub = "  ·  ".join(x for x in ((f"→ {new_name}" if new_name else ""), (f"now in “{old}”" if old else "")) if x)
+            row.view = {"num": ro.number_text(k, total, o["numbering"]), "title": row.path.name, "new": new_name, "arc": old,
+                        "status": status, "sub": sub, "tone": tone, "checked": bool(row.checked and not blocked)}
+        self.cards.refresh()
         ready = self._todo()
         n = len(self.rows)
         self.meta.configure(text=(f"{_plural(n, 'issue')} · {len(ready)} to write" if o["name"] else
                                   f"{_plural(n, 'issue')} · enter a reading order name") if n
                             else "Add issues to begin")
-        for key in ("clear", "remove", "up", "down", "top", "bottom", "suggest"):
-            self.tools[key].configure(state="normal" if n and not self.busy else "disabled")
+        self._buttons()
         self._sync_view(o, ready)
 
     def _sync_view(self, o, ready):
@@ -442,7 +422,8 @@ class OrderPage(SegmentPage):
         folders = len({r.path.parent for r in self.rows})
         self.s1.set_summary(f"{_plural(n, 'issue')} from {_plural(folders, 'folder')}" if n else "")
         custom = [r.path for r in self.rows] != sorted((r.path for r in self.rows), key=ro.suggest_key)
-        self.s2.set_summary(f"{_plural(n, 'issue')} · {'custom order' if custom else 'suggested order'}" if n else "")
+        todo = f" · {len(ready)} to write" if o["name"] else " · enter a name"
+        self.s2.set_summary(f"{_plural(n, 'issue')} · {'custom order' if custom else 'suggested order'}{todo}" if n else "")
         self.s3.set_summary(f"{o['store']} · numbers {o['numbering']}" if o["name"] else "")
         self.s1.set_state("done" if n else "active")
         self.s2.set_state("active" if n else "locked")

@@ -14,11 +14,16 @@ The page is two columns with a divider you can drag. On the left, **Comics** (ad
 
 1. **Add issues:** drop comics or folders on the page (or anywhere on the window while the page is open), click the drop area to pick files,
    or use **Add folder…** (the app adds *Library folder* and *Recent* under it). **Open a reading order ▾** lists the folders you marked as reading orders and adds the comics of the one you choose. Folders are searched including subfolders, and issues can come from several folders. Duplicates and non-comics are ignored.
-2. **Order them:** select one row, or several with Ctrl+click and Shift+click, then drag them (they move as one block, keeping their order) or
-   use ▲ ▼ to move the whole selection one place at a time, or **Top** and **Bottom** to send it to the very start or end of the list
-   (the rows keep their order among themselves). A block already at the top or bottom stays put. **Suggest order** sorts by series,
-   volume, year and issue number (the filename parser; anything unparseable goes last). Untick a row to leave that issue alone; it keeps its
-   place in the numbering. Clicking a tick box while several rows are selected ticks or unticks all of them. **Remove** takes out every selected row.
+2. **Order them:** each comic is a card. Hold a card and drag it to move it. Click a card to select it, Ctrl+click to add or remove one, Shift+click to select
+   a range, or drag a box from the space between or under the cards to select the ones it touches; then drag any selected card and they all move. They
+   collapse into one stacked card with a count ("5 issues") that follows the pointer, a thick line shows where they will land, the list scrolls itself when
+   you hold the pointer near its top or bottom edge, and on release the cards arrive together, in the order they had, and flash for a moment. Escape during
+   a drag cancels it. Moving is never drag-only: ▲ ▼ move the selection one place at a time (so do **Alt+Up** and **Alt+Down**), **Top** and **Bottom** send it
+   to the very start or end, the arrow keys, Home and End move the selection, Ctrl+A selects every card, and Space ticks the card. **Undo** (or **Ctrl+Z**)
+   takes back the last moves, one at a time. **Suggest order ▾** sorts by series, volume, year and issue number (the filename parser; anything unparseable
+   goes last), by publication date (ComicInfo year, month and day, else the year in the file name; undated issues last), by issue number, or by file name
+   (numbers compare as numbers). Untick a card to leave that issue alone; it keeps its place in the numbering. Clicking a tick box while several cards are
+   selected ticks or unticks all of them. **Remove** takes out every selected card.
 3. **Name the order** (for example "Court of Owls") and choose how to record it. The table shows each issue's arc number, its new filename when
    prefixing is on, the arc it already has, and a status (*Add*, *Update*, *Replaces “old arc”*, *No change*, *Skipped*).
 4. **Review** (on the right) says in plain words how many comics will be stamped, how many are already correct, unticked or cannot be stamped, and what happens to the originals. **Preview changes** (optional, or **Details** in the Review) opens a window listing, for every issue in order, the new filename and each field that would change from what it is now
