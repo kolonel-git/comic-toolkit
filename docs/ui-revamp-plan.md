@@ -19,7 +19,7 @@ design. The status column below says what is built; [The tools](tools.md) descri
 | Reading order | agreed, built (two columns, and the multi-drag list) |
 | Add to library | agreed |
 | ACEO sheets | agreed, built (two columns) |
-| Renamer | agreed |
+| Renamer | agreed, built |
 | Future work (all tools) | agreed |
 | Links between tools | agreed |
 
@@ -373,7 +373,9 @@ last sheet.
 
 ## Renamer
 
-**Current:** standardises names for CBZ, CBR, PDF and EPUB (subfolders optional). Each file is read from its name and
+**As built (Session 68, step 10):** two columns instead of the five-segment spine. Left: **Comics** and **Review**, where Review is a `CardList` (`reorder=False`: cards are selected, not moved) with a type chip and a green/amber/red dot on each card, unsure files first, a filter menu, Select all/none, **Set type** and single-letter keys. Right: **File** (the card with suggestions and reasons), **Detect** (with Saved rules under Advanced options), **Naming** and **Text and folders**. Footer: **Apply N renames**, **Export plan**, **Rescan folder**. The confidence logic is `rename_core.assess`; a decided type or a saved rule (keyed by `rename_core.shape`) is always green. Differences from the plan: the separate Card/List views are gone (the list is the card list; the card is the File block); files are never guessed silently, they sit in the needs-input group until a type is chosen or the tool is sure; undo stays out, as agreed.
+
+**Current (before the revamp):** standardises names for CBZ, CBR, PDF and EPUB (subfolders optional). Each file is read from its name and
 optionally `ComicInfo.xml`. Card view (one file) and list view (all). A file list with filters (needs attention, issues,
 collected editions, edited by hand). Four settings tabs: Detect, Names, Text, Folders. Nothing changes until *Apply renames*.
 

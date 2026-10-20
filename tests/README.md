@@ -8,7 +8,7 @@ python tests/run_all.py order      only scripts whose name contains "order"
 python tests/test_scan.py          run one script on its own
 ```
 
-The `*_ui.py`, `test_layout*.py`, `test_stats_*.py`, `test_bulk_page.py`, `test_meta_page.py`, `test_audit_ui.py`, `test_shortcuts.py`, `test_dropissue.py`, `test_renamer.py` and `test_aceo_ui.py` scripts open real windows briefly: run them on a desktop session and leave the mouse alone.
+The `*_ui.py`, `test_layout*.py`, `test_stats_*.py`, `test_bulk_page.py`, `test_meta_page.py`, `test_audit_ui.py`, `test_shortcuts.py`, `test_dropissue.py`, `test_renamer.py`, `test_rename_page.py` and `test_aceo_ui.py` scripts open real windows briefly: run them on a desktop session and leave the mouse alone.
 Each script finds the project folder from its own location, so run them from anywhere.
 
 | Script | Covers |
@@ -30,7 +30,8 @@ Each script finds the project folder from its own location, so run them from any
 | `test_flowrow.py` | `FlowRow` (one row when wide, wrapping when narrow, no rule at a line's start or end, nothing cut off) and the compact drop box built on it |
 | `test_cardlist.py` | the block-moving maths and the card list on its own: click, Ctrl and Shift selection, dragging one card or several, the stacked card and its count, the drop line, scrolling near the edge, the selection box, the keys, undo and every no-op |
 | `test_order_page.py` | the Reading order page on the shell: two columns, block summaries, the review and the footer, and marking the folder of copies (ask, always, never, the button, the menu of marked folders) |
-| `test_renamer.py` | parser (years, volumes, collected editions), naming engine, renamer window on a messy folder |
+| `test_renamer.py` | parser (years, volumes, collected editions), naming engine, `assess` (dots and suggestions), `shape`, page counting |
+| `test_rename_page.py` | the Renamer page: cards for a messy folder, dots and the needs-input group, the type chip and bulk Set type, typing a letter, saved rules and Apply to similar, filters, Export plan, a real apply |
 | `test_intake.py`, `test_intake_ui.py` | Add to library: naming, folders, duplicate flags, the convert / clean / verify / dispose pipeline and failure handling; the page (inbox scan, review table, ticking, confirmation, running, retry) |
 | `test_picker.py` | page picker: grid maths, cover guessing, selection helpers, JPG extraction, and the window (lazy thumbnails, click / shift / box selection, extract, full view) |
 | `test_stats.py`, `test_stats_ui.py`, `test_stats_home.py` | library statistics logic, the Library stats page (scan, bars, drill-down, export), the Home summary line and its saved numbers |

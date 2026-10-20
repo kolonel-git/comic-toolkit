@@ -217,25 +217,9 @@ Use copies of real issues from at least two series (6 to 10 files) plus one `.cb
   *Expect:* the card, the line and the tint are visible in both modes and the cards are not cramped in a narrow window. Tell me what feels wrong.
   Result:
 
-## Folder icons (Windows)
-
-- [ ] **N1. Choose and compare.** Open Folder icons on a library with a few series folders. Look at the table and the three style cards, press **Try another folder**, and click each style, then a few colours, the cover size and the series name under Advanced options.
-  *Expect:* every row shows a picture of the icon it would get; the big picture and the style cards use the example folder's own cover and follow your choices; nothing is written yet.
-  Result:
-- [ ] **N2. Make the icons.** Press **Make N icons**, then open the library in Explorer (large icons) and press **Refresh Explorer** if a folder still shows its old picture.
-  *Expect:* each folder shows its icon in the chosen style (the folder with the cover sticking out of the pocket, the folder with the cover as its face, or the flat cover); `folder.jpg` is beside it; the result lists every folder.
-  Result:
-- [ ] **N3. Already have one.** Make the icons again with *If a folder already has one* on Replace and on Skip.
-  *Expect:* the table says "Has one: replaced" or "Has one: kept" before you press the button, and the run does what it said.
-  Result:
-- [ ] **N4. An image of your own.** Select a row and press **Use a different image…**, then with nothing selected choose a parent folder with no comics (such as `DC`) and an image.
-  *Expect:* the row says "Your image" and "Custom image" and its picture changes; the parent folder gets a row and an icon; **Use the cover again** takes the image back.
-  Result:
-- [ ] **N5. Remove icons.** Press **Remove icons** and confirm.
-  *Expect:* the question names how many folders; afterwards they show the ordinary folder icon (after a refresh), `folder.jpg` is still there, and a folder whose icon some other program set is left alone.
-  Result:
-
 ## F. Renamer: cards, formats and messy folders
+
+*The page was rebuilt in Session 68: where a test below says Cards or List, use the card list on the left and the File block on the right.*
 
 Make a deliberately messy folder of copies: single issues, TPBs, hardcovers, omnibuses, compendiums, a `.cbr`, a `.pdf`, an `.epub`, `scan0001.cbz`, names written in
 different styles (`Saga Vol 1 TPB (2012)`, `saga_vol_2_tpb`, `Walking Dead, The Compendium 2`, `Batman #1-12 (Collected)`, `X-Men Epic Collection v12 - Title`), and the cases that
@@ -267,6 +251,33 @@ used to go wrong: `Batman 001 (Oct 2016)`, `Batman 001 (2016, DC)`, `Wolverine v
   Result:
 - [ ] **F9. Real library sample.** Point the Renamer at 100+ files from your real, untidy library and use Cards with the *Needs attention* filter.
   *Expect:* few wrong types, years or series; send me the names it gets wrong so detection can be improved. Also tell me whether the card layout is comfortable at your window size and in light mode.
+  Result:
+- [ ] **F10. Dots and suggestions.** Add a folder with `Berserk Vol 3.cbz`, a 300-page `Saga 001.cbz` that is really a book, and `Hellboy.cbz` with no number. Look at the dots and click each file.
+  *Expect:* the unsure files are listed first with amber or red dots; each card offers suggestions with a reason (page count, “Vol”, no issue number); picking one turns the dot green and updates the new name.
+  Result:
+- [ ] **F11. Set type and saved rules.** Select several files and use **Set type**, then press a letter (T, then 0). On one card turn on *Always treat names like this as …*, press **Apply to similar**, then look under Detect > Advanced options > Saved rules and delete the rule.
+  *Expect:* the chosen type is applied to all selected files; the letter keys work; similar names follow the rule and turn green; deleting the rule returns them to their detected type.
+  Result:
+- [ ] **F12. Export plan.** Press **Export plan**.
+  *Expect:* a file listing each planned rename (old name, new name, folder) is written where you choose; nothing in the folder changes.
+  Result:
+
+## Folder icons (Windows)
+
+- [ ] **N1. Choose and compare.** Open Folder icons on a library with a few series folders. Look at the table and the three style cards, press **Try another folder**, and click each style, then a few colours, the cover size and the series name under Advanced options.
+  *Expect:* every row shows a picture of the icon it would get; the big picture and the style cards use the example folder's own cover and follow your choices; nothing is written yet.
+  Result:
+- [ ] **N2. Make the icons.** Press **Make N icons**, then open the library in Explorer (large icons) and press **Refresh Explorer** if a folder still shows its old picture.
+  *Expect:* each folder shows its icon in the chosen style (the folder with the cover sticking out of the pocket, the folder with the cover as its face, or the flat cover); `folder.jpg` is beside it; the result lists every folder.
+  Result:
+- [ ] **N3. Already have one.** Make the icons again with *If a folder already has one* on Replace and on Skip.
+  *Expect:* the table says "Has one: replaced" or "Has one: kept" before you press the button, and the run does what it said.
+  Result:
+- [ ] **N4. An image of your own.** Select a row and press **Use a different image…**, then with nothing selected choose a parent folder with no comics (such as `DC`) and an image.
+  *Expect:* the row says "Your image" and "Custom image" and its picture changes; the parent folder gets a row and an icon; **Use the cover again** takes the image back.
+  Result:
+- [ ] **N5. Remove icons.** Press **Remove icons** and confirm.
+  *Expect:* the question names how many folders; afterwards they show the ordinary folder icon (after a refresh), `folder.jpg` is still there, and a folder whose icon some other program set is left alone.
   Result:
 
 ## G. ACEO sheets

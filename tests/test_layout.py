@@ -50,7 +50,8 @@ for pg in pages:
         assert headings(pg) == EXPECT[type(pg)], (type(pg).__name__, headings(pg))
 
 # the options panel can be dragged wider and narrower, within limits, and the width is saved
-pg = pages[3]; pg.pack(fill="both", expand=True); root.update()
+from page_intake import IntakePage   # (the one page that still has an options panel)
+pg = IntakePage(root); pg.pack(fill="both", expand=True); root.update()
 w0 = pg.side.winfo_width()
 pg.splitter._press(ev(1000)); pg.splitter._drag(ev(900)); pg.splitter._release(None); root.update()
 k = pg.splitter._scale()  # display scaling: mouse movement is in pixels, widths in scaled units
@@ -73,7 +74,6 @@ for pg in pages:
     for t in filter(None, trees):
         for c in t["columns"]:
             assert int(t.column(c, "minwidth")) <= 30, (type(pg).__name__, c, t.column(c, "minwidth"))
-assert len(pages[3].nav_tree["columns"]) == 3
 
 # a header edge drag is real: simulate it on the metadata table
 pg = pages[4]; pg.pack(fill="both", expand=True); root.update()

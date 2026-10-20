@@ -177,10 +177,11 @@ class _Tip:
             self.win = None
 
 
-def popup_menu(anchor, items, above=False):
+def popup_menu(anchor, items, above=False, at=None):
     """A square, bordered pop-up list with a hard shadow under `anchor` (over it with above=True, for buttons at the
     bottom of a window), in place of the native Windows menu. items is a list of (label, command); a command of None
-    makes a greyed, unclickable line. It closes on a click, Esc or when focus leaves; Up, Down and Enter work too."""
+    makes a greyed, unclickable line. It closes on a click, Esc or when focus leaves; Up, Down and Enter work too.
+    `at=(x, y)` (screen coordinates) opens it at that point instead of under `anchor`."""
     top = tk.Toplevel(anchor)
     top.wm_overrideredirect(True)
     top.attributes("-topmost", True)
@@ -235,10 +236,15 @@ def popup_menu(anchor, items, above=False):
     top.bind("<Escape>", close)
     top.update_idletasks()
     # the pieces are placed, not packed, so the window does not size itself: add the rows up
-    w = max(max(lab.winfo_reqwidth() for lab, _ in rows) + 2 * EDGE, anchor.winfo_width())
+    w = max(max(lab.winfo_reqwidth() for lab, _ in rows) + 2 * EDGE, 0 if at else anchor.winfo_width())
     h = sum(lab.winfo_reqheight() for lab, _ in rows) + 2 * EDGE
-    y = anchor.winfo_rooty() - h - depth - 4 if above else anchor.winfo_rooty() + anchor.winfo_height() + 4
-    top.geometry(f"{w + depth}x{h + depth}+{anchor.winfo_rootx()}+{y}")
+    if at:
+        x, y = at[0], min(at[1], max(0, top.winfo_screenheight() - h - depth - 40))
+        x = min(x, max(0, top.winfo_screenwidth() - w - depth - 10))
+    else:
+        x = anchor.winfo_rootx()
+        y = anchor.winfo_rooty() - h - depth - 4 if above else anchor.winfo_rooty() + anchor.winfo_height() + 4
+    top.geometry(f"{w + depth}x{h + depth}+{x}+{y}")
     top.focus_force()
     top.after(150, lambda: top.bind("<FocusOut>", close))  # not at once: opening may move focus around
     top.popup_rows = rows  # for tests

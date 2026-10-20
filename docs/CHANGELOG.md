@@ -12,6 +12,30 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-21 00:40 +11:00 · Session 68: Renamer on the page shell (roadmap Phase 4, step 10)
+
+**Summary:** The Renamer is rebuilt as two resizable columns around a card list. Every file is a card with a type chip and a green, amber or red dot for how sure the reading of its name is; unsure files come first with suggestions and reasons; types can be set one by one, in bulk or with a letter key; choices can be kept as saved rules; the plan can be exported.
+
+**Decisions**
+- The separate Cards and List views are gone: the list is the card list, the card is the **File** block on the right.
+- Files are never guessed silently: unsure files form a needs-input group at the top until a type is chosen. A chosen type or a saved rule is always green.
+- Saved rules go by `shape()` of the name (numbers and brackets taken out), kept in a persisted `rules` JSON setting. No undo (as agreed in the plan).
+
+**Changes by file**
+- `rename_core.py`: `assess` (SURE/UNSURE/GUESS with ranked suggestions and reasons, using the name, the ComicInfo fields and the page count), `shape`, `count_pages`, `TYPE_HELP`, `TYPE_LETTERS`.
+- `page_rename.py`: rewritten on `SegmentPage` (Comics, Review | File, Detect, Naming, Text and folders). Type chip menu, Set type, letter keys, filters, Apply to similar, saved rules list, Export plan, footer Apply N renames / Export plan / Rescan folder.
+- `cardlist.py`: `reorder=False`, `on_key`, buttons with a coloured dot, `warn` tone (amber stripe), `num` of None. `ui_kit.py`: `popup_menu(..., at=)`.
+- Tests: `test_renamer.py` (assess, shape, page counts), `test_rename_page.py` (new), `test_layout.py`.
+- Docs: tools, plan (as built), roadmap, architecture, known limitations, manual tests (F10 to F12, note on F), tests README, HANDOFF.
+
+**Bugs found and fixed:** the tone rule gave "dim" to an unchanged file that still needed input; `warn` now takes precedence.
+
+**Verification:** `ruff check --select F,E9 .` clean; `python tests/run_all.py` 38 of 38 passed. Looked at a screenshot of the page in the app. Not checked: the manual tests (they need real comics).
+
+**Known issues:** see Known limitations (Renamer details).
+
+---
+
 ## 2026-10-20 23:12 +11:00 · Session 67: Folder icons on the page shell (roadmap Phase 3, step 7)
 
 **Summary:** Folder icons is rebuilt as two resizable columns, and the icon can now look like a folder: three styles drawn in code (the cover sticking out of a folder's pocket, a folder whose face is the cover, and the flat cover as before). The roadmap held this step until folder-shape template art existed; the shapes are drawn by the program instead, so nothing waited on art.

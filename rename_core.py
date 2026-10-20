@@ -313,6 +313,103 @@ def merge(parsed, ci, use_ci):
     return out
 
 
+# ---------- how sure the reading of a name is, and what to suggest when it is not ----------
+
+TYPE_HELP = {   # type -> (what it is, an example name)
+    "Issue": ("A single issue of a series.", "Batman 012 (2016)"),
+    "Annual": ("A yearly special issue of a series.", "Batman Annual 03 (2016)"),
+    "Special": ("A one-off special that is not numbered with the run.", "Batman Special 01"),
+    "One-Shot": ("A single self-contained issue, no series around it.", "Hellboy One-Shot"),
+    "Volume": ("One volume of a collected series, no edition named.", "Saga Vol 03"),
+    "TPB": ("A trade paperback: a collected edition, one volume.", "Saga TPB Vol 01 (2012)"),
+    "Hardcover": ("A hardcover collected edition.", "Saga Hardcover Vol 01"),
+    "Omnibus": ("A large collected edition of many issues.", "Sandman Omnibus Vol 01"),
+    "Compendium": ("A very large black-and-white or colour collection.", "Walking Dead Compendium Vol 02"),
+    "Deluxe Edition": ("A deluxe edition of a story or run.", "Batman Deluxe Edition"),
+    "Library Edition": ("A library edition (oversized hardcover).", "Batman Library Edition Vol 01"),
+    "Epic Collection": ("A Marvel Epic Collection volume.", "X-Men Epic Collection Vol 12"),
+    "Graphic Novel": ("A story published as one book.", "Maus Graphic Novel"),
+    "Box Set": ("A box of several books.", "Saga Box Set Vol 01"),
+    "Collection": ("A collection of issues, often with a range.", "Batman Collection #1-12"),
+}
+TYPE_LETTERS = {"i": "Issue", "a": "Annual", "s": "Special", "o": "One-Shot", "v": "Volume", "t": "TPB", "h": "Hardcover",
+                "m": "Omnibus", "c": "Compendium", "d": "Deluxe Edition", "l": "Library Edition", "e": "Epic Collection",
+                "g": "Graphic Novel", "b": "Box Set", "n": "Collection", "0": AUTO_TYPE}
+SURE, UNSURE, GUESS = "high", "mid", "low"   # green, amber and red dots
+_VOL_IN_NAME = re.compile(r"(?<![A-Za-z])(?:vol(?:ume)?\.?|book|bk\.?|v)\s*\d{1,4}(?![A-Za-z\d])", re.I)
+MANY_PAGES, FEW_PAGES = 150, 40   # more pages than this is more than an issue; fewer is not a book
+
+
+def count_pages(path):
+    """How many pages a zip-based comic holds (images only), or None when that cannot be told cheaply (a RAR, a PDF)."""
+    path = Path(path)
+    try:
+        if path.suffix.lower() in RENAME_EXT and zipfile.is_zipfile(path):
+            with zipfile.ZipFile(path) as z:
+                return sum(1 for n in z.namelist() if Path(n).suffix.lower() in (".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"))
+    except (OSError, zipfile.BadZipFile):
+        pass
+    return None
+
+
+def shape(stem):
+    """What a name looks like with the numbers taken out ('Invincible Vol 3 (2010)' and 'Invincible Vol 4' are both
+    'invincible vol #'): the key that 'names like this' and the saved rules go by."""
+    s = _INVISIBLE.sub("", stem).replace("_", " ").lower()
+    s = re.sub(r"\([^)]*\)|\[[^\]]*\]", " ", s)
+    s = re.sub(r"\d+(?:\.\d+)?", "#", s)
+    s = re.sub(r"(?:\s*#\s*)+", " # ", s)
+    return re.sub(r"\s+", " ", s).strip(" -–.,:")
+
+
+def assess(parsed, fields, pages=None, decided=False):
+    """How sure the reading of one name is, and what to suggest if it is not: (SURE | UNSURE | GUESS, [(type, reason)]).
+    `parsed` is what the name said, `fields` what the file will be named from (after ComicInfo and edits), `pages` how
+    many pages the comic has (or None), `decided` that the user (or a saved rule) already chose the type."""
+    if decided:
+        return SURE, []
+    if not fields.get("series"):
+        return GUESS, []
+    kind, collected = fields.get("kind") or "", bool(fields.get("collected"))
+    explicit = bool(parsed.get("format") or parsed.get("range") or kind in ("Annual", "Special", "One-Shot"))
+    original = parsed.get("original") or ""
+    vol_word = _VOL_IN_NAME.search(original)
+    long, short = pages is not None and pages >= MANY_PAGES, pages is not None and pages < FEW_PAGES
+    sug = []
+    if explicit and collected:
+        if short:
+            return UNSURE, [("Issue", f"Called {kind}, but it has only {pages} pages"), (kind, "Keep it as it is")]
+        return SURE, []
+    if explicit:
+        if long:
+            return UNSURE, [("TPB", f"Called {kind}, but it has {pages} pages"), (kind, "Keep it as it is")]
+        return SURE, []
+    if vol_word and kind in ("Issue", "Volume", "Other"):
+        # 'Berserk Vol 3': an issue number (manga) or a volume of a collected edition?
+        what = f"“{vol_word.group(0).strip()}”"
+        if pages is not None and not short:
+            sug = [("Volume", f"Contains {what} and has {pages} pages"), ("Issue", f"Contains {what}, so it may be a numbered issue")]
+        elif short:
+            sug = [("Issue", f"Contains {what} but has only {pages} pages"), ("Volume", f"Contains {what}")]
+        else:
+            sug = [("Issue", f"Contains {what}: a numbered issue, as manga is"), ("Volume", f"Contains {what}: a collected volume")]
+        return UNSURE, sug
+    if kind == "Other" or (not fields.get("issue") and not collected and not fields.get("volume")):
+        if pages is not None and pages >= 80:
+            sug = [("Graphic Novel", f"No issue number and {pages} pages"), ("TPB", f"No issue number and {pages} pages"),
+                   ("One-Shot", "No issue number")]
+        elif pages is not None:
+            sug = [("One-Shot", f"No issue number and only {pages} pages"), ("Special", "No issue number"), ("Issue", "No issue number")]
+        else:
+            sug = [("One-Shot", "No issue number"), ("Special", "No issue number"), ("Graphic Novel", "No issue number")]
+        return GUESS, sug
+    if not collected and long:
+        return UNSURE, [("TPB", f"Read as an issue, but it has {pages} pages"), ("Issue", "Keep it as an issue")]
+    if collected and short:
+        return UNSURE, [("Issue", f"Read as a collected edition, but it has only {pages} pages"), (kind or "Volume", "Keep it as it is")]
+    return SURE, []
+
+
 def find_files(folder, recursive, include_other):
     exts = RENAME_EXT | (OTHER_EXT if include_other else set())
     it = Path(folder).rglob("*") if recursive else Path(folder).iterdir()

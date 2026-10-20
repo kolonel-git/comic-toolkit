@@ -14,7 +14,10 @@ for lists whose order matters: Reading order today, the ACEO cover list next.
 `render(id)` returns what to draw: {"num", "title", "sub", "status", "tone" ("", "dim" or "bad"), "checked" (None for no tick
 box)}, and optionally "images" (a list of small PIL pictures drawn at the left of the card; "image_on" is the index of the one
 that is in use and gets a thick outline) and "buttons" (a list of (key, text) drawn at the right of the card; a key of None is
-a plain label, any other makes a small button that calls `on_button(id, key)`). The page owns what the ids mean; this list owns their order, the selection and the undo history, and calls
+a plain label, any other makes a small button that calls `on_button(id, key)`; a third item, "green", "amber" or "red",
+puts a coloured dot in front of the text), "tone" may also be "warn" (an amber stripe), and a "num" of None leaves the number
+badge out. A list that is only to be picked from, not put in order, is made with `reorder=False`; `on_key(char)` gets the
+printable keys typed in it. The page owns what the ids mean; this list owns their order, the selection and the undo history, and calls
 `on_reorder()` after the order changed by a move or an undo.
 """
 from __future__ import annotations
@@ -39,11 +42,13 @@ TICK_MS = 50
 FLASH_MS = 700                   # how long the cards that just moved stay highlighted
 KEEP = 50                        # moves that can be undone
 WHEEL_PX = 60
+AMBER = "#F0AA14"
+DOTS = {"green": "#2EA043", "amber": AMBER, "red": "#D90429"}   # the dot in front of a button's text
 
 
 class CardList(ctk.CTkFrame):
     def __init__(self, parent, render, on_reorder=None, on_tick=None, noun="item", empty="", busy=None, on_stack=None,
-                 card_h=CARD_H, on_button=None):
+                 card_h=CARD_H, on_button=None, reorder=True, on_key=None, on_select=None):
         """`on_tick(id)` is called for a press on a card's tick box; `busy()` returns True while nothing may be moved;
         `on_stack(can_undo)` is told when undo becomes available or not; `noun` is the word after the count."""
         super().__init__(parent, fg_color=BG, border_color=BORDER, border_width=EDGE, corner_radius=0)
@@ -51,6 +56,9 @@ class CardList(ctk.CTkFrame):
         self.on_reorder = on_reorder
         self.on_tick = on_tick
         self.on_button = on_button
+        self.reorder = reorder      # False: cards can be selected but not moved
+        self.on_key = on_key
+        self.on_select = on_select  # told when the selection changes
         self.card_h = card_h        # the height of a card in pixels at 96 dpi (a list with pictures wants taller cards)
         self._photos = {}
         self.noun = noun
@@ -89,6 +97,7 @@ class CardList(ctk.CTkFrame):
                         ("<Home>", lambda: self._arrow(-10 ** 9, False)), ("<End>", lambda: self._arrow(10 ** 9, False))):
             c.bind(seq, lambda _, fn=fn: self._key(fn))
         c.bind("<Escape>", self._escape)
+        c.bind("<Key>", self._typed)
         c.bind("<FocusIn>", lambda _: self._schedule())
         c.bind("<FocusOut>", lambda _: self._schedule())
 
@@ -135,11 +144,15 @@ class CardList(ctk.CTkFrame):
         sel = self.selected()
         self.anchor = self.cursor = sel[-1] if sel else None
         self._schedule()
+        if self.on_select:
+            self.on_select()
 
     def select_all(self):
         self.sel = set(self.order)
         self.anchor = self.order[0] if self.order else None
         self._schedule()
+        if self.on_select:
+            self.on_select()
 
     def refresh(self):
         """The page changed what the cards say."""
@@ -166,7 +179,7 @@ class CardList(ctk.CTkFrame):
 
     def move_selected(self, delta):
         sel = self.selected()
-        if self.busy() or not sel:
+        if self.busy() or not sel or not self.reorder:
             return False
         done = self.apply(blocks.move_block(self.order, sel, delta), sel)
         self.see(sel[0] if delta < 0 else sel[-1])
@@ -174,7 +187,7 @@ class CardList(ctk.CTkFrame):
 
     def to_edge(self, top):
         sel = self.selected()
-        if self.busy() or not sel:
+        if self.busy() or not sel or not self.reorder:
             return False
         done = self.apply(blocks.send_to_edge(self.order, sel, top), sel)
         self.see(sel[0] if top else sel[-1])
@@ -352,6 +365,8 @@ class CardList(ctk.CTkFrame):
         tone = v.get("tone", "")
         if tone == "bad":
             c.create_rectangle(x0 + u(2), y0 + u(2), x0 + u(8), y1 - u(2), fill=pick(DANGER), outline="")
+        elif tone == "warn":
+            c.create_rectangle(x0 + u(2), y0 + u(2), x0 + u(8), y1 - u(2), fill=AMBER, outline="")
         elif selected:
             c.create_rectangle(x0 + u(2), y0 + u(2), x0 + u(8), y1 - u(2), fill=pick(PINK), outline="")
         cy = (y0 + y1) / 2
@@ -363,9 +378,10 @@ class CardList(ctk.CTkFrame):
             if v["checked"]:
                 c.create_text(left + t / 2, cy, text="✓", fill=ink, font=(FONT, 13, "bold"))
             left += u(30)
-        c.create_rectangle(left, cy - u(15), left + u(40), cy + u(15), fill=pick(ACCENT), outline=ink, width=u(2))
-        c.create_text(left + u(20), cy, text=self._fit(v.get("num", ""), self.f_num, u(36)), fill=ON_ACCENT, font=self.f_num)
-        left += u(52)
+        if v.get("num") is not None:
+            c.create_rectangle(left, cy - u(15), left + u(40), cy + u(15), fill=pick(ACCENT), outline=ink, width=u(2))
+            c.create_text(left + u(20), cy, text=self._fit(v.get("num", ""), self.f_num, u(36)), fill=ON_ACCENT, font=self.f_num)
+            left += u(52)
         for k, (img, box) in enumerate(self._picture_boxes(v, left, cy)):
             c.create_image(box[0], box[1], image=self._photo(img, box[2] - box[0], box[3] - box[1]), anchor="nw")
             on = v.get("image_on") == k
@@ -373,13 +389,19 @@ class CardList(ctk.CTkFrame):
             left = box[2] + u(8)
         tx0 = left + u(2)
         tx1 = x1 - u(14)
-        for key, text, bb in self._button_boxes(v, (x0, y0, x1, y1)):
+        dots = [(b[2] if len(b) > 2 else None) for b in v.get("buttons") or []]
+        for (key, text, bb), dot in zip(self._button_boxes(v, (x0, y0, x1, y1)), dots):
+            shift = u(8) if dot else 0
             if key is None:
                 c.create_text((bb[0] + bb[2]) / 2, cy, text=text, fill=text_color, font=self.f_title)
             else:
                 c.create_rectangle(bb[0] + u(2), bb[1] + u(2), bb[2] + u(2), bb[3] + u(2), fill=ink, outline=ink)
                 c.create_rectangle(*bb, fill=pick(RAISED), outline=ink, width=u(2))
-                c.create_text((bb[0] + bb[2]) / 2, cy, text=text, fill=pick(TEXT), font=self.f_num)
+                c.create_text((bb[0] + bb[2]) / 2 + shift, cy, text=text, fill=pick(TEXT), font=self.f_num)
+            if dot:
+                r = u(5)
+                dx, dy = bb[0] + u(11), cy
+                c.create_oval(dx - r, dy - r, dx + r, dy + r, fill=DOTS.get(dot, dot), outline=ink, width=u(1))
             tx1 = min(tx1, bb[0] - u(10))
         status = self._fit(v.get("status", ""), self.f_sub, int((tx1 - tx0) * 0.42))
         sw = self.f_sub.measure(status) if status else 0
@@ -420,8 +442,10 @@ class CardList(ctk.CTkFrame):
         x0, y0, x1, y1 = box
         cy = (y0 + y1) / 2
         out, right = [], x1 - u(14)
-        for key, text in reversed(v.get("buttons") or []):
-            w = max(u(26) if key else u(8), self.f_num.measure(text) + (u(16) if key else u(6)))
+        for spec in reversed(v.get("buttons") or []):
+            key, text = spec[0], spec[1]
+            dot = len(spec) > 2 and spec[2]
+            w = max(u(26) if key else u(8), self.f_num.measure(text) + (u(16) if key else u(6)) + (u(18) if dot else 0))
             h = u(24) if key else u(20)
             out.append((key, text, (right - w, cy - h / 2, right, cy + h / 2)))
             right -= w + u(6)
@@ -467,6 +491,8 @@ class CardList(ctk.CTkFrame):
     def _set_sel(self, ids):
         self.sel = set(ids)
         self._schedule()
+        if self.on_select:
+            self.on_select()
 
     def _press(self, e):
         self.canvas.focus_set()
@@ -519,6 +545,8 @@ class CardList(ctk.CTkFrame):
         if not d:
             return None
         if d["kind"] == "move":
+            if not self.reorder:
+                return "break"
             if not d["moved"]:
                 if abs(e.x - d["x_press"]) + abs(e.y - d["y_press"]) < DRAG_PX:
                     return "break"
@@ -612,6 +640,13 @@ class CardList(ctk.CTkFrame):
     def _key(self, fn):
         fn()
         return "break"
+
+    def _typed(self, e):
+        """A printable key typed in the list goes to the page."""
+        if self.on_key and e.char and e.char.isprintable() and not (e.state & 0x4) and not (e.state & 0x20000) and not self.busy():
+            self.on_key(e.char)
+            return "break"
+        return None
 
     def _arrow(self, delta, extend):
         if not self.order or self.busy():

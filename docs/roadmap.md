@@ -30,7 +30,7 @@ Backup `.bak` safety fix, metadata extensions, shared library scan, Library audi
 Library stats, Renamer revamp (cards and a template per type), ACEO sheets, Add to library, page picker, shared library folder,
 recent folders, keyboard layer and Ctrl+K search, and the neo-brutalist UI. Details are in [The tools](tools.md) and the
 [Changelog](CHANGELOG.md). From the revamp below: the shared page shell, Bulk folder, Library stats and the Metadata repair editor (two columns) and the Library audit are built.
-**Where we are:** Phases 0, 1 and 2 are finished and tagged (`v0.8.0`, `v0.9.0`). Phase 3 is complete in the code (Single issue, Folder icons, Reading order and ACEO sheets are done; `v0.10.0` is for you to tag once the pull requests are merged); the Renamer (step 10) is next.
+**Where we are:** Phases 0, 1 and 2 are finished and tagged (`v0.8.0`, `v0.9.0`). Phase 3 is complete in the code (Single issue, Folder icons, Reading order and ACEO sheets are done; `v0.10.0` is for you to tag once the pull requests are merged); the Renamer (step 10) is built; Add to library (step 11) is next.
 
 ## Build order: the UI revamp
 
@@ -62,7 +62,7 @@ Every page becomes a Header, two resizable columns and a Footer (Library stats k
 9. ACEO sheets. **Done** (two columns; one card per cover with a copies stepper and a front / back switch; a sheet preview with a strip of sheets, empty slots drawn dashed, and covers swapped by dragging; the options as pictures).
 
 **Phase 4: the heavy ones** (`v0.11.0`)
-10. Renamer: type prompts, suggestions, saved rules.
+10. Renamer: type prompts, suggestions, saved rules. **Done** (card list with how-sure dots, type chip menus, Set type and letter keys, suggestions with reasons, saved rules, Export plan).
 11. Add to library: five segments, *Set series…*, uses the Renamer's rules, and a **Watch this folder** switch that picks up new
     files in the inbox while the app is open (this replaces the former separate downloads watcher).
 
