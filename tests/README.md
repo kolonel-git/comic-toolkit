@@ -30,6 +30,7 @@ Each script finds the project folder from its own location, so run them from any
 | `test_flowrow.py` | `FlowRow` (one row when wide, wrapping when narrow, no rule at a line's start or end, nothing cut off) and the compact drop box built on it |
 | `test_cardlist.py` | the block-moving maths and the card list on its own: click, Ctrl and Shift selection, dragging one card or several, the stacked card and its count, the drop line, scrolling near the edge, the selection box, the keys, undo and every no-op |
 | `test_order_page.py` | the Reading order page on the shell: two columns, block summaries, the review and the footer, and marking the folder of copies (ask, always, never, the button, the menu of marked folders) |
+| `test_app_paths.py` | the settings place, the bundled-files place (source and packaged), the `tools` folder coming first for a RAR extractor, the old settings place read once |
 | `test_renamer.py` | parser (years, volumes, collected editions), naming engine, `assess` (dots and suggestions), `shape`, page counting |
 | `test_rename_page.py` | the Renamer page: cards for a messy folder, dots and the needs-input group, the type chip and bulk Set type, typing a letter, saved rules and Apply to similar, filters, Export plan, a real apply |
 | `test_links.py` | the Next steps row (shown, replaced, cleared on leaving), the app's goto with a folder and a From chip with Back, Get covers on ACEO, and the links a real Renamer apply offers |

@@ -17,6 +17,7 @@ settings.json
 build/
 dist/
 *.spec
+!packaging/ComicToolkit.spec
 
 # Editor / OS
 .vscode/

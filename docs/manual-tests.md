@@ -492,6 +492,18 @@ Use your real library (hundreds of comics if you can) for I1 to I3 and I6.
   *Expect:* Bulk folder opens.
   Result:
 
+## P. Packaged build
+
+- [ ] **P1. Build and start.** Run `.\packaging\build.ps1 -Shortcut`, then start the program from the desktop shortcut (best on a computer or user without Python on the PATH).
+  *Expect:* the window opens with the Comic Toolkit icon in the title bar and the taskbar, Home shows every tool, and dragging a folder onto a page works.
+  Result:
+- [ ] **P2. Settings.** Change the theme, close the program, start it again. Look in `%APPDATA%\ComicToolkit`.
+  *Expect:* the theme is remembered and `settings.json` is there (and no `settings.json` is written beside the `.exe`). If you had one beside the source, your old options are carried over the first time.
+  Result:
+- [ ] **P3. Every tool starts.** Open each tool once, including ACEO sheets (press Save with a few covers) and a `.cbr` in CBR to CBZ.
+  *Expect:* no tool fails to open; ACEO sheets makes its PDF; the `.cbr` is read once you put `7z.exe` and `7z.dll` (or `unrar.exe`) in `dist\ComicToolkit\tools`, or have 7-Zip installed.
+  Result:
+
 ## When you're done
 
 Send me the failed items with what you saw (a screenshot or the exact message helps). Passing results can be summarised in one line.

@@ -4,6 +4,7 @@ Index of the Comic Toolkit docs. The project overview and quick start live in th
 
 | Document | What's in it |
 |---|---|
+| [Packaging](packaging.md) | Building the double-click folder version, where settings and bundled files live, the `tools` folder for `.cbr` support |
 | [Getting started](getting-started.md) | Install, requirements, the RAR extractor for `.cbr` files, where settings are saved |
 | [The tools](tools.md) | What each tool does and its options: Single issue, Bulk folder, Folder icons, Renamer, Metadata, CBR to CBZ, Library audit, Reading order, ACEO sheets |
 | [Naming styles and templates](renamer-templates.md) | Every Renamer option: template syntax, tokens, token formats, a format per type, text options, folders and how names are read |

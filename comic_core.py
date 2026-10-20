@@ -10,6 +10,8 @@ from pathlib import Path
 
 from PIL import Image
 
+from app_paths import tools_dir
+
 IMG_EXT = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp"}
 COMIC_EXT = {".cbz", ".cbr"}
 ARCHIVE_DIR = "Archive"  # where backups and converted originals are parked; scans skip it
@@ -38,6 +40,9 @@ def is_page(name):
 # ---------- archives ----------
 
 def find_extractor():
+    for exe in ("7z.exe", "unrar.exe"):   # a copy dropped in the `tools` folder beside the program comes first
+        if (tools_dir() / exe).exists():
+            return str(tools_dir() / exe)
     for exe in ("7z", "7za", "unrar"):
         if shutil.which(exe):
             return exe

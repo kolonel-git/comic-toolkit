@@ -30,7 +30,7 @@ Backup `.bak` safety fix, metadata extensions, shared library scan, Library audi
 Library stats, Renamer revamp (cards and a template per type), ACEO sheets, Add to library, page picker, shared library folder,
 recent folders, keyboard layer and Ctrl+K search, and the neo-brutalist UI. Details are in [The tools](tools.md) and the
 [Changelog](CHANGELOG.md). From the revamp below: the shared page shell, Bulk folder, Library stats and the Metadata repair editor (two columns) and the Library audit are built.
-**Where we are:** Phases 0, 1 and 2 are finished and tagged (`v0.8.0`, `v0.9.0`). Phase 3 is complete in the code (Single issue, Folder icons, Reading order and ACEO sheets are done; `v0.10.0` is for you to tag once the pull requests are merged); the Renamer (step 10) is built; Add to library (step 11) is built; the links pass (step 12) is built; packaging (step 13) is next.
+**Where we are:** Phases 0, 1 and 2 are finished and tagged (`v0.8.0`, `v0.9.0`). Phase 3 is complete in the code (Single issue, Folder icons, Reading order and ACEO sheets are done; `v0.10.0` is for you to tag once the pull requests are merged); the Renamer (step 10) is built; Add to library (step 11) is built; the links pass (step 12) and packaging (step 13) are built. What is left is yours: merge the pull requests in order, place the tags (`v0.10.0` after the Phase 3 branches, `v0.11.0` after the Renamer and Add to library, `v0.12.0` after the links pass and packaging) and run the manual tests.
 
 ## Build order: the UI revamp
 
@@ -68,7 +68,7 @@ Every page becomes a Header, two resizable columns and a Footer (Library stats k
 
 **Phase 5: finish** (`v0.12.0`, then `v1.0.0`)
 12. Links pass for anything not yet wired, documentation clean-up, and the manual-test debt. **Done** except the manual tests, which only you can run (a Next steps row on the finished runs; see the plan's "As built (Session 70)").
-13. Packaging: PyInstaller **folder build** (less antivirus noise than a single file) with a shortcut and icon; bundle the
+13. Packaging. **Done** (see [Packaging](packaging.md): the folder build, settings in `%APPDATA%\ComicToolkit`, the assets bundled, an icon and a shortcut; `7za.exe` is not shipped, see the page). Planned: PyInstaller **folder build** (less antivirus noise than a single file) with a shortcut and icon; bundle the
     `customtkinter` assets and the `tkinterdnd2` files; move `settings.json` to `%APPDATA%\ComicToolkit`; optionally ship 7-Zip's
     `7za.exe` so CBR works without a separate install (check its licence terms first).
 

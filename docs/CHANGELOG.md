@@ -12,7 +12,29 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
-## 2026-10-21 00:20 +11:00 · Session 70: Links between tools and a documentation pass (roadmap Phase 5, step 12)
+## 2026-10-20 23:51 +11:00 · Session 71: Packaging (roadmap Phase 5, step 13)
+
+**Summary:** The program can be built as a double-click folder (`dist\ComicToolkit\ComicToolkit.exe`) with an icon and an optional desktop shortcut. Settings move to `%APPDATA%\ComicToolkit`. This finishes the build order.
+
+**Decisions**
+- A PyInstaller **folder** build, not a single file (starts faster, fewer antivirus warnings).
+- Settings go to `%APPDATA%\ComicToolkit\settings.json` for every run, not only the packaged one. The old file beside the program is read once if the new one is missing, and only when the app uses the default place (a test that sets its own settings file never reads the real one).
+- No RAR extractor is shipped. The plan's `7za.exe` cannot read RAR at all (that needs `7z.exe` with `7z.dll`), and the 7-Zip and unrar licences carry restrictions the owner should decide on. Instead a `tools` folder beside the program is looked at first for `7z.exe` or `unrar.exe`.
+- The icon is drawn in code from the sidebar logo (`packaging/make_icon.py`), so there is nothing to design by hand.
+
+**Changes by file**
+- `app_paths.py` (new): `resource_dir`, `program_dir`, `data_dir`, `settings_path`, `legacy_settings_path`, `tools_dir`. `comic_tool.py`: settings place, the old place read once, the window icon (set after CustomTkinter's own). `aceo_core.py`: the template is found through `resource_dir`. `comic_core.py`: `find_extractor` looks in `tools` first.
+- `packaging/`: `ComicToolkit.spec`, `build.ps1`, `make_icon.py`, `ComicToolkit.ico`. `.gitignore` keeps the spec.
+- Tests: `test_app_paths.py` (new).
+- Docs: `docs/packaging.md` (new), README, docs index, getting started, known limitations, architecture, roadmap, manual tests (section P), tests README, HANDOFF.
+
+**Verification:** `ruff check --select F,E9 .` clean; `python tests/run_all.py` 40 of 40 passed. The build was run in a clean virtual environment outside the repository (`pyinstaller packaging/ComicToolkit.spec`: 49 MB folder). I started the built `.exe` with a temporary `APPDATA`, looked at the window (icon, Home) and closed it: it exited by itself and wrote `settings.json` to the new place. Not checked: a computer without Python, the desktop shortcut from `build.ps1 -Shortcut`, ACEO sheets and CBR reading inside the packaged build (manual tests P1 to P3).
+
+**Known issues:** see Known limitations (The packaged build).
+
+---
+
+## 2026-10-20 23:48 +11:00 · Session 70: Links between tools and a documentation pass (roadmap Phase 5, step 12)
 
 **Summary:** A finished run now says where to go next. Each page built on the shell can show a **Next steps** row under its header; the links open the other tool with the folder already loaded and a "From <tool>" chip with a Back button.
 

@@ -14,6 +14,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageOps
 
+from app_paths import resource_dir
 from comic_core import COMIC_EXT, IMG_EXT, Comic, natural_key
 
 TEMPLATE_NAME = "ACEO - Full Page BLANK.pdf"
@@ -57,7 +58,7 @@ def _pypdf():
 
 
 def default_template():
-    return Path(__file__).with_name(TEMPLATE_NAME)
+    return resource_dir() / TEMPLATE_NAME
 
 
 # ---------- reading the template ----------

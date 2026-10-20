@@ -31,6 +31,7 @@ from tkinter import filedialog
 import customtkinter as ctk
 from tkinterdnd2 import DND_FILES, TkinterDnD
 
+from app_paths import legacy_settings_path, resource_dir, settings_path
 from page_aceo import AceoPage
 from page_audit import AuditPage
 from page_bulk import BulkPage
@@ -49,7 +50,7 @@ from ui_kit import (Toggle, spotlight, tooltip, ACCENT, BG, BORDER, CYAN, DANGER
                     tool_button)
 from ui_kit import button  # noqa: F401 - used by strip_button
 
-SETTINGS = Path(__file__).with_name("settings.json")
+SETTINGS = settings_path()   # %APPDATA%\ComicToolkit\settings.json
 
 # (light, dark) tint of the card icon tiles: one soft accent wash for every tool
 TINT = ("#F1D9C9", "#4F3626")
@@ -256,6 +257,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         self.theme = saved.get("theme", "system")  # light | dark | system
         ctk.set_appearance_mode(self.theme)
         self.title("Comic Toolkit")
+        self.after(300, self._set_icon)   # (CustomTkinter puts its own icon on after the window opens)
         self.geometry("1200x780")
         self.minsize(1040, 720)
         self.configure(fg_color=BG)
@@ -626,11 +628,19 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             self.show("single")
             self.pages["single"].load(p)
 
-    def _load_settings(self):
+    def _set_icon(self):
         try:
-            return json.loads(SETTINGS.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            return {}
+            self.iconbitmap(str(resource_dir() / "packaging" / "ComicToolkit.ico"))
+        except tk.TclError:
+            pass
+
+    def _load_settings(self):
+        for path in (SETTINGS, legacy_settings_path() if SETTINGS == settings_path() else None):   # (the old place, read once)
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, ValueError, AttributeError):
+                continue
+        return {}
 
     def close(self):
         data = {k: p.state() for k, p in self.pages.items() if hasattr(p, "state")}
@@ -642,6 +652,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
         data["stats_snapshot"] = self.snapshot
         data["reading_orders"] = self.orders.to_dict()
         try:
+            SETTINGS.parent.mkdir(parents=True, exist_ok=True)
             SETTINGS.write_text(json.dumps(data, indent=2), encoding="utf-8")
         except OSError:
             pass

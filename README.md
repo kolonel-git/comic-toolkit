@@ -15,6 +15,8 @@ pip install customtkinter tkinterdnd2 pillow pypdf
 python comic_tool.py
 ```
 
+To run it without Python, build the folder version: see [Packaging](docs/packaging.md).
+
 Opening `.cbr` files needs a RAR-capable extractor (7-Zip, unrar, or Windows' built-in `tar.exe`). See
 [Getting started](docs/getting-started.md) for details.
 

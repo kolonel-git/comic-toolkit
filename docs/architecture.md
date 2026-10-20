@@ -4,6 +4,8 @@
 
 | File | Role |
 |---|---|
+| `app_paths.py` | Where files live: settings in `%APPDATA%\ComicToolkit`, the bundled files (PyInstaller's folder when packaged), the `tools` folder for a RAR extractor |
+| `packaging/` | PyInstaller recipe (`ComicToolkit.spec`), `build.ps1`, and the icon (`make_icon.py`, `ComicToolkit.ico`) |
 | `comic_tool.py` | App shell: window, sidebar, Home cards, theme toggle, drag-and-drop routing, settings load/save |
 | `ui_kit.py` | Shared look (and `FlowRow`, a row of widgets that wraps when it is too narrow, and a compact `DropZone`): neo-brutalist (light, dark) palette (`BG`, `INK`, `YELLOW`/`PINK`/`CYAN`, `ACCENT`), the `Shadow` hard-shadow wrapper, `AbstractStrip` shape bands, `IconTile`, canvas `Toggle` and `Slider`, styled widgets, form rows, drop zone (with Add folder / Choose comics buttons), `Splitter` (draggable divider), `toolbar` (grouped buttons with dividers), page scaffold with a resizable options panel, table helpers (resizable columns, horizontal scrollbar) |
 | `batch_page.py` | Base page for run-per-item tools (progress, log, Preview, Stop) |
