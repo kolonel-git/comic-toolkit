@@ -21,7 +21,7 @@ design. The status column below says what is built; [The tools](tools.md) descri
 | ACEO sheets | agreed, built (two columns) |
 | Renamer | agreed, built |
 | Future work (all tools) | agreed |
-| Links between tools | agreed |
+| Links between tools | agreed, built (a Next steps row; Library stats and audit links were already there) |
 
 ## Global shell and segmented pages
 
@@ -454,3 +454,5 @@ to three contextual links. Empty states link to the tool that creates what is mi
 | CBR to CBZ | Library audit | After converting: rescan |
 | Reading order | Library audit / Library stats | After stamping: the reading-order folder is left out of their counts |
 | Single issue / Bulk folder | Library stats | Empty state when no library folder is set |
+
+**As built (Session 70, step 12).** `SegmentPage.show_next(links)` draws a **Next steps** row under the header (`clear_next()`; the app clears it when the page is left) and `SegmentPage.link(key, folder=…, paths=…)` makes a command that calls the app's `goto`, which opens that tool with the folder or files loaded and a chip "From <tool>" with a Back button. Built: Bulk folder to Folder icons and ACEO sheets (after a run); Single issue to Bulk folder and ACEO sheets (after saving a cover); Renamer to Metadata and Library audit (after applying); Metadata to Renamer (after saving); Reading order to Metadata (after writing); Add to library to Library audit and Metadata (after adding); CBR to CBZ to Library audit (after converting); ACEO's drop box has **Get covers…** (Bulk folder). The links from Library stats and Library audit (Fix these, Convert in bulk, Metadata) and **Naming settings** on Add to library were built earlier. Not built: Library stats links on the empty states of Single issue and Bulk folder, Reading order to Library audit / stats (they follow the reading-order marking, which is already shared), Add to library to Metadata for *No series* comics (Set series… fixes them on the card), Folder icons to Bulk folder (Folder icons reads the comics itself, so it needs no covers).

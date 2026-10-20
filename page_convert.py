@@ -599,6 +599,8 @@ class ConvertPage(SegmentPage):
         self.result_sub.configure(text=sub)
         self.say("")
         self.refresh()
+        if not stopped and c["ok"] and self.folder:
+            self.show_next([("Check the library for duplicates", self.link("audit", folder=self.folder))])
 
     def _log(self, line):
         self.log.configure(state="normal")

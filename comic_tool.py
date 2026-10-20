@@ -280,6 +280,8 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
                       "aceo": AceoPage(content), "intake": IntakePage(content)}
         self.pages["intake"].rename_source = self.pages["rename"].state  # names follow the Renamer's settings
         self.pages["intake"].open_renamer = lambda: self.show("rename")      # its Naming settings button
+        for pg in self.pages.values():
+            pg.goto = self.goto     # the "Next steps" links of a finished run
         self.nav = {}
         self.current = None
         Logo(side, lambda: self.show("home")).pack(fill="x", padx=(12, 8), pady=(14, 8))
@@ -349,6 +351,19 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             page.set_folder(path)
         else:
             page.add_paths([Path(path)])
+
+    def goto(self, key, folder=None, paths=None, origin=None):
+        """A link from one tool to the next: open `key` with a folder or some files already loaded, and (with `origin`) a chip
+        saying where it came from with a Back button."""
+        came = self.current
+        page = self.pages[key]
+        if folder is not None:
+            self._open_path(page, folder)
+        elif paths:
+            page.add_paths([Path(q) for q in paths])
+        self.show(key)
+        if origin and hasattr(page, "show_origin") and came != key:
+            page.show_origin(f"From {origin}", lambda: self.show(came), f"Back to {origin}")
 
     def _open_from_stats(self, key, view=None):
         """A link on Library stats: open another tool on the library folder (Metadata opens already filtered to `view`,
@@ -581,6 +596,8 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
 
     def show(self, key):
         if self.current:
+            if hasattr(self.pages[self.current], "clear_next"):
+                self.pages[self.current].clear_next()
             self.pages[self.current].pack_forget()
         self.current = key
         self.pages[key].pack(fill="both", expand=True)

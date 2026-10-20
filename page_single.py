@@ -334,6 +334,8 @@ class SinglePage(SegmentPage):
         else:
             self.saved_dir = dest.parent
             self.say(f"Saved {dest}")
+            self.show_next([("Do the whole folder", self.link("bulk", folder=self.comic.path.parent)),
+                            ("Put this cover on a sheet", self.link("aceo", paths=[self.comic.path]))])
         self._sync()
 
     def extract(self):

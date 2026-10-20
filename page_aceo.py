@@ -148,6 +148,7 @@ class AceoPage(SegmentPage):
         self.drop = DropZone(self.s1.body, "Drop comics, folders or cover images here", self.add_files, self.add_folder,
                              self.add_files, files_text="Choose comics or images…", compact=True)
         self.drop.pack(fill="x", padx=(0, 6))
+        self.drop.add_extra("covers", "Get covers…", self.link("bulk"), 120)   # an empty list: where covers come from
         bar = FlowRow(self.s1.body)
         bar.pack(fill="x", pady=(0, 2))
         self.tools = {}

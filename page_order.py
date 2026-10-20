@@ -595,6 +595,9 @@ class OrderPage(SegmentPage):
             self.last_dest = self.dest_dir
             self._offer_mark(self.dest_dir)
         self._replan(keep_notes=True)
+        where = self._mark_candidate()
+        if self.applied and where is not None:
+            self.show_next([("Check the story arc fields", self.link("metadata", folder=where))])
 
     # --- marking the folder as a reading order (so Library stats and the duplicate check leave it out) ---
     def _mark_candidate(self):

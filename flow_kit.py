@@ -19,7 +19,7 @@ from comic_core import FORMATS, HEIGHTS
 from ui_kit import (ACCENT, BG, BORDER, CYAN, DANGER, EDGE, FOCUS, FONT, HEAD, HOVER, MUTED, ON_ACCENT, PANEL, PINK, RAISED,
                     SCROLL, SWITCH_OFF, TEXT, TYPE_BODY, TYPE_HINT, TYPE_SEGMENT, WELL, Shadow, Splitter, Toggle, _TOGGLES,
                     apply_tree_theme, build_tree, button, ensure_hover, entry, menu, pick, refresh_strips, segmented,
-                    slider, switch_style, tool_button)
+                    slider, switch_style, tool_button, FlowRow)
 
 LAZY_OVER = 500   # a table with more rows than this loads them as you scroll
 CHUNK = 200       # rows added each time
@@ -536,6 +536,7 @@ class SegmentPage(ctk.CTkFrame):
     split = False       # True: no scrolling column; `col` fills the page so the subclass can lay out panes that scroll alone
     left_min = 400      # the narrowest the left pane may get when the right one is dragged wider
     show_auto = True    # the "open the next section for me" switch (pointless on a page without segments)
+    goto = None         # the app sets this: goto(key, folder=None, paths=None, origin=None) opens another tool with something loaded
 
     def __init__(self, parent):
         super().__init__(parent, fg_color=BG)
@@ -595,6 +596,37 @@ class SegmentPage(ctk.CTkFrame):
         self.origin_label.pack(side="left", padx=14, pady=8)
         self.origin_back = tool_button(self.origin, "Back", None, 70)
         self.origin_back.pack(side="right", padx=(0, 8), pady=6)
+        self.next_bar = ctk.CTkFrame(self.col, fg_color=PANEL, border_color=BORDER, border_width=EDGE, corner_radius=0)
+        self.next_label = ctk.CTkLabel(self.next_bar, text="Next steps", font=(FONT, 12, "bold"), text_color=MUTED, anchor="w")
+        self.next_label.pack(side="left", padx=(14, 10), pady=8)
+        self.next_flow = FlowRow(self.next_bar)
+        self.next_flow.pack(side="left", fill="x", expand=True, padx=(0, 8), pady=6)
+        self._next_items = []
+
+    def link(self, key, **kw):
+        """A command that opens tool `key` (see `goto`), for show_next."""
+        return lambda: self.goto and self.goto(key, origin=self.title, **kw)
+
+    def show_next(self, links, text="Next steps"):
+        """A row under the header with one to three links to the tools that usually come next: [(label, command)]. It stays until
+        `clear_next()` (the app clears it when the page is left) so a finished run can say where to go from here."""
+        self.clear_next()
+        if not links:
+            return
+        self.next_label.configure(text=text)
+        for label, command in links:
+            b = tool_button(self.next_flow, label, command, max(110, 28 + 8 * len(label)))
+            self.next_flow.add(b)
+            self._next_items.append(b)
+        anchor = self.origin if self.origin.winfo_manager() else self.head_frame
+        self.next_bar.pack(fill="x", pady=(0, 14), padx=(0, 6), after=anchor)
+
+    def clear_next(self):
+        self.next_bar.pack_forget()
+        for b in self._next_items:
+            b.destroy()
+        self.next_flow.items = []
+        self._next_items = []
 
     def show_origin(self, text, on_back=None, back_label="Back"):
         """A chip under the header saying where the user came from ("From Library stats · Missing publisher") with a

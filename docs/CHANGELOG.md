@@ -12,6 +12,26 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-21 00:20 +11:00 · Session 70: Links between tools and a documentation pass (roadmap Phase 5, step 12)
+
+**Summary:** A finished run now says where to go next. Each page built on the shell can show a **Next steps** row under its header; the links open the other tool with the folder already loaded and a "From <tool>" chip with a Back button.
+
+**Decisions**
+- One mechanism for every link: `SegmentPage.show_next(links)` / `clear_next()` / `link(key, folder=, paths=)` and the app's `goto`. The row clears when the page is left.
+- Only links the plan listed and that have something to carry were built; the ones that do not apply (Folder icons reads the comics itself, so it does not need covers from Bulk folder) are listed in the plan as not built.
+
+**Changes by file**
+- `flow_kit.py`: the Next steps row, `link`, `goto` hook. `comic_tool.py`: `goto`, clears the row when a page is left, wires every page.
+- Links: Bulk folder (to Folder icons, ACEO sheets), Single issue (to Bulk folder, ACEO sheets), Renamer (to Metadata, Library audit), Metadata (to Renamer), Reading order (to Metadata), Add to library (to Library audit, Metadata), CBR to CBZ (to Library audit), ACEO sheets **Get covers…** (to Bulk folder).
+- Tests: `test_links.py` (new; the real app); `test_bulk_page.py` takes the page off the screen while it tests a standalone table (the row made the page taller).
+- Docs: tools (Links between tools), plan (as built), roadmap, architecture, manual tests (section O, and the check count), tests README, HANDOFF (test count, next step).
+
+**Verification:** `ruff check --select F,E9 .` clean; `python tests/run_all.py` 39 of 39 passed. Not checked: the links by hand in the whole app (manual tests O1 to O3).
+
+**Known issues:** the links not built are listed in the plan's "As built (Session 70)".
+
+---
+
 ## 2026-10-20 23:45 +11:00 · Session 69: Add to library on the page shell (roadmap Phase 4, step 11)
 
 **Summary:** Add to library is rebuilt as two resizable columns. Every comic is a card with what it becomes; comics that need a look come first with a fix on the card (*Set series…*, *Add anyway*, *Skip*). *Watch this folder* lists new comics in the inbox once they stop growing. The run can be stopped, and failed comics retried from the footer.

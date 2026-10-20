@@ -536,6 +536,10 @@ class IntakePage(SegmentPage):
         if ok:
             flash_taskbar(self.winfo_toplevel())
         self.recompute()
+        ready = self.vars["ready"].get().strip()
+        if ok and ready and Path(ready).is_dir():
+            self.show_next([("Check the library for duplicates", self.link("audit", folder=ready)),
+                            ("Check the new comics' metadata", self.link("metadata", folder=ready))])
 
     def open_ready(self):
         ready = self.vars["ready"].get().strip()

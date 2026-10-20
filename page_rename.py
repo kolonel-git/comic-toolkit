@@ -1046,5 +1046,9 @@ class RenamePage(SegmentPage):
             text += f" · {left} left as they were"
         if errors:
             text += f" · {len(errors)} failed ({errors[0]})"
+        root = self.root_dir
         self.rescan()
         self.say(text, err=bool(errors))
+        if done and root is not None:
+            self.show_next([("Update the metadata from the new names", self.link("metadata", folder=root)),
+                            ("Check the library for duplicates", self.link("audit", folder=root))])

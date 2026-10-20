@@ -399,6 +399,8 @@ class MetadataPage(SegmentPage):
         self.say(text, err=bool(self.failed))
         if self.on_saved and self.applied:
             self.on_saved()
+        if self.applied and self.root_dir is not None:
+            self.show_next([("Rename these files to match", self.link("rename", folder=self.root_dir))])
 
     # ------------------------------------------------------------------ the table of comics
     def _view_key(self):

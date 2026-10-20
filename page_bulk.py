@@ -768,6 +768,10 @@ class BulkPage(SegmentPage):
         self.result_sub.configure(text=sub)
         self.say("")
         self.refresh()
+        if not stopped and c["saved"] and self.folder:
+            covers = self.out_dir if self.out_dir and Path(self.out_dir).exists() else self.folder
+            self.show_next([("Make folder icons from these comics", self.link("icons", folder=self.folder)),
+                            ("Put the covers on a sheet", self.link("aceo", folder=covers))])
 
     def _log(self, line):
         self.log.configure(state="normal")

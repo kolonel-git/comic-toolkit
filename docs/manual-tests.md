@@ -480,6 +480,18 @@ Use your real library (hundreds of comics if you can) for I1 to I3 and I6.
   *Expect:* the Numbering switch, the line of gestures and the orange *Looks like a cover* legend are always visible and fit at the narrowest window width; *By page number* sorts the picks (and the ticks on the Single issue page follow); **Arrange…** is greyed in that mode and works in the other; the saved files are numbered in the order shown.
   Result:
 
+## O. Links between tools
+
+- [ ] **O1. Next steps.** Finish a run on Bulk folder, then Renamer (apply on a test folder), Metadata (save), Reading order (write), Add to library (add) and CBR to CBZ (convert).
+  *Expect:* each page shows a **Next steps** row under its header with the links named in the tools list; the row goes away when you leave the page.
+  Result:
+- [ ] **O2. The link opens the next tool ready.** Press each link once.
+  *Expect:* the next tool opens with the same folder already loaded, a chip "From <tool>" and a **Back to <tool>** button that returns to where you were.
+  Result:
+- [ ] **O3. Get covers.** Open ACEO sheets with an empty list and press **Get covers…**.
+  *Expect:* Bulk folder opens.
+  Result:
+
 ## When you're done
 
 Send me the failed items with what you saw (a screenshot or the exact message helps). Passing results can be summarised in one line.

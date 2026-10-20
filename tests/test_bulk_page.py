@@ -192,6 +192,7 @@ assert pg.review.tree.column("#0", "width") > 0
 pg.covers_on.set(False); root.update(); assert pg.review.tree.column("#0", "width") == 0
 
 # the lazy table: a long list opens at once and loads more as you scroll; the filter searches every column
+pg.pack_forget()   # (the page, with its Next steps row, would leave the table no room)
 lt = fk.LazyTable(root, [("a", "Name", 200, True), ("b", "Kind", 100, False)], rows=6)
 lt.pack(); big = [(f"Comic {i:04d}", "even" if i % 2 == 0 else "odd") for i in range(1200)]
 lt.set_rows(big); root.update()
@@ -206,7 +207,7 @@ assert [lt.tree.item(i)["values"][0] for i in lt.tree.get_children()] == ["Comic
 lt.query.set("odd"); root.update()
 assert len(lt.view) == 600 and len(lt.tree.get_children()) == fk.CHUNK, "a long filtered list is still loaded in chunks"
 lt.query.set(""); lt.set_rows(big[:10]); root.update(); assert len(lt.tree.get_children()) == 10, "short lists are drawn whole"
-lt.destroy()
+lt.destroy(); pg.pack(fill="both", expand=True); root.update()
 
 # scrolling works in the right column on its own: the scroll region is set, the column is taller than the window, the wheel moves it
 pg.reset(); pg.set_folder(d); root.update(); root.update()
