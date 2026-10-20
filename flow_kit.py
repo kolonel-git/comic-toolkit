@@ -443,12 +443,14 @@ class LazyTable(ctk.CTkFrame):
             pass  # the table is gone
 
     # --- pictures
-    def show_pictures(self, loader, on=True):
-        """Show (or hide) a small picture on each row. `loader(key)` is called off the main thread."""
+    def show_pictures(self, loader, on=True, width=46, height=58):
+        """Show (or hide) a small picture on each row. `loader(key)` is called off the main thread. `width` is the width of
+        the picture's column (the table indents it by about 20 pixels, so it is the picture's width plus that) and `height`
+        the height of a row."""
         self.loader = loader if on else None
-        height = 58 if on else 30
+        height = height if on else 30
         self.tree.__dict__["_rowheight"] = height
-        self.tree.column("#0", width=46 if on else 0, minwidth=0, stretch=False)
+        self.tree.column("#0", width=width if on else 0, minwidth=0, stretch=False)
         apply_tree_theme(self.tree)
         if on:
             for i in self.view[:self.shown]:
@@ -459,6 +461,15 @@ class LazyTable(ctk.CTkFrame):
         else:
             for iid in self.tree.get_children():
                 self.tree.item(iid, image="")
+
+    def refresh_pictures(self, keys):
+        """The pictures depend on something that changed (a style, a colour): use these keys, one for each row as given to
+        `set_rows`, and load the pictures again."""
+        self.keys = list(keys)
+        self._cache.clear()
+        if self.loader is not None:
+            for i in self.view[:self.shown]:
+                self._wish(i)
 
     def _wish(self, i):
         key = self.keys[i]

@@ -15,7 +15,8 @@ Each script finds the project folder from its own location, so run them from any
 |---|---|
 | `test_audit.py`, `test_audit_findings.py`, `test_audit_orders.py`, `test_audit_ui.py`, `test_fixes.py` | audit logic (integrity, duplicates, gaps); findings, ignore keys, fix planning and the fixes themselves, junk and Archive purge; reading-order copies left out of Duplicates, the Reading orders finding, the fix confirmation text and the Details data; the audit page end to end (folding sections, strip, Checks switches, Details panel and its pointers, confirmation, reading orders) |
 | `test_archive.py`, `test_bak.py` | verified archive rewriting, clean-up, `.bak` backups |
-| `test_icons.py` | Windows folder icons |
+| `test_icons.py` | Windows folder icons: planning, writing, the three styles, colours, sizes and the series name, removing an icon (and leaving another program's alone), refreshing Explorer |
+| `test_icons_page.py` | the Folder icons page: two columns, the table of folders with a picture of each icon, the style cards and example folder, an image of your own, a real run in a temporary library, retry, stop, removing icons, picking comics one by one, and the Windows-only message |
 | `test_meta.py`, `test_metadata_core.py` | metadata fields, `ComicInfo.xml` writing, the editing logic (`Row`, what is missing, fill from file names, the offer to a series, suggestions) |
 | `test_meta_page.py` | the Metadata page: two columns, the form following the selection (automatic and forced), suggestions, the offer, fill and remove issue number, the live list of changes, saving after Confirm, locked `.cbr`, opening from Library stats |
 | `test_single_page.py` | the Single issue page: two columns, the strip of first and last pages and its browse tile, the footer changing with the picks, saving a cover (the live file line, conflicts, a folder of your own), extracting picked pages, the ZIP shortcut, and one selection shared with the picker window |

@@ -217,6 +217,24 @@ Use copies of real issues from at least two series (6 to 10 files) plus one `.cb
   *Expect:* the card, the line and the tint are visible in both modes and the cards are not cramped in a narrow window. Tell me what feels wrong.
   Result:
 
+## Folder icons (Windows)
+
+- [ ] **N1. Choose and compare.** Open Folder icons on a library with a few series folders. Look at the table and the three style cards, press **Try another folder**, and click each style, then a few colours, the cover size and the series name under Advanced options.
+  *Expect:* every row shows a picture of the icon it would get; the big picture and the style cards use the example folder's own cover and follow your choices; nothing is written yet.
+  Result:
+- [ ] **N2. Make the icons.** Press **Make N icons**, then open the library in Explorer (large icons) and press **Refresh Explorer** if a folder still shows its old picture.
+  *Expect:* each folder shows its icon in the chosen style (the folder with the cover sticking out of the pocket, the folder with the cover as its face, or the flat cover); `folder.jpg` is beside it; the result lists every folder.
+  Result:
+- [ ] **N3. Already have one.** Make the icons again with *If a folder already has one* on Replace and on Skip.
+  *Expect:* the table says "Has one: replaced" or "Has one: kept" before you press the button, and the run does what it said.
+  Result:
+- [ ] **N4. An image of your own.** Select a row and press **Use a different image…**, then with nothing selected choose a parent folder with no comics (such as `DC`) and an image.
+  *Expect:* the row says "Your image" and "Custom image" and its picture changes; the parent folder gets a row and an icon; **Use the cover again** takes the image back.
+  Result:
+- [ ] **N5. Remove icons.** Press **Remove icons** and confirm.
+  *Expect:* the question names how many folders; afterwards they show the ordinary folder icon (after a refresh), `folder.jpg` is still there, and a folder whose icon some other program set is left alone.
+  Result:
+
 ## F. Renamer: cards, formats and messy folders
 
 Make a deliberately messy folder of copies: single issues, TPBs, hardcovers, omnibuses, compendiums, a `.cbr`, a `.pdf`, an `.epub`, `scan0001.cbz`, names written in

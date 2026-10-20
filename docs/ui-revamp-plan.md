@@ -12,7 +12,7 @@ design. The status column below says what is built; [The tools](tools.md) descri
 | Library scan / stats | agreed, built |
 | Single issue | agreed, built (two columns, and the page picker) |
 | Bulk folder | agreed, built (two columns) |
-| Folder icons | agreed (collage deferred) |
+| Folder icons | agreed, built (two columns; collage deferred) |
 | Metadata (repair editor) | agreed, built (two columns) |
 | CBR to CBZ | agreed, built (two columns) |
 | Library audit | agreed, built (two columns) |
@@ -28,7 +28,7 @@ design. The status column below says what is built; [The tools](tools.md) descri
 **Current:** left options panel plus main area on most pages; Bulk folder is the first page converted to the shell. Many options sit in one
 panel. Type uses about ten sizes (8 to 28 pt), Segoe UI plus Arial Black headings plus Consolas, and several accent colours.
 
-**Owner's decision (Session 60): two columns.** Every page except Library stats is laid out as **two resizable columns** under the header, with the footer below: what you choose (the folder, the list of comics) on the left, and what you can set and the review of what will happen on the right, which scrolls on its own. The divider between the columns is dragged to the width you like (and remembered), and every table column is resizable too. Library stats keeps the stack of segments. Bulk folder, Metadata, Library audit, CBR to CBZ, Single issue, Reading order and ACEO sheets are built this way; Folder icons, ACEO sheets, the Renamer and Add to library follow when their turn comes (they already have a main area and a draggable options panel, so for them it is mostly regrouping the options into titled blocks and putting the review and the run under them). The per-tool sections below still describe what each part holds; read "segment" as "block of a column" for every page except Library stats.
+**Owner's decision (Session 60): two columns.** Every page except Library stats is laid out as **two resizable columns** under the header, with the footer below: what you choose (the folder, the list of comics) on the left, and what you can set and the review of what will happen on the right, which scrolls on its own. The divider between the columns is dragged to the width you like (and remembered), and every table column is resizable too. Library stats keeps the stack of segments. Bulk folder, Metadata, Library audit, CBR to CBZ, Single issue, Reading order, ACEO sheets and Folder icons are built this way; ACEO sheets, the Renamer and Add to library follow when their turn comes (they already have a main area and a draggable options panel, so for them it is mostly regrouping the options into titled blocks and putting the review and the run under them). The per-tool sections below still describe what each part holds; read "segment" as "block of a column" for every page except Library stats.
 
 **Owner's decisions (the original segment design, still true for Library stats)**
 - Every tool is a stack of **collapsible segments**. A finished segment folds to a short summary of what it did or holds.
@@ -176,6 +176,8 @@ one example folder first, then the user decides; add a dry run or preview before
 - *Footer:* main action **Make N icons**; secondary: **Remove icons** (restores the default folder look for the folders in the
   list, after a confirmation that names how many) and **Refresh Explorer** (clears the Windows icon cache so changes show).
 - *Style, bundled templates:* two or three bundled folder-shape images with transparent areas; no user template yet.
+
+**As built (Session 67, step 7):** two columns. Left: **Folders**, a compact drop box, *Include subfolders* and one table that is both the list and the dry run (a lazy-loaded picture of the finished icon on every row, the folder, the comic its cover comes from, the status); *Use a different image…* and *Use the cover again* sit above it. Right: **Icon style** (a big picture for an example folder with **Try another folder**, three style cards each drawn with that folder's cover, **Cover from** first or last issue, and *Advanced options*) and **Review**. Footer: **Make N icons**, **Remove icons**, **Refresh Explorer**. The folder shapes are drawn in code (`folder_icons.render_icon`: back panel and tab, the cover tilted 7° and framed above the front pocket, or the cover as the folder's face, in six colours, with an optional series-name label), which is why the plan's "bundled template images" were not needed. Differences from the plan: the plan's separate **Folders** and **Review** tables are one table; the status of a folder that already has an icon follows *If a folder already has one*; *Use a different image…* works on the selected rows and, with none selected, asks for any folder and an image (the old "Custom image for a folder…" button); **Remove icons** only removes icons this tool made (the ones that point at `folder.ico`). The column of the table that holds the picture is the table's own picture column, so the pictures are 42 px.
 
 **Deferred:** collage icon for parent folders (for example `DC`, from four series covers). To be decided later.
 

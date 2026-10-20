@@ -30,7 +30,7 @@ Backup `.bak` safety fix, metadata extensions, shared library scan, Library audi
 Library stats, Renamer revamp (cards and a template per type), ACEO sheets, Add to library, page picker, shared library folder,
 recent folders, keyboard layer and Ctrl+K search, and the neo-brutalist UI. Details are in [The tools](tools.md) and the
 [Changelog](CHANGELOG.md). From the revamp below: the shared page shell, Bulk folder, Library stats and the Metadata repair editor (two columns) and the Library audit are built.
-**Where we are:** Phases 0, 1 and 2 are finished and tagged (`v0.8.0`, `v0.9.0`). Phase 3 is under way: Single issue, Reading order and ACEO sheets are done; Folder icons is next.
+**Where we are:** Phases 0, 1 and 2 are finished and tagged (`v0.8.0`, `v0.9.0`). Phase 3 is complete in the code (Single issue, Folder icons, Reading order and ACEO sheets are done; `v0.10.0` is for you to tag once the pull requests are merged); the Renamer (step 10) is next.
 
 ## Build order: the UI revamp
 
@@ -57,7 +57,7 @@ Every page becomes a Header, two resizable columns and a Footer (Library stats k
 
 **Phase 3: standalone tools** (`v0.10.0`)
 6. Single issue, in two branches. **6a, the page on the shell: done** (two columns; a strip of the first 3 and last 2 pages with a Browse all tile; Save cover or Extract N pages in the footer; one selection shared with the picker window). **6b, the page picker: done** (a visible *Numbering* switch in place of *Reorder…*, a line of gestures and a legend for the orange outline).
-7. Folder icons (needs the folder-shape template art first).
+7. Folder icons. **Done** (two columns; the table of folders is the dry run, with a picture of each icon; three styles drawn in code, so no template art was needed; your own image for any folder; Remove icons and Refresh Explorer).
 8. Reading order, in two branches. **8a, the page on the shell: done** (two columns; Stamp and Review on the right; the footer says Stamp N comics; the folder of copies can be marked as a reading order, shared with Library stats and the audit). **8b, the card list: done** (`cardlist.py`: each comic is a card you hold and drag; Ctrl and Shift select; a drag box; a stacked card with a count, a drop line, scrolling near the edges, Alt+↑ / Alt+↓, Undo and Ctrl+Z; *Suggest order* by series, date, issue number or file name). ACEO reuses it.
 9. ACEO sheets. **Done** (two columns; one card per cover with a copies stepper and a front / back switch; a sheet preview with a strip of sheets, empty slots drawn dashed, and covers swapped by dragging; the options as pictures).
 
@@ -81,7 +81,7 @@ Not scheduled. Listed so they are not lost.
   other tools. A navigation hub, not a reader.
 - **Add to library:** place comics into the existing library by matching series; write fuller `ComicInfo.xml` data on the way in;
   accept PDF, EPUB and 7z.
-- **Folder icons:** collage icon for parent folders such as `DC` (from four series covers); a user-supplied folder template.
+- **Folder icons:** collage icon for parent folders such as `DC` (from four series covers); a folder picture of the user's own (the three styles are drawn by the program).
 - **Reading order:** replace copies with links so no real duplicates exist (not decided).
 - **Command-line mode** for processing (for Task Scheduler).
 - **Smaller ideas:** filter the Renamer list by type, write the detected format into `ComicInfo.xml`, ACEO bleed and crop marks,

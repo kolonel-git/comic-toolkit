@@ -44,14 +44,13 @@ sg.pack_forget()
 
 # every options panel is grouped under headings, always starting with the source or main subject and ending with the output
 def headings(pg): return pg.form.headings
-EXPECT = {IconsPage: ["Cover", "Output"],
-}
+EXPECT = {}
 for pg in pages:
     if type(pg) in EXPECT:  # (Bulk folder, Metadata, Library audit, CBR to CBZ, Single issue and Reading order are segment pages, tested in their own page tests)
         assert headings(pg) == EXPECT[type(pg)], (type(pg).__name__, headings(pg))
 
 # the options panel can be dragged wider and narrower, within limits, and the width is saved
-pg = pages[2]; pg.pack(fill="both", expand=True); root.update()
+pg = pages[3]; pg.pack(fill="both", expand=True); root.update()
 w0 = pg.side.winfo_width()
 pg.splitter._press(ev(1000)); pg.splitter._drag(ev(900)); pg.splitter._release(None); root.update()
 k = pg.splitter._scale()  # display scaling: mouse movement is in pixels, widths in scaled units
@@ -124,9 +123,9 @@ with tempfile.TemporaryDirectory() as d:
     cv.pack_forget()
     # Folder icons: one folder per parent, using the first or last chosen comic
     ic = pages[2]; ic.pack(fill="both", expand=True); ic.set_files(chosen)
-    assert ic.items == [(a1.parent, a1), (b1.parent, b1)], ic.items
+    assert ic.plan == [(a1.parent, a1), (b1.parent, b1)], ic.plan
     ic.vars["which"].set("Last issue"); root.update()
-    assert ic.items == [(a1.parent, a2), (b1.parent, r1)], ic.items
+    assert ic.plan == [(a1.parent, a2), (b1.parent, r1)], ic.plan
     ic.pack_forget()
     # Bulk covers
     bk = pages[1]; bk.pack(fill="both", expand=True); bk.set_files(chosen)

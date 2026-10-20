@@ -12,6 +12,31 @@ Technical record of every working session on Comic Toolkit, newest first. Each s
 
 ---
 
+## 2026-10-20 23:12 +11:00 · Session 67: Folder icons on the page shell (roadmap Phase 3, step 7)
+
+**Summary:** Folder icons is rebuilt as two resizable columns, and the icon can now look like a folder: three styles drawn in code (the cover sticking out of a folder's pocket, a folder whose face is the cover, and the flat cover as before). The roadmap held this step until folder-shape template art existed; the shapes are drawn by the program instead, so nothing waited on art.
+
+**Decisions**
+- Folder shapes are drawn with Pillow at twice the size and scaled down (`render_icon`), in six colours with an optional series-name label, instead of bundled template images.
+- One table is both the list of folders and the dry run: a picture of the finished icon on every row, the comic its cover comes from and a status. Nothing is written until the footer button is pressed.
+- *Use a different image…* works on the selected rows; with nothing selected it asks for any folder and an image (the old "Custom image for a folder…").
+- **Remove icons** only removes icons this tool made (a `desktop.ini` that points at `folder.ico`); an icon another program set is left alone, and `folder.jpg` stays. **Refresh Explorer** asks Windows to redraw its icons; it cannot rebuild Windows' own icon cache, and the known limitations say so.
+
+**Changes by file**
+- `folder_icons.py`: `render_icon`, `STYLES`, `FOLDER_COLORS`, `COVER_SIZES`; `make_ico` and `write_icon` take the style, colour, size and series name; `remove_icon`; `refresh_explorer`; `plan_folders(…, recursive)` now also counts the folder itself.
+- `page_icons.py`: rewritten on `SegmentPage`. Left: Folders (a compact drop box, *Include subfolders*, the table with its icon pictures, *Use a different image…* and *Use the cover again*). Right: Icon style (a big picture for an example folder with **Try another folder**, three style cards drawn with that folder's cover, **Cover from**, *Advanced options*) and Review (counts, progress, result, the list of every folder). Footer: **Make N icons** (**Stop**), **Remove icons**, **Refresh Explorer**, then after a run **Make them again**, **Do another folder**, **Retry N failed**.
+- `flow_kit.py`: `LazyTable.refresh_pictures(keys)` and `show_pictures(width, height)` (the picture column is the picture's width plus the table's indent).
+- Tests: `test_icons.py` extended; `test_icons_page.py` (new; real icons in a temporary library); `test_layout.py` (Folder icons is no longer an options-panel page; the panel-divider check now uses the Renamer).
+- Docs: tools, plan (as built), roadmap, architecture, known limitations, manual tests (new Folder icons section N1 to N5), tests README, HANDOFF.
+
+**Bugs found and fixed:** the first run of the new page test hung on a real folder dialog: after an image was applied the table was rebuilt and the selection lost, so the second call asked for a folder. The page now keeps the selection when it redraws the table. The icon pictures overlapped the folder names until the picture column was given its picture's width plus the table's indent.
+
+**Verification:** `ruff check --select F,E9 .` clean; `python tests/run_all.py` 37 of 37 passed. I rendered the page in the whole app and looked at the screenshots, and looked at all three styles at full size. Not checked: how the icons look in Explorer (manual tests N1 to N5), Refresh Explorer on a real machine, and a very long folder list on a network drive.
+
+**Known issues:** see Known limitations (Windows-only pieces; Folder icons: the table is not a promise).
+
+---
+
 ## 2026-10-20 22:50 +11:00 · Session 66: ACEO sheets on the page shell (roadmap Phase 3, step 9)
 
 **Summary:** ACEO sheets is rebuilt as two resizable columns, one card per cover on the left and the sheet preview and the options on the right. It is the first of the remaining steps done in one run (ACEO, Folder icons, Renamer, Add to library, the links pass, packaging), each on its own branch stacked on the one before.
